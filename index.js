@@ -110,11 +110,11 @@ app.use("/api/academic", protectRoute, academicRouter);
 app.use("/api/discussion", discussionRouter);
 
 const societyRouter = require("./routes/university_related/society/society.route.js")
-const subSocietyRouter = require("./routes/university_related/subsociety/sub.society.route.js")
+// const subSocietyRouter = require("./routes/university_related/subsociety/sub.society.route.js")
 const postsRouter = require('./routes/university_related/posts/post.route.js')
 
 app.use("/api/society", protectRoute, societyRouter);
-app.use("/api/sub-society", protectRoute, subSocietyRouter);
+// app.use("/api/sub-society", protectRoute, subSocietyRouter);
 app.use("/api/posts", protectRoute, postsRouter);
 
 
