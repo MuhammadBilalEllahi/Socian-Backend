@@ -12,8 +12,14 @@ const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const mongoDB = require("./db/connect.mongodb.js");
 const session = require("express-session");
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const csrfProtection = require('@fastify/csrf-protection');
+
+// const sanitizeHtml = require('sanitize-html');
+// const cleanHtml = sanitizeHtml(userInput, { allowedTags: [], allowedAttributes: {} });
+
 const MongoStore = require("connect-mongo");
-// const protectRoute = require('./middlewares/protectRoute.js')
 const path = require("path");
 // const RedisStore = require('connect-redis').default;
 // const redisClient = require("./db/reddis.js")
@@ -52,13 +58,22 @@ app.use(sessionData);
 
 app.use(
   cors({
-    origin: ["http://localhost:4352", "http://localhost:3000", "https://m.bilalellahi.com"],
+    origin: ["http://localhost:4352", "https://m.bilalellahi.com"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
+app.use(helmet());
+// app.use(csrfProtection);
+
 app.use(cookieParser());
-app.use(morgan("dev"));
+app.use(morgan("combined"));
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -118,6 +133,61 @@ app.use("/api/society", protectRoute, societyRouter);
 app.use("/api/posts", protectRoute, postsRouter);
 
 
+
+
+
+
+
+
+
+
+
+
+
+/** This code is implemented after some bots tried to 
+  * get sensitive data from the deployment backend
+  * add any sensitive route here if found
+  * This will send null to sender before it even checks the authentication
+*/
+const suspiciousRoutes = [
+  '/.env',
+  '/.git/config',
+  '/wp-admin/setup-config.php?step=1',
+  '/wordpress/wp-admin/setup-config.php?step=1',
+  '/robots.txt',
+  '//wp-includes/ID3/license.txt',
+  '//xmlrpc.php?rsd',
+  '//web/wp-includes/wlwmanifest.xml',
+  '//wp/wp-includes/wlwmanifest.xml',
+  '//2019/wp-includes/wlwmanifest.xml',
+  '//shop/wp-includes/wlwmanifest.xml',
+  '//test/wp-includes/wlwmanifest.xml',
+  '//cms/wp-includes/wlwmanifest.xml',
+];
+// Add suspicious routes to return a safe response
+suspiciousRoutes.forEach((route) => {
+  app.get(route, (req, res) => {
+    res.status(404).send(null); // Respond with null and a 404 status
+  });
+});
+
+// Default catch-all route for undefined paths
+app.all('*', (req, res) => {
+  res.status(404).json({ message: 'Not Found' });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Start Server
 const startServer = () => {
   app.listen(PORT, () => {
@@ -133,6 +203,20 @@ app.use((err, req, res, next) => {
 });
 
 startServer();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // if (cluster.isMaster) {
 //     const numCPUs = os.cpus().length;
