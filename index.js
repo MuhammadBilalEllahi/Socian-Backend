@@ -58,22 +58,25 @@ app.use(sessionData);
 
 app.use(
   cors({
-    origin: ["http://localhost:4352", "https://m.bilalellahi.com"],
+    // origin: ["http://localhost:4352", "https://m.bilalellahi.com"],
+    origin: [process.env.FRONTEND_URL],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
+// app.options("*", cors()); // Allow all preflight requests
+
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
 });
-app.use(limiter);
+process.env.RUN_LIMITER === 'true' && app.use(limiter);
 app.use(helmet());
 // app.use(csrfProtection);
 
 app.use(cookieParser());
-app.use(morgan("combined"));
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -132,8 +135,10 @@ app.use("/api/society", protectRoute, societyRouter);
 // app.use("/api/sub-society", protectRoute, subSocietyRouter);
 app.use("/api/posts", protectRoute, postsRouter);
 
+// cafe role doesnot exist
 
-
+const accessibleRoutes = require('./routes/accessibles/accessible.route.js')
+app.use('/api/accessible/', accessibleRoutes)
 
 
 

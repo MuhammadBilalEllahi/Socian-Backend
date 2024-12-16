@@ -70,7 +70,7 @@ const sendOtp = async (phoneNumber, email, user, name) => {
   }
   const otp = generateOtp6Digit();
   const query = phoneNumber ? { phone: phoneNumber } : { email: email };
-  const otpExpiration = moment().add(2, "minutes"); // 2 minutes expiry
+  const otpExpiration = moment().add(20, "minutes"); // 20 minutes expiry
 
   console.log("this query", query);
   const otpResponse = await OTP.findOneAndUpdate(

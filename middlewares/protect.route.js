@@ -7,6 +7,10 @@ const authenticateSession = require("./session.protect.js");
 const protectRoute = async (req, res, next) => {
   ///req res order is must
   try {
+    /**
+     *  please set header for mobile app. i have sent them but incase you remove them.
+     *  you cant access the code without it 
+     */
     const platform = req.headers["x-platform"];
 
     if (!platform)
@@ -24,3 +28,9 @@ const protectRoute = async (req, res, next) => {
   }
 };
 module.exports = protectRoute;
+
+// const bypassRoutes = ["/universities-grouped-campus"];
+//  // Skip authentication if the route is in the bypass list
+//  if (bypassRoutes.includes(req.path)) {
+//   return next(); // Skip auth and proceed to the route
+// }

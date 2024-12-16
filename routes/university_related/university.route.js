@@ -2,6 +2,9 @@ const express = require("express");
 const University = require("../../models/university/university.register.model");
 const router = express.Router();
 
+
+
+
 router.post("/register", async (req, res) => {
   const { name, mainLocationAddress } = req.body;
 
@@ -43,6 +46,8 @@ router.put("/:universityId", async (req, res) => {
   }
 });
 
+
+
 router.get("/", async (req, res) => {
   try {
     const university = await University.find().populate("campuses");
@@ -53,6 +58,7 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: error.message }); // Unable to create campus. Please try again.
   }
 });
+
 
 router.get("/:universityId", async (req, res) => {
   const { universityId } = req.params;

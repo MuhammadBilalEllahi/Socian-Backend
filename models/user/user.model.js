@@ -43,15 +43,15 @@ const userSchema = new mongoose.Schema({
       //enum is not needed to hardcode here so ref is used
       // enum: [{ type: mongoose.Schema.Types.ObjeectId, ref: 'Campus' }]
     },
-    website: { type: String, default: "" }, // ## for showcase on profile
+    website: [{ type: String, default: "" }], // ## for showcase on profile
     socialLinks: [String], //
     gender: {
       type: String,
       enum: ["male", "female", "other"],
     },
-    respect: {
-      postRespect: { type: Number, default: 0 },
-      commentRespect: { type: Number, default: 0 },
+    credibility: {
+      postCredibility: { type: Number, default: 0 },
+      commentCredibility: { type: Number, default: 0 },
     },
     graduationYear: {
       type: Date,
@@ -100,6 +100,11 @@ const userSchema = new mongoose.Schema({
       ref: "Campus",
       index: true,
     },
+    departmentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Department",
+      index: true,
+    },
   },
   subscribedSocities: [
     { type: mongoose.Schema.Types.ObjectId, ref: "Society" },
@@ -130,7 +135,6 @@ const userSchema = new mongoose.Schema({
       "Please fill a valid email address",
     ],
   },
-
   secondaryPersonalEmail: {
     type: String,
     index: true,
@@ -236,7 +240,7 @@ userSchema.methods.updateEmail = async function (emailType, email) {
   // Define role-based valid email types
   const roleEmailTypes = {
     student: ["personalEmail"],
-    teacher: ["personalEmail"],
+    teacher: ["personalEmail"], // if teaher leavs then why is peronalEmail is present?
     alumni: ["personalEmail", "secondaryPersonalEmail"],
   };
 
@@ -246,8 +250,7 @@ userSchema.methods.updateEmail = async function (emailType, email) {
   // Validate the email type against the user's role
   if (!validEmailTypes.includes(emailType)) {
     throw new Error(
-      `Invalid email type for role "${
-        this.role
+      `Invalid email type for role "${this.role
       }". Allowed types: ${validEmailTypes.join(", ")}`
     );
   }

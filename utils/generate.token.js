@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 
 // Helper function to generate tokens
-const generateToken = (user, userRoleBool) => {
+const generateToken = (user) => {
   console.log("suer", user);
   const payload = {
     _id: user._id,
@@ -12,7 +12,7 @@ const generateToken = (user, userRoleBool) => {
       user?.secondaryPersonalEmail,
     username: user.username,
     profile: user.profile,
-    university: userRoleBool ? user.university : undefined,
+    university: (user.role !== 'ext_org') ? user.university : undefined,
     super_role: user.super_role,
     role: user.role,
     references: {

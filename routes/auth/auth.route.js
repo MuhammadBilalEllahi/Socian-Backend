@@ -8,6 +8,7 @@ const moment = require("moment");
 const {
   resendEmail,
   resendEmailForgotPassword,
+  resendEmailAccountConfirmation,
 } = require("../../utils/email.util.js");
 const bcryptjs = require("bcryptjs");
 const {
@@ -169,62 +170,152 @@ router.post("/login", async (req, res) => {
   }
 });
 
+/**
+ * USE BELOW CODE ONLY IF OTP is correct
+ * Handles user response based on platform type.
+ * 
+ * @param {string} platform - Platform type ("app" or "web").
+ * @param {object} user - User object from the database.
+ * @param {object} res - Express.js response object.
+ * @param {object} req - Express.js request object (for session in web).
+ * @param {function} generateToken - Function to generate access and refresh tokens.
+ * @returns {Promise} - Resolves with the response sent to the client.
+ */
+const handlePlatformResponse = async (user, res, req) => {
+  console.log("here")
+  const platform = req.headers["x-platform"];
+  console.log("here2", platform)
+  if (platform === "app") {
+    // Generate JWT tokens
+    const { accessToken, refreshToken } = generateToken(user);
+
+    // Assign tokens to the user object
+    user.tokens = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    };
+
+    await user.save(); // Save the updated user tokens
+
+    // Send JWT tokens to the client
+    return res.status(200).json({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+  } else if (platform === "web") {
+    // Set user session data
+    console.log("here", "pla")
+    req.session.user = {
+      _id: user._id,
+      name: user.name,
+      email:
+        user.universityEmail ||
+        user.personalEmail ||
+        user.secondaryPersonalEmail,
+      username: user.username,
+      profile: user.profile,
+      university: user.role !== 'ext_org' ? user.university : undefined,
+      super_role: user.super_role,
+      role: user.role,
+    };
+
+    // Set references for the session
+    req.session.references = {
+      university: {
+        name: user.university.universityId.name,
+        _id: user.university.universityId._id,
+      },
+      campus: {
+        name: user.university.campusId.name,
+        _id: user.university.campusId._id,
+      },
+    };
+
+    // Save session and handle any errors
+    return req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
+
+      // Send the session user as the response
+      return res.status(200).json(req.session.user);
+    });
+  } else {
+    // Handle invalid platform
+    return res.status(400).json({ error: "Invalid platform" });
+  }
+};
+
 router.post("/register", async (req, res) => {
-  const { name, email, password, universityId, campusId, role } = req.body;
+  const { name, username, universityEmail, personalEmail, password, universityId, campusId, role } = req.body;
   let user;
   let query;
 
-  console.log(email, password, universityId, campusId, role);
+  console.log(universityEmail, personalEmail, password, universityId, campusId, role);
   try {
     if (!name) return res.status(302).json({ error: "name is required" });
+    if (!username) return res.status(302).json({ error: "username is required" });
+    if (!role) return res.status(302).json({ error: "role is required" });
+    if (role === 'alumni' && !personalEmail) return res.status(302).json({ error: "alumni requires personal email is required" });
+    if (!universityId && !campusId) { return res.status(302).json("Select a Univerisity"); }
 
-    if (isValidEduEmail(email)) {
-      //make it check that .edu comes after @ and no two @ exists
-      query = { universityEmail: email };
-    } else {
+
+    if (role === 'teacher' || role === 'student') {
+      query = { universityEmail };
+    } else if (role === 'alumni') {
       query = {
-        $or: [{ personalEmail: email }, { secondaryPersonalEmail: email }],
+        $or: [{ universityEmail }, { personalEmail }, { secondaryPersonalEmail: personalEmail }],
       };
     }
 
     console.log(query);
 
-    if (universityId && campusId) {
-      query.$and = [
-        // query, // Include to the existing $or condition
-        {
-          "university.universityId": universityId,
-          "university.campusId": campusId,
-        },
-      ];
-    }
-    if (
-      !universityId &&
-      !campusId &&
-      (user.role === "student" ||
-        user.role === "teacher" ||
-        user.role === "alumni")
-    ) {
-      return res.status(404).json("References not found");
-    }
+
+    query.$and = [
+      // query, // Include to the existing $or condition
+      {
+        "university.universityId": universityId,
+        "university.campusId": campusId,
+      },
+    ];
+
 
     console.log("later", query);
     user = await User.findOne(query);
 
-    if (user) return res.status(400).json("Registered?"); // already registered
+    if (user) {
+      if (user.universityEmailVerified === false) {
+        deliverOTP(user, resendEmailAccountConfirmation, req, res)
+
+        return res.status(200).json({
+          success: true,
+          redirectUrl: `${process.env.FRONTEND_URL}/otp/${user._id}`,
+        });
+
+
+        // res.set({
+        //   "Access-Control-Allow-Origin": process.env.FRONTEND_URL,
+        //   "Access-Control-Allow-Credentials": "true", // Required for cookies/auth
+        // });
+        // return res
+        //   .redirect(`${process.env.FRONTEND_URL}/otp/${user._id}`)
+
+      } else {
+        return res.status(302).json({ error: "Already Registered?" }); // already registered
+      }
+    }
     console.log("No", user);
-    if (
-      (role === "student" || role === "teacher") &&
-      (user?.personalEmail || user?.secondaryPersonalEmail)
-    )
-      return res.status(400).json("Registered?");
+
     console.log("here");
+
+    let newUser;
 
     if (!(role === "ext_org")) {
       const uniExists = await University.findOne({ _id: universityId });
 
       if (!uniExists)
-        return res.status(404).json("Hmm.. Seems Odd, this should not happen"); // not registered
+        return res.status(404).json({ error: "Hmm.. Seems Odd, this should not happen" }); // no uni
 
       const campus = await Campus.findOne({
         _id: campusId,
@@ -233,7 +324,7 @@ router.post("/register", async (req, res) => {
 
       console.log(campus);
       if (!campus)
-        return res.status(404).json("Hmm.. Seems Odd, this should not happen"); // not registered
+        return res.status(404).json({ error: "Hmm.. Seems Odd, this should not happen" }); // no campus
 
       const emailPatterns = campus.emailPatterns.studentPatterns.map(
         (pattern) => pattern.replace(/\d+/g, "\\d+")
@@ -241,7 +332,7 @@ router.post("/register", async (req, res) => {
 
       const combinedPattern = `^(${emailPatterns.join("|")})$`;
       const regex = new RegExp(combinedPattern);
-      const isEmailValid = regex.test(email);
+      const isEmailValid = regex.test(universityEmail);
       console.log(emailPatterns);
       // const isEmailValid = emailPatterns.some(pattern => new RegExp(pattern).test(universityEmail));
       console.log("Valid", isEmailValid);
@@ -250,25 +341,20 @@ router.post("/register", async (req, res) => {
         // TODO Send report to moderator and superadmin
         return res
           .status(400)
-          .json("University email does not match the required format!");
+          .json({ error: "University email does not match the required format!" });
       }
 
       const hashedPassword = await bcryptjs.hash(password, 10);
 
-      const newUser = new User({
-        name: name,
-        username: await createUniqueUsername(name),
-        password: hashedPassword,
-        university: {
-          universityId: universityId,
-          campusId: campusId,
-        },
-        role: role,
+      newUser = new User({
+        name, username, password: hashedPassword,
+        university: { universityId, campusId, },
+        universityEmail,
+        role,
         super_role: "none",
       });
       role === "alumni"
-        ? (newUser.personalEmail = email)
-        : (newUser.universityEmail = email);
+        && (newUser.personalEmail = personalEmail)
 
       await newUser.save();
 
@@ -277,28 +363,112 @@ router.post("/register", async (req, res) => {
 
       await campus.save();
       await uniExists.save();
-    } else {
+    } else if (role === 'ext_org') {
       const hashedPassword = await bcryptjs.hash(password, 10);
       console.log("here2");
-      const newUser = new User({
-        name: name,
-        username: createUniqueUsername(name),
+      // this is reachable to only
+      newUser = new User({
+        name,
+        username,
         password: hashedPassword,
-        personalEmail: email,
+        personalEmail: personalEmail,
         role: role,
         super_role: "none",
       });
       await newUser.save();
 
       console.log("here3");
-    }
+    } else return res.status(400).json({ error: "Role not found in dictionary" })
 
-    return res.status(201).json({ message: "Registration successful!" });
+    deliverOTP(newUser, resendEmailAccountConfirmation, req, res)
+
+    return res.status(200).json({
+      success: true,
+      redirectUrl: `${process.env.FRONTEND_URL}/otp/${newUser._id}`,
+    });
+    // return res.status(201).json({ message: "OTP has been delivered to your account" });
   } catch (error) {
     console.error("Error in ", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
+/**
+ * Verifies the OTP sent to the user.
+ * @route POST /verify-otp
+ * @param {string} email - The email address of the user (optional if phone is provided).
+ * @param {string} phone - The phone number of the user (optional if email is provided).
+ * @param {string} otp - The OTP to be verified.
+ * @returns {Object} - A success or failure message.
+ */
+router.post("/registration-verify-otp", async (req, res) => {
+  const { otp, userId } = req.body;
+  // // Validate inputs
+  // if ((!email && !phoneNumber) || !otp) {
+  //   return res
+  //     .status(400)
+  //     .json({ message: "Email or phoneNumber and OTP are required." });
+  // }
+
+  try {
+    const user = await User.findById({ _id: userId })
+    if (!user) return res.status(406).json('Session out or token expired')
+    const query = { ref: user._id }
+
+    console.log("OTP", otp)
+    // Find the OTP entry
+    const otpEntry = await OTP.findOne(query);
+    if (otpEntry?.used === true) {
+      await OTP.findByIdAndDelete(otpEntry._id)
+      return res.status(404)
+        .json({ message: "OTP used already." });
+    }
+
+    if (!otpEntry) {
+      return res
+        .status(404)
+        .json({ message: "No OTP found for the provided details." });
+    }
+
+    if (otpEntry.otp !== otp) {
+      return res.status(401).json({ message: "Invalid OTP." });
+    }
+
+    if (moment().isAfter(moment(otpEntry.otpExpiration))) {
+      return res.status(401).json({ message: "OTP has expired." });
+    }
+
+    // OTP is valid
+
+    otpEntry.used = true;
+    await otpEntry.save();
+
+    if (otpEntry.email === user.universityEmail) {
+      user.universityEmailVerified = true
+    }
+    if (otpEntry.email === user.personalEmail) {
+      user.personalEmailVerified = true
+    }
+    if (otpEntry.email === user.secondaryPersonalEmail) {
+      user.secondaryPersonalEmailVerified = true
+    }
+    // if (user.role === 'student' || user.role === 'teacher') 
+    // if (user.role === 'alumni') user.personalEmailVerified = true
+
+    await user.save()
+
+    // res.status(200).json({ message: "OTP verified successfully." })
+
+    await handlePlatformResponse(user, res, req);
+
+
+  } catch (error) {
+    console.error("Error in verify-otp:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
 
 router.put("/update/name", async (req, res) => {
   const { name, userId } = req.body;
@@ -641,7 +811,9 @@ router.post("/logout", async (req, res) => {
         }
         // Clear the cookie on the client side
         res.clearCookie("iidxi");
+        return res.status(200).json({ message: "Logged out successfully" });
       });
+      return;
     } else if (platform === "app") {
       let user = await User.findById({ _id: userId });
 
@@ -651,10 +823,10 @@ router.post("/logout", async (req, res) => {
         refresh_token: "",
       };
       await user.save();
+      return res.status(200).json({ message: "Logged out successfully" });
     } else {
       return res.status(500).json("Invalid Params");
     }
-    return res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     console.error(error);
     res.status(401).json({ error: "Invalid or expired refresh token" });
@@ -806,7 +978,7 @@ router.post("/resend-otp", async (req, res) => {
     }
 
     // Generate a new OTP
-    const newOtp = generateOtp6Digit(); // Replace with your OTP generation function
+    const newOtp = generateOtp6Digit();
 
     // Update the OTP entry
     otpEntry.otp = newOtp;
@@ -836,7 +1008,68 @@ router.post("/resend-otp", async (req, res) => {
   }
 });
 
+
+const deliverOTP = async (user, emailFunction, req, res) => {
+  const { otp, otpResponse } = await sendOtp(
+    null,
+    email = (user.role === 'alumni') ? user.personalEmail : user.universityEmail,
+    user._id,
+    user.name
+  );
+  if (!otpResponse) {
+    return res.status(500).json({ message: "Failed to generate OTP" });
+  }
+  console.log("otp", otp, otpResponse);
+  const datas = {
+    name: user.name,
+    email: user.role === 'alumni' ? user.personalEmail : user.universityEmail,
+    otp,
+  };
+  emailFunction(datas, req, res)
+}
+
 module.exports = router;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 async function newSession(req, res) {
   // console.log("Req user:", req.session.user)
@@ -856,5 +1089,134 @@ async function newSession(req, res) {
     res.status(401).json({ error: "Not authenticated" });
   }
 }
+// router.post("/register", async (req, res) => {
+//   const { name, email, password, universityId, campusId, role } = req.body;
+//   let user;
+//   let query;
 
-module.exports = router;
+//   console.log(email, password, universityId, campusId, role);
+//   try {
+//     if (!name) return res.status(302).json({ error: "name is required" });
+
+//     if (isValidEduEmail(email)) {
+//       //make it check that .edu comes after @ and no two @ exists
+//       query = { universityEmail: email };
+//     } else {
+//       query = {
+//         $or: [{ personalEmail: email }, { secondaryPersonalEmail: email }],
+//       };
+//     }
+
+//     console.log(query);
+
+//     if (universityId && campusId) {
+//       query.$and = [
+//         // query, // Include to the existing $or condition
+//         {
+//           "university.universityId": universityId,
+//           "university.campusId": campusId,
+//         },
+//       ];
+//     }
+//     if (
+//       !universityId &&
+//       !campusId &&
+//       (user.role === "student" ||
+//         user.role === "teacher" ||
+//         user.role === "alumni")
+//     ) {
+//       return res.status(404).json("References not found");
+//     }
+
+//     console.log("later", query);
+//     user = await User.findOne(query);
+
+//     if (user) return res.status(400).json("Registered?"); // already registered
+//     console.log("No", user);
+//     if (
+//       (role === "student" || role === "teacher") &&
+//       (user?.personalEmail || user?.secondaryPersonalEmail)
+//     )
+//       return res.status(400).json("Registered?");
+//     console.log("here");
+
+//     if (!(role === "ext_org")) {
+//       const uniExists = await University.findOne({ _id: universityId });
+
+//       if (!uniExists)
+//         return res.status(404).json("Hmm.. Seems Odd, this should not happen"); // not registered
+
+//       const campus = await Campus.findOne({
+//         _id: campusId,
+//         universityOrigin: universityId,
+//       });
+
+//       console.log(campus);
+//       if (!campus)
+//         return res.status(404).json("Hmm.. Seems Odd, this should not happen"); // not registered
+
+//       const emailPatterns = campus.emailPatterns.studentPatterns.map(
+//         (pattern) => pattern.replace(/\d+/g, "\\d+")
+//       );
+
+//       const combinedPattern = `^(${emailPatterns.join("|")})$`;
+//       const regex = new RegExp(combinedPattern);
+//       const isEmailValid = regex.test(email);
+//       console.log(emailPatterns);
+//       // const isEmailValid = emailPatterns.some(pattern => new RegExp(pattern).test(universityEmail));
+//       console.log("Valid", isEmailValid);
+
+//       if (!isEmailValid) {
+//         // TODO Send report to moderator and superadmin
+//         return res
+//           .status(400)
+//           .json("University email does not match the required format!");
+//       }
+
+//       const hashedPassword = await bcryptjs.hash(password, 10);
+
+//       const newUser = new User({
+//         name: name,
+//         username: await createUniqueUsername(name),
+//         password: hashedPassword,
+//         university: {
+//           universityId: universityId,
+//           campusId: campusId,
+//         },
+//         role: role,
+//         super_role: "none",
+//       });
+//       role === "alumni"
+//         ? (newUser.personalEmail = email)
+//         : (newUser.universityEmail = email);
+
+//       await newUser.save();
+
+//       campus.users.push(newUser._id);
+//       uniExists.users.push(newUser._id);
+
+//       await campus.save();
+//       await uniExists.save();
+//     } else {
+//       const hashedPassword = await bcryptjs.hash(password, 10);
+//       console.log("here2");
+//       const newUser = new User({
+//         name: name,
+//         username: createUniqueUsername(name),
+//         password: hashedPassword,
+//         personalEmail: email,
+//         role: role,
+//         super_role: "none",
+//       });
+//       await newUser.save();
+
+//       console.log("here3");
+//     }
+
+//     return res.status(201).json({ message: "Registration successful!" });
+//   } catch (error) {
+//     console.error("Error in ", error.message);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// });
+
