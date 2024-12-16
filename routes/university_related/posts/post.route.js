@@ -40,33 +40,26 @@ const getUserDetails = (req) => {
 
 
 
-
 /**
  * get latest posts in a university section
  */
-router.get("university/all", async (req, res) => {
+router.get("/universities/all", async (req, res) => {
     try {
         console.log("here")
-        const { role, universityOrigin } = getUserDetails(req)
-        const posts = await PostsCollection.find({
-            'references.role': role,
-            'references.role': universityOrigin
-        }).populate([  // 'postsCollectionRef',
-            {
-                path: 'postsCollectionRef',
-                populate: {
-                    path: 'posts.postId',
-                    model: 'Post',
-                    populate: {
-                        path: 'author',
-                        model: 'User',
-                    },
-                    populate: {
-                        path: 'voteId',
-                        model: 'SocietyPostAndCommentVote',
-                    },
-                },
-            },]);
+        const { role, universityOrigin, campusOrigin } = getUserDetails(req)
+
+        const posts = await Post.find({
+            'references.role': role
+        })
+            .populate([
+                "author",
+                "society",
+                "subSociety",
+                "voteId"
+            ]);
+
+
+        console.log("posts", posts)
 
         if (!posts) return res.status(304).json("Posts Collection null");
 
@@ -76,6 +69,92 @@ router.get("university/all", async (req, res) => {
         res.status(500).json("Internal Server Error");
     }
 });
+
+/**
+ * get latest posts in a university section
+ */
+router.get("/campuses/all", async (req, res) => {
+    try {
+        console.log("here")
+        const { role, universityOrigin, campusOrigin } = getUserDetails(req)
+
+        const posts = await Post.find({
+            'references.role': role,
+            'references.universityOrigin': universityOrigin,
+        })
+            .populate([
+                "author",
+                "society",
+                "subSociety",
+                "voteId"
+            ]);
+
+
+
+        console.log("posts", posts)
+
+        if (!posts) return res.status(304).json("Posts Collection null");
+
+        res.status(200).json(posts);
+    } catch (error) {
+        console.log("Error in posts.route.js /all", error);
+        res.status(500).json("Internal Server Error");
+    }
+});
+
+/**
+ * get latest posts in a university section
+ */
+router.get("/campus/all", async (req, res) => {
+    try {
+        console.log("here")
+        const { role, universityOrigin, campusOrigin } = getUserDetails(req)
+
+        const posts = await Post.find({
+            'references.role': role,
+            'references.universityOrigin': universityOrigin,
+            'references.campusOrigin': campusOrigin
+        })
+            .populate([
+                "author",
+                "society",
+                "subSociety",
+                "voteId"
+            ]);
+
+        // const posts = await PostsCollection.find({
+        //     'references.role': role,
+        //     'references.universityOrigin': universityOrigin,
+        //     'references.campusOrigin': campusOrigin
+        // })
+        //     .populate([  // 'postsCollectionRef',
+
+        //         {
+        //             path: 'posts.postId',
+        //             model: 'Post',
+        //             populate: [{
+        //                 path: 'author',
+        //                 model: 'User',
+        //             }, {
+        //                 path: 'voteId',
+        //                 model: 'SocietyPostAndCommentVote',
+        //             }],
+        //         },
+        //     ]);
+
+        console.log("posts", posts)
+
+        if (!posts) return res.status(304).json("Posts Collection null");
+
+        res.status(200).json(posts);
+    } catch (error) {
+        console.log("Error in posts.route.js /all", error);
+        res.status(500).json("Internal Server Error");
+    }
+});
+
+
+
 
 
 /**
@@ -88,7 +167,7 @@ router.get("university/all", async (req, res) => {
  */
 router.post("/create", async (req, res) => {
     try {
-        const { campusOrigin, universityOrigin } = getUserDetails(req);
+        const { campusOrigin, universityOrigin, role } = getUserDetails(req);
         const { title, body, societyId, author } = req.body;
 
         if (!title || !body || !societyId || !author) {
@@ -101,6 +180,7 @@ router.post("/create", async (req, res) => {
             body: body,
             author: author,
             society: societyId,
+            "references.role": role,
             "references.campusOrigin": campusOrigin,
             "references.universityOrigin": universityOrigin,
         });

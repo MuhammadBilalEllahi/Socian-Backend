@@ -36,6 +36,10 @@ const postsCollectionSchema = new Schema(
         ref: "Campus",
         required: true,
       },
+      role: {
+        type: String,
+        enum: ['alumni', 'student', 'teacher', 'ext_org']
+      }
     },
     companyReference: {
       isCompany: { type: Boolean, default: false },

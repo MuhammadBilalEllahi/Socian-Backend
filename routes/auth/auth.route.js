@@ -186,6 +186,7 @@ const handlePlatformResponse = async (user, res, req) => {
   const platform = req.headers["x-platform"];
   console.log("here2", platform)
   if (platform === "app") {
+
     // Generate JWT tokens
     const { accessToken, refreshToken } = generateToken(user);
 
@@ -458,6 +459,11 @@ router.post("/registration-verify-otp", async (req, res) => {
     await user.save()
 
     // res.status(200).json({ message: "OTP verified successfully." })
+
+    await user.populate([
+      { path: "university.universityId", select: "-users _id" },
+      { path: "university.campusId", select: "-users _id" },
+    ]);
 
     await handlePlatformResponse(user, res, req);
 

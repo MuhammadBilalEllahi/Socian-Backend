@@ -77,6 +77,10 @@ const postSchema = new Schema(
         ref: "Campus",
         required: true,
       },
+      role: {
+        type: String,
+        enum: ['alumni', 'student', 'teacher', 'ext_org']
+      }
     },
   },
   { timestamps: true },

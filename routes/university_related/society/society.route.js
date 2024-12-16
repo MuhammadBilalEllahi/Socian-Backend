@@ -159,6 +159,7 @@ router.post("/create", async (req, res) => {
                 }
                 : {
                     references: {
+                        role: role,
                         universityOrigin: universityId,
                         campusOrigin: campusId,
                     },
@@ -215,14 +216,14 @@ router.get("/:id", async (req, res) => {
                 populate: {
                     path: 'posts.postId',
                     model: 'Post',
-                    populate: {
+                    populate: [{
                         path: 'author',
                         model: 'User',
                     },
-                    populate: {
+                    {
                         path: 'voteId',
                         model: 'SocietyPostAndCommentVote',
-                    },
+                    }],
                 },
             },
             'references.universityOrigin',
