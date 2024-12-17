@@ -24,7 +24,8 @@ router.get("/universities-grouped-campus", async (req, res) => {
         const uniWithCampus = universities.flatMap(university =>
             university.campuses.map(campus => ({
                 name: `${university.name} - ${campus.name}`, // Combine university and campus names
-                _id: `${university._id}-${campus._id}`      // Format _id as "universityId-campusId"
+                _id: `${university._id}-${campus._id}`,    // Format _id as "universityId-campusId"
+                domain: `${campus.emailPatterns.domain}`
             }))
         );
         // Store the data in the cache

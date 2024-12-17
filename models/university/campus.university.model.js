@@ -23,6 +23,9 @@ const campusSchema = new Schema({
         convertedRegEx: {
             teacherPatterns: [String],
             studentPatterns: [String],
+        },
+        domain: {
+            type: String,
         }
         // RollNumberFormat: [String]
     },
