@@ -37,6 +37,11 @@ router.get("/session", async (req, res) => {
       university: req.session.user.university,
       super_role: req.session.user.super_role,
       role: req.session.user.role,
+
+      verified: req.session.user.universityEmailVerified,
+      joined: req.session.user.joined,
+      joinedSocieties: req.session.user.joinedSocieties,
+      joinedSubSocieties: req.session.user.joinedSubSocieties,
     });
   } else {
     res.status(401).json({ error: "Not authenticated" });
@@ -99,8 +104,12 @@ router.post("/login", async (req, res) => {
       await user.populate([
         { path: "university.universityId", select: "-users _id" },
         { path: "university.campusId", select: "-users _id" },
+        { path: "subscribedSocities", select: "name _id" },
+        { path: "subscribedSubSocities", select: "name _id" },
+
       ]);
     }
+
 
     console.log("user populated", user.university, "role", userRoleBool);
 
@@ -134,6 +143,10 @@ router.post("/login", async (req, res) => {
         university: userRoleBool ? user.university : undefined,
         super_role: user.super_role,
         role: user.role,
+        verified: user.universityEmailVerified,
+        joined: moment(user.createdAt).format('MMMM DD, YYYY'),
+        joinedSocieties: user.subscribedSocities,
+        joinedSubSocieties: user.subscribedSubSocities,
       };
 
       console.log("User in WEB", req.session.user);
@@ -218,6 +231,11 @@ const handlePlatformResponse = async (user, res, req) => {
       university: user.role !== 'ext_org' ? user.university : undefined,
       super_role: user.super_role,
       role: user.role,
+      verified: user.universityEmailVerified,
+      joined: user.joined,
+      joinedSocieties: user.joinedSocieties,
+      joinedSubSocieties: user.joinedSubSocieties,
+
     };
 
     // Set references for the session
@@ -463,6 +481,9 @@ router.post("/registration-verify-otp", async (req, res) => {
     await user.populate([
       { path: "university.universityId", select: "-users _id" },
       { path: "university.campusId", select: "-users _id" },
+      { path: "subscribedSocities", select: "name _id" },
+      { path: "subscribedSubSocities", select: "name _id" },
+
     ]);
 
     await handlePlatformResponse(user, res, req);

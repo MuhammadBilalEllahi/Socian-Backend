@@ -141,6 +141,9 @@ const accessibleRoutes = require('./routes/accessibles/accessible.route.js')
 app.use('/api/accessible/', accessibleRoutes)
 
 
+const userRouter = require('./routes/user/user.route.js')
+app.use("/api/user", protectRoute, userRouter);
+
 
 
 

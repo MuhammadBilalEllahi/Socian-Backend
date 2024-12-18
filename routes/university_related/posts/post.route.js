@@ -281,7 +281,7 @@ router.post("/vote-post", async (req, res) => {
                 }
 
                 // Perform the update with the changes
-                const voteDocUpdated = await SocietyPostAndCommentVote.findOneAndUpdate({ postId }, updateOps, { session });
+                const voteDocUpdated = await SocietyPostAndCommentVote.findOneAndUpdate({ postId }, updateOps, { session, new: true });
 
                 return res.status(200).json({
                     message: "Vote reprocessed successfully.",
@@ -303,12 +303,14 @@ router.post("/vote-post", async (req, res) => {
                     updateOps.$inc = { downVotesCount: -1 };
                 }
 
-                const voteDocUpdated = await SocietyPostAndCommentVote.findOneAndUpdate({ postId }, updateOps, { session });
+                const voteDocUpdated = await SocietyPostAndCommentVote.findOneAndUpdate({ postId }, updateOps, { session, new: true });
 
                 return res.status(200).json({
                     message: "Vote already registered.",
                     upVotesCount: voteDocUpdated.upVotesCount,
                     downVotesCount: voteDocUpdated.downVotesCount,
+                    noneSelected: true
+
                 });
             }
 
@@ -323,7 +325,7 @@ router.post("/vote-post", async (req, res) => {
                 updateOps.$inc = { downVotesCount: 1 };
             }
 
-            const voteDocUpdated = await SocietyPostAndCommentVote.findOneAndUpdate({ postId }, updateOps, { session });
+            const voteDocUpdated = await SocietyPostAndCommentVote.findOneAndUpdate({ postId }, updateOps, { session, new: true });
 
             return res.status(200).json({
                 message: "Vote processed successfully.",

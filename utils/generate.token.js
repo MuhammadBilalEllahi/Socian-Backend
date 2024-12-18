@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const moment = require('moment')
 
 // Helper function to generate tokens
 const generateToken = (user) => {
@@ -15,6 +16,10 @@ const generateToken = (user) => {
     university: (user.role !== 'ext_org') ? user.university : undefined,
     super_role: user.super_role,
     role: user.role,
+    joined: moment(user.createdAt).format('MMMM DD, YYYY'),
+    joinedSocieties: user.subscribedSocities,
+    joinedSubSocieties: user.subscribedSubSocities,
+    verified: user.universityEmailVerified,
     references: {
       university: {
         name: user.university.universityId.name,
