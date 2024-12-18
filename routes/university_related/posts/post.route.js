@@ -3,6 +3,7 @@ const PostsCollection = require("../../../models/society/post/collection/post.co
 const Post = require("../../../models/society/post/post.model");
 const SocietyPostAndCommentVote = require("../../../models/society/post/vote/vote.post.community.model");
 const mongoose = require("mongoose");
+const User = require("../../../models/user/user.model");
 const router = express.Router();
 
 /**
@@ -167,7 +168,7 @@ router.get("/campus/all", async (req, res) => {
  */
 router.post("/create", async (req, res) => {
     try {
-        const { campusOrigin, universityOrigin, role } = getUserDetails(req);
+        const { userId, campusOrigin, universityOrigin, role } = getUserDetails(req);
         const { title, body, societyId, author } = req.body;
 
         if (!title || !body || !societyId || !author) {
@@ -218,8 +219,14 @@ router.post("/create", async (req, res) => {
                     "references.campusOrigin": campusOrigin,
                 },
             },
-            { new: true, upsert: true } // `upsert` ensures a new document is created if it doesn't exist
+            { new: true, upsert: true } // ToRemember: `upsert` ensures a new document is created if it doesn't exist
         );
+
+        const user = await User.findByIdAndUpdate({ _id: userId },
+            { $addToSet: { "profile.posts": post._id } },
+            { new: true }
+        )
+        if (!user) return res.status(409).json({ error: "User not found" })
         console.log("here", societyPostCollection);
 
         res.status(200).json("Post Created");

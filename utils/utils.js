@@ -89,9 +89,48 @@ const sendOtp = async (phoneNumber, email, user, name) => {
   return { otp, otpResponse };
 };
 
+
+
+
+
+
+/**
+ * Extracts user details based on the platform and session or user data.
+ * @param {Object} req - The request object
+ * @returns {Object} - The user details, including userId, role, universityId, and campusId
+ * @returns {userId}
+ * @returns {role}
+ * @returns {universityOrigin}
+ * @returns {campusOrigin}
+ */
+const getUserDetails = (req) => {
+  let userId, role, universityOrigin, campusOrigin;
+
+  const platform = req.headers["x-platform"];
+
+  if (platform === "web") {
+    userId = req.session.user._id;
+    role = req.session.user.role;
+    if (role !== "ext_org") {
+      universityOrigin = req.session.user.university.universityId._id;
+      campusOrigin = req.session.user.university.campusId._id;
+    }
+  } else if (platform === "app") {
+    userId = req.user._id;
+    role = req.user.role;
+    if (role !== "ext_org") {
+      universityOrigin = req.user.university.universityId._id;
+      campusOrigin = req.user.university.campusId._id;
+    }
+  }
+
+  return { userId, role, universityOrigin, campusOrigin };
+};
+
 module.exports = {
   generateOtp6Digit,
   createDateTime,
   createUniqueUsername,
   sendOtp,
+  getUserDetails
 };

@@ -6,6 +6,7 @@ const VerificationRequest = require("../../../models/verification/society.verify
 const SubSociety = require("../../../models/society/sub.society.model");
 const PostsCollection = require("../../../models/society/post/collection/post.collection.model");
 const User = require("../../../models/user/user.model");
+const { getUserDetails } = require("../../../utils/utils");
 const router = express.Router();
 
 router.post("/create-SocietyTypes", async (req, res) => {
@@ -782,5 +783,39 @@ router.get("/user-subscribed", async (req, res) => {
         res.status(500).json("Internal Server Error");
     }
 });
+
+
+
+/**
+ * finds public societies basis on your role
+ */
+router.get('/public/societies', async (req, res) => {
+    let { role, universityOrigin, campusOrigin } = getUserDetails(req);
+    try {
+
+        const societies = await Society.find({
+            "references.role": role,
+            "references.universityOrigin": universityOrigin,
+            "references.campusOrigin": campusOrigin
+        })
+            .select('name _id societyType')
+            .populate('societyType')
+        // console.log("Hi-soc", societies)
+
+        const filteredSocieties = societies.filter(
+            society => society.societyType.societyType === 'public'
+        );
+        // console.log("Hi-soc2", filteredSocieties)
+
+        // setTimeout(() => {
+        //     res.status(200).json(filteredSocieties);
+        // }, 10000);
+        res.status(200).json(filteredSocieties);
+    } catch (error) {
+        console.error("Error in society.route.js ", error);
+        res.status(500).json("Internal Server Error");
+    }
+});
+
 
 module.exports = router;
