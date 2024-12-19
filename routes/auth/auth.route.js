@@ -106,7 +106,24 @@ router.post("/login", async (req, res) => {
         { path: "university.campusId", select: "-users _id" },
         { path: "subscribedSocities", select: "name _id" },
         { path: "subscribedSubSocities", select: "name _id" },
+        // { path: "profile.posts" },
+        {
+          path: "profile.posts",
+          populate: [
+            { path: "author", select: "name _id" },
+            { path: "society", select: "name _id" },
+            { path: "voteId", select: "upvotes downvotes userVotes", },
 
+            {
+              path: "references",
+              select: "role campusOrigin universityOrigin",
+              populate: [
+                { path: "campusOrigin", select: "name _id" },
+                { path: "universityOrigin", select: "name _id" },
+              ],
+            },
+          ],
+        },
       ]);
     }
 
