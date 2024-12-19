@@ -99,7 +99,7 @@ router.post("/login", async (req, res) => {
       }
     }
 
-    if (user.role === "student" || user.role === "alumni") {
+    if (user.role === "student" || user.role === "teacher" || user.role === "alumni") {
       userRoleBool = true;
       await user.populate([
         { path: "university.universityId", select: "-users _id" },
@@ -345,23 +345,46 @@ router.post("/register", async (req, res) => {
       if (!campus)
         return res.status(404).json({ error: "Hmm.. Seems Odd, this should not happen" }); // no campus
 
-      const emailPatterns = campus.emailPatterns.studentPatterns.map(
-        (pattern) => pattern.replace(/\d+/g, "\\d+")
-      );
+      if (role !== 'teacher') {
 
-      const combinedPattern = `^(${emailPatterns.join("|")})$`;
-      const regex = new RegExp(combinedPattern);
-      const isEmailValid = regex.test(universityEmail);
-      console.log(emailPatterns);
-      // const isEmailValid = emailPatterns.some(pattern => new RegExp(pattern).test(universityEmail));
-      console.log("Valid", isEmailValid);
+        const emailPatterns = campus.emailPatterns.studentPatterns.map(
+          (pattern) => pattern.replace(/\d+/g, "\\d+")
+        );
 
-      if (!isEmailValid) {
-        // TODO Send report to moderator and superadmin
-        return res
-          .status(400)
-          .json({ error: "University email does not match the required format!" });
+        const combinedPattern = `^(${emailPatterns.join("|")})$`;
+        const regex = new RegExp(combinedPattern);
+        const isEmailValid = regex.test(universityEmail);
+        console.log(emailPatterns);
+        // const isEmailValid = emailPatterns.some(pattern => new RegExp(pattern).test(universityEmail));
+        console.log("Valid", isEmailValid);
+
+        if (!isEmailValid) {
+          // TODO Send report to moderator and superadmin
+          return res
+            .status(400)
+            .json({ error: "University email does not match the required format!" });
+        }
+
+      } else {
+        const studentPatterns = campus.emailPatterns.studentPatterns.map(
+          (pattern) => pattern.replace(/\d+/g, "\\d+")
+        );
+        const combinedPattern = `^(${studentPatterns.join("|")})$`;
+        const studentRegex = new RegExp(combinedPattern);
+
+        if (studentRegex.test(universityEmail)) {
+          return res.status(400).json({
+            error: "Student email detected. You cannot register as a teacher with a student email!",
+          });
+        }
+
+        // Validate domain for teachers
+        const domainRegex = new RegExp(campus.emailPatterns.domain.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$");
+        if (!domainRegex.test(universityEmail)) {
+          return res.status(400).json({ error: "Invalid email domain for teacher registration" });
+        }
       }
+
 
       const hashedPassword = await bcryptjs.hash(password, 10);
 
@@ -437,11 +460,7 @@ router.post("/registration-verify-otp", async (req, res) => {
     console.log("OTP", otp)
     // Find the OTP entry
     const otpEntry = await OTP.findOne(query);
-    if (otpEntry?.used === true) {
-      await OTP.findByIdAndDelete(otpEntry._id)
-      return res.status(404)
-        .json({ message: "OTP used already." });
-    }
+
 
     if (!otpEntry) {
       return res
@@ -449,9 +468,24 @@ router.post("/registration-verify-otp", async (req, res) => {
         .json({ message: "No OTP found for the provided details." });
     }
 
-    if (otpEntry.otp !== otp) {
+    if (otpEntry.used === true) {
+      await OTP.findByIdAndDelete(otpEntry._id)
+      return res.status(404)
+        .json({ message: "OTP used already." });
+    }
+
+
+
+    const isOTPMatched = await bcryptjs.compare(
+      otp,
+      otpEntry.otp || ""
+    );
+
+
+    if (!isOTPMatched) {
       return res.status(401).json({ message: "Invalid OTP." });
     }
+
 
     if (moment().isAfter(moment(otpEntry.otpExpiration))) {
       return res.status(401).json({ message: "OTP has expired." });
@@ -464,6 +498,7 @@ router.post("/registration-verify-otp", async (req, res) => {
 
     if (otpEntry.email === user.universityEmail) {
       user.universityEmailVerified = true
+      user.restrictions.blocking.isBlocked = false
     }
     if (otpEntry.email === user.personalEmail) {
       user.personalEmailVerified = true
@@ -934,13 +969,28 @@ router.post("/verify-otp", async (req, res) => {
     // Find the OTP entry
     const otpEntry = await OTP.findOne(query, { used: false });
 
+
     if (!otpEntry) {
       return res
         .status(404)
         .json({ message: "No OTP found for the provided details." });
     }
 
-    if (otpEntry.otp !== otp) {
+    if (otpEntry.used === true) {
+      await OTP.findByIdAndDelete({ _id: otpEntry._id })
+      return res.status(404)
+        .json({ message: "OTP used already." });
+    }
+
+
+
+    const isOTPMatched = await bcryptjs.compare(
+      otp,
+      otpEntry.otp || ""
+    );
+
+
+    if (!isOTPMatched) {
       return res.status(401).json({ message: "Invalid OTP." });
     }
 
@@ -951,6 +1001,7 @@ router.post("/verify-otp", async (req, res) => {
     // OTP is valid
 
     otpEntry.used = true;
+    // delete after this: abhi ni. abhi tou hash k andr expiry time bhi dalna h
     await otpEntry.save();
     res.status(200).json({ message: "OTP verified successfully." });
   } catch (error) {

@@ -2,6 +2,7 @@ const { OTP } = require("../models/otp/otp");
 const User = require("../models/user/user.model");
 const moment = require("moment");
 const otpGenerator = require("otp-generator");
+const bcryptjs = require('bcryptjs')
 /**
  * Generates a 6-digit OTP.
  * @returns {string} - A 6-digit OTP as a string.
@@ -72,11 +73,13 @@ const sendOtp = async (phoneNumber, email, user, name) => {
   const query = phoneNumber ? { phone: phoneNumber } : { email: email };
   const otpExpiration = moment().add(20, "minutes"); // 20 minutes expiry
 
+  const hashedOTP = await bcryptjs.hash(otp, 10);
+
   console.log("this query", query);
   const otpResponse = await OTP.findOneAndUpdate(
     query,
     {
-      otp,
+      otp: hashedOTP,
       otpExpiration,
       used: false,
       ref: user,
