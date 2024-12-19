@@ -112,7 +112,7 @@ router.post("/login", async (req, res) => {
           populate: [
             { path: "author", select: "name _id" },
             { path: "society", select: "name _id" },
-            { path: "voteId", select: "upvotes downvotes userVotes", },
+            { path: "voteId", select: "downVotesCount upVotesCount userVotes", },
 
             {
               path: "references",
