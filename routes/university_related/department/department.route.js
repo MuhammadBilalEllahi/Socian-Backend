@@ -2,7 +2,11 @@ const express = require("express");
 const Department = require("../../../models/university/department/department.university.model");
 const University = require("../../../models/university/university.register.model");
 const Campus = require("../../../models/university/campus.university.model");
+const { getUserDetails } = require("../../../utils/utils");
 const router = express.Router();
+const NodeCache = require("node-cache");
+const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
+
 
 router.get("/by-university", async (req, res) => {
   const { universityId } = req.body;
@@ -41,14 +45,56 @@ router.get("/by-campus", async (req, res) => {
 });
 
 // TO FIX : req.session will always have campusId, if it doesnot then such user doesnot need it
+// router.get("/with-subjects-by-campus", async (req, res) => {
+//   // const { campusId } = req.body;
+//   // const ifAvailableCampusIdFromUser = req.session.user.university.campusId._id;
+//   const { campusOrigin } = getUserDetails(req)
+
+
+//   try {
+//     const campus = await Campus.find({
+//       _id: campusOrigin,
+//     })
+//       .select("departments")
+//       .populate({
+//         path: "departments",
+//         select: "name _id",
+//         populate: {
+//           path: "subjects",
+//           select: "name _id",
+//           options: { lean: true },
+//         },
+//       })
+//       .lean();
+
+//     if (!campus)
+//       return res.status(300).json({ message: "Dang! No subjects yet" });
+//     // return res.status(300).json({ message: "Error fetching campus" });
+//     // console.log("Departments: ", JSON.stringify(campus))
+//     res.status(200).json(campus);
+//   } catch (error) {
+
+//     console.error("Error in department:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// });
+
+
 router.get("/with-subjects-by-campus", async (req, res) => {
-  const { campusId } = req.body;
-  const ifAvailableCampusIdFromUser = req.session.user.university.campusId._id;
+  const { campusOrigin } = getUserDetails(req);
+
+  // Cache key (specific to the campus)
+  const cacheKey = `campus-with-subjects-${campusOrigin}`;
 
   try {
-    const campus = await Campus.find({
-      _id: ifAvailableCampusIdFromUser ? ifAvailableCampusIdFromUser : campusId,
-    })
+    // Check if data is in cache
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      return res.status(200).json(cachedData);
+    }
+
+    // Fetch data from the database if not in cache
+    const campus = await Campus.find({ _id: campusOrigin })
       .select("departments")
       .populate({
         path: "departments",
@@ -61,10 +107,13 @@ router.get("/with-subjects-by-campus", async (req, res) => {
       })
       .lean();
 
-    if (!campus)
+    if (!campus || campus.length === 0) {
       return res.status(300).json({ message: "Dang! No subjects yet" });
-    // return res.status(300).json({ message: "Error fetching campus" });
-    // console.log("Departments: ", JSON.stringify(campus))
+    }
+
+    // Store the fetched data in cache
+    cache.set(cacheKey, campus);
+
     res.status(200).json(campus);
   } catch (error) {
     console.error("Error in department:", error);

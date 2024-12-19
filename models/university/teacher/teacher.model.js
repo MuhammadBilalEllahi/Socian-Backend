@@ -4,6 +4,20 @@ const Schema = mongoose.Schema;
 
 
 const teacherSchema = new Schema({
+    teacher: {
+        id: {
+            type: Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        verified: {
+            type: Boolean,
+            default: false
+        },
+        matchDomain: {
+            type: String,
+            default: '' //e.g drhabib@cuilahore.edu.pk
+        }
+    },
     name: {
         type: String,
         required: true
