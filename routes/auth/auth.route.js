@@ -326,7 +326,7 @@ router.post("/register", async (req, res) => {
 
         return res.status(200).json({
           success: true,
-          redirectUrl: `${process.env.FRONTEND_URL}/otp/${user._id}`,
+          redirectUrl: `${process.env.FRONTEND_URL}/otp/${user._id}?email=${role === 'alumni' ? user.personalEmail : user.universityEmail}`,
         });
 
 
@@ -443,7 +443,7 @@ router.post("/register", async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      redirectUrl: `${process.env.FRONTEND_URL}/otp/${newUser._id}`,
+      redirectUrl: `${process.env.FRONTEND_URL}/otp/${newUser._id}?email=${role === 'alumni' ? user.personalEmail : user.universityEmail}`,
     });
     // return res.status(201).json({ message: "OTP has been delivered to your account" });
   } catch (error) {
@@ -627,164 +627,164 @@ router.put("/update/email", async (req, res) => {
   }
 });
 
-router.post("/register-bulk", async (req, res) => {
-  const users = req.body.users; // Expecting an array of user data
+// router.post("/register-bulk", async (req, res) => {
+//   const users = req.body.users; // Expecting an array of user data
 
-  const now = moment();
-  const formattedTime = now.format("HH:mm:ss:SSS");
-  // console.log("START ", formattedTime);
+//   const now = moment();
+//   const formattedTime = now.format("HH:mm:ss:SSS");
+//   // console.log("START ", formattedTime);
 
-  if (!Array.isArray(users)) {
-    return res.status(400).json({ message: "Invalid data format" });
-  }
+//   if (!Array.isArray(users)) {
+//     return res.status(400).json({ message: "Invalid data format" });
+//   }
 
-  const createdUsers = [];
-  const errors = [];
+//   const createdUsers = [];
+//   const errors = [];
 
-  for (let i = 0; i < users.length; i++) {
-    const { email, password, universityId, campusId, role } = users[i];
-    let user;
-    let query;
+//   for (let i = 0; i < users.length; i++) {
+//     const { email, password, universityId, campusId, role } = users[i];
+//     let user;
+//     let query;
 
-    try {
-      const platform = req.headers["x-platform"];
+//     try {
+//       const platform = req.headers["x-platform"];
 
-      if (email.includes(".edu")) {
-        query = { universityEmail: email };
-      } else {
-        query = {
-          $or: [{ personalEmail: email }, { secondaryPersonalEmail: email }],
-        };
-      }
+//       if (email.includes(".edu")) {
+//         query = { universityEmail: email };
+//       } else {
+//         query = {
+//           $or: [{ personalEmail: email }, { secondaryPersonalEmail: email }],
+//         };
+//       }
 
-      if (universityId && campusId) {
-        query.$and = [
-          {
-            "university.universityId": universityId,
-            "university.campusId": campusId,
-          },
-        ];
-      }
+//       if (universityId && campusId) {
+//         query.$and = [
+//           {
+//             "university.universityId": universityId,
+//             "university.campusId": campusId,
+//           },
+//         ];
+//       }
 
-      user = await User.findOne(query);
+//       user = await User.findOne(query);
 
-      if (user) {
-        // console.log("error " + i);
-        errors.push({ email, message: "User already registered" });
-        continue; // Skip this user if already registered
-      }
+//       if (user) {
+//         // console.log("error " + i);
+//         errors.push({ email, message: "User already registered" });
+//         continue; // Skip this user if already registered
+//       }
 
-      if (
-        (role === "student" || role === "teacher") &&
-        (user?.personalEmail || user?.secondaryPersonalEmail)
-      ) {
-        // console.log("error " + i);
-        errors.push({
-          email,
-          message: "User already registered with a personal email",
-        });
-        continue; // Skip this user if already registered
-      }
+//       if (
+//         (role === "student" || role === "teacher") &&
+//         (user?.personalEmail || user?.secondaryPersonalEmail)
+//       ) {
+//         // console.log("error " + i);
+//         errors.push({
+//           email,
+//           message: "User already registered with a personal email",
+//         });
+//         continue; // Skip this user if already registered
+//       }
 
-      if (!(role === "ext_org")) {
-        const uniExists = await University.findOne({ _id: universityId });
+//       if (!(role === "ext_org")) {
+//         const uniExists = await University.findOne({ _id: universityId });
 
-        if (!uniExists) {
-          // console.log("error " + i);
-          errors.push({ email, message: "University does not exist" });
-          continue; // Skip if university doesn't exist
-        }
+//         if (!uniExists) {
+//           // console.log("error " + i);
+//           errors.push({ email, message: "University does not exist" });
+//           continue; // Skip if university doesn't exist
+//         }
 
-        const campus = await Campus.findOne({
-          _id: campusId,
-          universityOrigin: universityId,
-        });
+//         const campus = await Campus.findOne({
+//           _id: campusId,
+//           universityOrigin: universityId,
+//         });
 
-        if (!campus) {
-          // console.log("error " + i);
-          errors.push({ email, message: "Campus does not exist" });
-          continue; // Skip if campus doesn't exist
-        }
+//         if (!campus) {
+//           // console.log("error " + i);
+//           errors.push({ email, message: "Campus does not exist" });
+//           continue; // Skip if campus doesn't exist
+//         }
 
-        const emailPatterns = campus.emailPatterns.studentPatterns.map(
-          (pattern) => pattern.replace(/\d+/g, "\\d+")
-        );
+//         const emailPatterns = campus.emailPatterns.studentPatterns.map(
+//           (pattern) => pattern.replace(/\d+/g, "\\d+")
+//         );
 
-        const combinedPattern = `^(${emailPatterns.join("|")})$`;
-        const regex = new RegExp(combinedPattern);
-        const isEmailValid = regex.test(email);
+//         const combinedPattern = `^(${emailPatterns.join("|")})$`;
+//         const regex = new RegExp(combinedPattern);
+//         const isEmailValid = regex.test(email);
 
-        if (!isEmailValid) {
-          // console.log("error " + i);
-          errors.push({
-            email,
-            message: "University email does not match the required format",
-          });
-          continue; // Skip if email format is invalid
-        }
+//         if (!isEmailValid) {
+//           // console.log("error " + i);
+//           errors.push({
+//             email,
+//             message: "University email does not match the required format",
+//           });
+//           continue; // Skip if email format is invalid
+//         }
 
-        const hashedPassword = await bcryptjs.hash(password, 10);
+//         const hashedPassword = await bcryptjs.hash(password, 10);
 
-        const newUser = new User({
-          username: email.split("@")[0] + email.split(".")[0],
-          password: hashedPassword,
-          university: {
-            universityId: universityId,
-            campusId: campusId,
-          },
-          role: role,
-          super_role: "none",
-        });
+//         const newUser = new User({
+//           username: email.split("@")[0] + email.split(".")[0],
+//           password: hashedPassword,
+//           university: {
+//             universityId: universityId,
+//             campusId: campusId,
+//           },
+//           role: role,
+//           super_role: "none",
+//         });
 
-        role === "alumni"
-          ? (newUser.personalEmail = email)
-          : (newUser.universityEmail = email);
+//         role === "alumni"
+//           ? (newUser.personalEmail = email)
+//           : (newUser.universityEmail = email);
 
-        await newUser.save();
+//         await newUser.save();
 
-        campus.users.push(newUser._id);
-        uniExists.users.push(newUser._id);
+//         campus.users.push(newUser._id);
+//         uniExists.users.push(newUser._id);
 
-        await campus.save();
-        await uniExists.save();
+//         await campus.save();
+//         await uniExists.save();
 
-        createdUsers.push(newUser);
-      } else {
-        const hashedPassword = await bcryptjs.hash(password, 10);
+//         createdUsers.push(newUser);
+//       } else {
+//         const hashedPassword = await bcryptjs.hash(password, 10);
 
-        const newUser = new User({
-          username: email.split("@")[0],
-          password: hashedPassword,
-          personalEmail: email,
-          role: role,
-          super_role: "none",
-        });
+//         const newUser = new User({
+//           username: email.split("@")[0],
+//           password: hashedPassword,
+//           personalEmail: email,
+//           role: role,
+//           super_role: "none",
+//         });
 
-        await newUser.save();
+//         await newUser.save();
 
-        createdUsers.push(newUser);
-      }
-    } catch (error) {
-      // console.log("error " + i);
-      errors.push({ email, message: "Error processing user" });
-      console.error("Error in processing user", email, error.message);
-    }
-  }
+//         createdUsers.push(newUser);
+//       }
+//     } catch (error) {
+//       // console.log("error " + i);
+//       errors.push({ email, message: "Error processing user" });
+//       console.error("Error in processing user", email, error.message);
+//     }
+//   }
 
-  if (errors.length > 0) {
-    return res.status(400).json({ errors, createdUsers });
-  }
+//   if (errors.length > 0) {
+//     return res.status(400).json({ errors, createdUsers });
+//   }
 
-  const now2 = moment();
-  const formattedTime2 = now2.format("HH:mm:ss:SSS");
-  // console.log("END ", formattedTime2);
+//   const now2 = moment();
+//   const formattedTime2 = now2.format("HH:mm:ss:SSS");
+//   // console.log("END ", formattedTime2);
 
-  return res.status(201).json({
-    message: "Bulk registration successful!",
-    createdUsers,
-    errors,
-  });
-});
+//   return res.status(201).json({
+//     message: "Bulk registration successful!",
+//     createdUsers,
+//     errors,
+//   });
+// });
 
 router.put("/reset-password", async (req, res) => {
   const { oldPassword, newPassword, userId } = req.body;
@@ -1027,8 +1027,8 @@ router.post("/verify-otp", async (req, res) => {
   }
 });
 
-const OTP_RESEND_LIMIT = process.env.OTP_RESEND_LIMIT; // Max number of resends allowed
-const OTP_COOLDOWN_PERIOD = process.env.OTP_COOLDOWN_PERIOD; // 1 minutes in milliseconds
+const OTP_RESEND_LIMIT = Number(process.env.OTP_RESEND_LIMIT); // Max number of resends allowed
+const OTP_COOLDOWN_PERIOD = Number(process.env.OTP_COOLDOWN_PERIOD); // 1 minutes in milliseconds
 router.post("/resend-otp", async (req, res) => {
   const { email, phoneNumber } = req.body;
 
@@ -1122,6 +1122,85 @@ const deliverOTP = async (user, emailFunction, req, res) => {
   };
   emailFunction(datas, req, res)
 }
+
+
+
+router.post("/register-resend-otp", async (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res
+      .status(400)
+      .json({ message: "Id is required." });
+  }
+
+  try {
+    const query = userId;
+
+
+    console.log("HERE", query)
+    // Find the existing OTP entry
+    const otpEntry = await OTP.findOne({ ref: query }, { used: false });
+
+    if (!otpEntry) {
+      return res
+        .status(404)
+        .json({ message: "No OTP found for the provided details." });
+    }
+
+    console.log(`Cooldown period in seconds: ${OTP_COOLDOWN_PERIOD}`, moment.duration(OTP_COOLDOWN_PERIOD).asSeconds());
+    console.log(`Cooldown period in minutes:`, moment.duration(OTP_COOLDOWN_PERIOD).asMinutes());
+
+    // Check if the resend limit has been exceeded
+    if (otpEntry.resendCount >= OTP_RESEND_LIMIT) {
+      return res.status(203).json({
+        error:
+          `You have reached the maximum resend limit. Please Re-signup`,
+      });
+    }
+
+    // Check if cooldown period has passed
+    const timeSinceLastResent = moment().diff(
+      moment(otpEntry.lastResentAt),
+      "seconds"
+    );
+    if (timeSinceLastResent < OTP_COOLDOWN_PERIOD / 1000) {
+      const secondsLeft = Math.ceil(
+        OTP_COOLDOWN_PERIOD / 1000 - timeSinceLastResent
+      );
+      return res.status(429).json({
+        message: `Please wait ${secondsLeft} seconds before resending OTP.`,
+      });
+    }
+
+    // Generate a new OTP
+    const newOtp = generateOtp6Digit();
+
+    // Update the OTP entry
+    otpEntry.otp = newOtp;
+    otpEntry.otpExpiration = moment().add(2, "minutes"); // 2 minutes validity
+    otpEntry.resendCount += 1;
+    otpEntry.lastResentAt = moment();
+    await otpEntry.save();
+
+    const datas = {
+      name: otpEntry.refName,
+      email: otpEntry.email,
+      otp: otpEntry.otp,
+      subject: "Retry OTP"
+    };
+
+    // Send the OTP to the user
+    resendEmailAccountConfirmation(datas, req, res);
+
+
+    res.status(200).json({ message: "OTP resent successfully." });
+  } catch (error) {
+    console.error("Error in resend-otp:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 
 module.exports = router;
 
