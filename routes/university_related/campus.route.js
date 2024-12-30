@@ -8,7 +8,7 @@ const Campus = require("../../models/university/campus.university.model");
 router.post("/register", async (req, res) => {
   const { universityOrigin, ...campusData } = req.body;
 
-  const { location, name, regex } = campusData;
+  const { location, name, regex, domain } = campusData;
 
   try {
     if (!universityOrigin) {
@@ -26,6 +26,8 @@ router.post("/register", async (req, res) => {
       location,
       name,
       "emailPatterns.regex": regex,
+      "emailPatterns.domain": domain,
+
       universityOrigin,
     });
     // console.log("CAMPUS onbj", newCampus)
