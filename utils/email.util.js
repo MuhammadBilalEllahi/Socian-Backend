@@ -40,7 +40,7 @@ const resendEmailForgotPassword = async (datas, req, res) => {
     const { name, email, otp, subject = "Request for Password Reset" } = datas;
 
     const forgotPasswordHTML = otpTemplate(name, otp);
-    console.log("this ", datas);
+    // console.log("this ", datas);
     const { data, error } = await resend.emails.send({
       from: "no-reply@bilalellahi.com",
       to: ["bilalillahi25@gmail.com", email],
@@ -50,10 +50,10 @@ const resendEmailForgotPassword = async (datas, req, res) => {
     });
 
     if (error) {
-      console.log("Errorin mail", error);
+      console.error("Error in mail", error);
       //   return res.status(400).json({ message: error });
     }
-    console.log("DATA", data);
+    // console.log("DATA", data);
 
     // res.status(200).json({ message: "Success", data });
   } catch (error) {
@@ -311,7 +311,7 @@ const resendEmailAccountConfirmation = async (datas, req, res) => {
     const { name, email, otp, subject = "Confirm Account" } = datas;
 
     const forgotPasswordHTML = confirmAccountTemplate(name, otp);
-    console.log("this ", datas);
+    // console.log("this ", datas);
     const { data, error } = await resend.emails.send({
       from: "BeyondTheClass@bilalellahi.com",
       to: [email],
@@ -321,10 +321,10 @@ const resendEmailAccountConfirmation = async (datas, req, res) => {
     });
 
     if (error) {
-      console.log("Error in mail", error);
+      console.error("Error in mail", error);
       //   return res.status(400).json({ message: error });
     }
-    console.log("DATA", data);
+    // console.log("DATA", data);
 
     // res.status(200).json({ message: "OTP delievered", data });
   } catch (error) {

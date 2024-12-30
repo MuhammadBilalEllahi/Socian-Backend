@@ -40,8 +40,8 @@ router.get("/session", async (req, res) => {
 
       verified: req.session.user.universityEmailVerified,
       joined: req.session.user.joined,
-      joinedSocieties: req.session.user.joinedSocieties,
-      joinedSubSocieties: req.session.user.joinedSubSocieties,
+      // joinedSocieties: req.session.user.joinedSocieties,
+      // joinedSubSocieties: req.session.user.joinedSubSocieties,
     });
   } else {
     res.status(401).json({ error: "Not authenticated" });
@@ -63,7 +63,7 @@ router.post("/login", async (req, res) => {
         { secondaryPersonalEmail: email },
       ],
     };
-    console.log(query);
+    // console.log(query);
 
     if (universityId && campusId) {
       query.$and = [
@@ -75,7 +75,7 @@ router.post("/login", async (req, res) => {
       ];
     }
 
-    console.log("later", query);
+    // console.log("later", query);
     user = await User.findOne(query);
 
     const isPassMatched = await bcryptjs.compare(
@@ -86,10 +86,10 @@ router.post("/login", async (req, res) => {
     if (!user || !isPassMatched)
       return res.status(400).json({ error: "Invalid email or password" });
 
-    console.log(
-      user.restrictions.blocking.isBlocked,
-      user.restrictions.approval.isApproved
-    );
+    // console.log(
+    //   user.restrictions.blocking.isBlocked,
+    //   user.restrictions.approval.isApproved
+    // );
     if (user.restrictions.blocking.isBlocked) {
       return res.status(400).json({ error: "User blocked or Up for Review" });
     }
@@ -104,31 +104,31 @@ router.post("/login", async (req, res) => {
       await user.populate([
         { path: "university.universityId", select: "-users _id" },
         { path: "university.campusId", select: "-users _id" },
-        { path: "subscribedSocities", select: "name _id" },
-        { path: "subscribedSubSocities", select: "name _id" },
+        // { path: "subscribedSocities", select: "name _id" },
+        // { path: "subscribedSubSocities", select: "name _id" },
         // { path: "profile.posts" },
-        {
-          path: "profile.posts",
-          populate: [
-            { path: "author", select: "name _id" },
-            { path: "society", select: "name _id" },
-            { path: "voteId", select: "downVotesCount upVotesCount userVotes", },
+        // {
+        //   path: "profile.posts",
+        //   populate: [
+        //     { path: "author", select: "name _id" },
+        //     { path: "society", select: "name _id" },
+        //     { path: "voteId", select: "downVotesCount upVotesCount userVotes", },
 
-            {
-              path: "references",
-              select: "role campusOrigin universityOrigin",
-              populate: [
-                { path: "campusOrigin", select: "name _id" },
-                { path: "universityOrigin", select: "name _id" },
-              ],
-            },
-          ],
-        },
+        //     {
+        //       path: "references",
+        //       select: "role campusOrigin universityOrigin",
+        //       populate: [
+        //         { path: "campusOrigin", select: "name _id" },
+        //         { path: "universityOrigin", select: "name _id" },
+        //       ],
+        //     },
+        //   ],
+        // },
       ]);
     }
 
 
-    console.log("user populated", user.university, "role", userRoleBool);
+    // console.log("user populated", user.university, "role", userRoleBool);
 
     if (platform === "app") {
       // console.log("in app type", typeof process.env.JWT_EXPIRY_TIME);
@@ -162,11 +162,11 @@ router.post("/login", async (req, res) => {
         role: user.role,
         verified: user.universityEmailVerified,
         joined: moment(user.createdAt).format('MMMM DD, YYYY'),
-        joinedSocieties: user.subscribedSocities,
-        joinedSubSocieties: user.subscribedSubSocities,
+        // joinedSocieties: user.subscribedSocities,
+        // joinedSubSocieties: user.subscribedSubSocities,
       };
 
-      console.log("User in WEB", req.session.user);
+      // console.log("User in WEB", req.session.user);
 
       req.session.references = {
         university: {
@@ -187,7 +187,7 @@ router.post("/login", async (req, res) => {
         // console.log("Session user in Longin Controller : ", req.session.user)
       });
 
-      console.log(req.session.references);
+      // console.log(req.session.references);
       // res.setHeader("Authorization", `Bearer ${token}`);
 
       return res.status(200).json(req.session.user);
@@ -212,9 +212,9 @@ router.post("/login", async (req, res) => {
  * @returns {Promise} - Resolves with the response sent to the client.
  */
 const handlePlatformResponse = async (user, res, req) => {
-  console.log("here")
+  // console.log("here")
   const platform = req.headers["x-platform"];
-  console.log("here2", platform)
+  // console.log("here2", platform)
   if (platform === "app") {
 
     // Generate JWT tokens
@@ -235,7 +235,7 @@ const handlePlatformResponse = async (user, res, req) => {
     });
   } else if (platform === "web") {
     // Set user session data
-    console.log("here", "pla")
+    // console.log("here", "pla")
     req.session.user = {
       _id: user._id,
       name: user.name,
@@ -250,8 +250,8 @@ const handlePlatformResponse = async (user, res, req) => {
       role: user.role,
       verified: user.universityEmailVerified,
       joined: user.joined,
-      joinedSocieties: user.joinedSocieties,
-      joinedSubSocieties: user.joinedSubSocieties,
+      // joinedSocieties: user.joinedSocieties,
+      // joinedSubSocieties: user.joinedSubSocieties,
 
     };
 
@@ -288,7 +288,7 @@ router.post("/register", async (req, res) => {
   let user;
   let query;
 
-  console.log(universityEmail, personalEmail, password, universityId, campusId, role);
+  // console.log(universityEmail, personalEmail, password, universityId, campusId, role);
   try {
     if (!name) return res.status(302).json({ error: "name is required" });
     if (!username) return res.status(302).json({ error: "username is required" });
@@ -305,7 +305,7 @@ router.post("/register", async (req, res) => {
       };
     }
 
-    console.log(query);
+    // console.log(query);
 
 
     query.$and = [
@@ -317,7 +317,7 @@ router.post("/register", async (req, res) => {
     ];
 
 
-    console.log("later", query);
+    // console.log("later", query);
     user = await User.findOne(query);
 
     if (user) {
@@ -341,9 +341,9 @@ router.post("/register", async (req, res) => {
         return res.status(302).json({ error: "Already Registered?" }); // already registered
       }
     }
-    console.log("No", user);
+    // console.log("No", user);
 
-    console.log("here");
+    // console.log("here");
 
     let newUser;
 
@@ -358,7 +358,7 @@ router.post("/register", async (req, res) => {
         universityOrigin: universityId,
       });
 
-      console.log(campus);
+      // console.log(campus);
       if (!campus)
         return res.status(404).json({ error: "Hmm.. Seems Odd, this should not happen" }); // no campus
 
@@ -424,7 +424,7 @@ router.post("/register", async (req, res) => {
       await uniExists.save();
     } else if (role === 'ext_org') {
       const hashedPassword = await bcryptjs.hash(password, 10);
-      console.log("here2");
+      // console.log("here2");
       // this is reachable to only
       newUser = new User({
         name,
@@ -436,7 +436,7 @@ router.post("/register", async (req, res) => {
       });
       await newUser.save();
 
-      console.log("here3");
+      // console.log("here3");
     } else return res.status(400).json({ error: "Role not found in dictionary" })
 
     deliverOTP(newUser, resendEmailAccountConfirmation, req, res)
@@ -474,7 +474,7 @@ router.post("/registration-verify-otp", async (req, res) => {
     if (!user) return res.status(406).json('Session out or token expired')
     const query = { ref: user._id }
 
-    console.log("OTP", otp)
+    // console.log("OTP", otp)
     // Find the OTP entry
     const otpEntry = await OTP.findOne(query);
 
@@ -632,7 +632,7 @@ router.post("/register-bulk", async (req, res) => {
 
   const now = moment();
   const formattedTime = now.format("HH:mm:ss:SSS");
-  console.log("START ", formattedTime);
+  // console.log("START ", formattedTime);
 
   if (!Array.isArray(users)) {
     return res.status(400).json({ message: "Invalid data format" });
@@ -669,7 +669,7 @@ router.post("/register-bulk", async (req, res) => {
       user = await User.findOne(query);
 
       if (user) {
-        console.log("error " + i);
+        // console.log("error " + i);
         errors.push({ email, message: "User already registered" });
         continue; // Skip this user if already registered
       }
@@ -678,7 +678,7 @@ router.post("/register-bulk", async (req, res) => {
         (role === "student" || role === "teacher") &&
         (user?.personalEmail || user?.secondaryPersonalEmail)
       ) {
-        console.log("error " + i);
+        // console.log("error " + i);
         errors.push({
           email,
           message: "User already registered with a personal email",
@@ -690,7 +690,7 @@ router.post("/register-bulk", async (req, res) => {
         const uniExists = await University.findOne({ _id: universityId });
 
         if (!uniExists) {
-          console.log("error " + i);
+          // console.log("error " + i);
           errors.push({ email, message: "University does not exist" });
           continue; // Skip if university doesn't exist
         }
@@ -701,7 +701,7 @@ router.post("/register-bulk", async (req, res) => {
         });
 
         if (!campus) {
-          console.log("error " + i);
+          // console.log("error " + i);
           errors.push({ email, message: "Campus does not exist" });
           continue; // Skip if campus doesn't exist
         }
@@ -715,7 +715,7 @@ router.post("/register-bulk", async (req, res) => {
         const isEmailValid = regex.test(email);
 
         if (!isEmailValid) {
-          console.log("error " + i);
+          // console.log("error " + i);
           errors.push({
             email,
             message: "University email does not match the required format",
@@ -765,7 +765,7 @@ router.post("/register-bulk", async (req, res) => {
         createdUsers.push(newUser);
       }
     } catch (error) {
-      console.log("error " + i);
+      // console.log("error " + i);
       errors.push({ email, message: "Error processing user" });
       console.error("Error in processing user", email, error.message);
     }
@@ -777,7 +777,7 @@ router.post("/register-bulk", async (req, res) => {
 
   const now2 = moment();
   const formattedTime2 = now2.format("HH:mm:ss:SSS");
-  console.log("END ", formattedTime2);
+  // console.log("END ", formattedTime2);
 
   return res.status(201).json({
     message: "Bulk registration successful!",
@@ -798,7 +798,7 @@ router.put("/reset-password", async (req, res) => {
 
     const platform = req.headers["x-platform"];
 
-    console.log(userId);
+    // console.log(userId);
     if (platform === "app") {
       if (!userId)
         return res.status(409).json({ error: "Error parsing token" });
@@ -842,7 +842,7 @@ router.put("/forgot-password", async (req, res) => {
         $or: [{ personalEmail: email }, { secondaryPersonalEmail: email }],
       };
     }
-    console.log(query);
+    // console.log(query);
 
     user = await User.findOne(query);
 
@@ -860,7 +860,7 @@ router.put("/forgot-password", async (req, res) => {
     if (!otpResponse) {
       return res.status(500).json({ message: "Failed to generate OTP" });
     }
-    console.log("otp", otp, otpResponse);
+    // console.log("otp", otp, otpResponse);
     const datas = {
       name: user.name,
       email,
@@ -1114,7 +1114,7 @@ const deliverOTP = async (user, emailFunction, req, res) => {
   if (!otpResponse) {
     return res.status(500).json({ message: "Failed to generate OTP" });
   }
-  console.log("otp", otp, otpResponse);
+  // console.log("otp", otp, otpResponse);
   const datas = {
     name: user.name,
     email: user.role === 'alumni' ? user.personalEmail : user.universityEmail,

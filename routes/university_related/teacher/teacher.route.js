@@ -149,7 +149,7 @@ router.post("/", async (req, res) => {
 
 router.get("/info", async (req, res) => {
   const { id } = req.query;
-  console.log("info id", id);
+  // console.log("info id", id);
   try {
     const teacher = await Teacher.findById(id).populate({
       path: "department.departmentId campusOrigin",
@@ -170,7 +170,7 @@ router.get("/info", async (req, res) => {
 
 router.get("/reviews/comments", async (req, res) => {
   const { id } = req.query;
-  console.log(id, ":in review commetn");
+  // console.log(id, ":in review commetn");
   try {
     const teacher = await Teacher.findById(id).populate({
       path: "ratingsByStudents",
@@ -185,7 +185,7 @@ router.get("/reviews/comments", async (req, res) => {
       return res.status(404).json({ message: "Teacher not found" });
     }
 
-    console.log("Teacher: ", teacher);
+    // console.log("Teacher: ", teacher);
 
     const populatedRatings = await Promise.all(
       teacher.ratingsByStudents.map(async (review) => {
@@ -211,13 +211,13 @@ router.get("/reviews/comments", async (req, res) => {
             personalEmailVerified: false,
           };
         }
-        console.log("user data", userIdData);
+        // console.log("user data", userIdData);
 
         const userVote = await UserReviewTeacherVote.findOne({
           reviewId: review._id,
           userId: review.userId?._id,
         });
-        console.log("first time null ", userVote);
+        // console.log("first time null ", userVote);
 
         return {
           rating: review.rating,
@@ -234,7 +234,7 @@ router.get("/reviews/comments", async (req, res) => {
       })
     );
 
-    console.log("pop rate", populatedRatings);
+    // console.log("pop rate", populatedRatings);
     res.status(200).json(populatedRatings);
   } catch (err) {
     console.error("error", err.message);
@@ -256,7 +256,7 @@ router.post("/rate", async (req, res) => {
     }
 
     let existingRating = await TeacherRating.findOne({ teacherId, userId });
-    console.log("existing?", existingRating);
+    // console.log("existing?", existingRating);
     if (existingRating) {
       existingRating.rating = rating;
       existingRating.comment = comment;

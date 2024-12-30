@@ -15,7 +15,7 @@ router.get("/universities-grouped-campus", async (req, res) => {
     try {
         const cachedData = cache.get("universitiesGroupedCampus");
         if (cachedData) {
-            console.log("Cache hit: universitiesGroupedCampus");
+            // console.log("Cache hit: universitiesGroupedCampus");
             return res.status(200).json(cachedData);
         }
 
@@ -46,13 +46,15 @@ router.get('/usernames', async (req, res) => {
         // }
         const username = req.query.username
 
-        console.log(username)
+        // console.log(username)
         if (!username) return res.status(302).json("Username not provided")
-        const usernameExists = await User.findOne({ username }).select('username');
-        console.log("USername here", usernameExists)
+        const usernameExists = await User.findOne({ username }).select('username')
+        // .lean()
+        // .explain("executionStats");;
+        // console.log("USername here", usernameExists)
         if (!usernameExists) return res.status(200).json(false)
         // usernameExists,
-        console.log(usernameExists)
+        // console.log(usernameExists)
 
         // cache.set("usernames", usernameExistList);
         res.status(200).json(true);

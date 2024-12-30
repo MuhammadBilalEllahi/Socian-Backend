@@ -69,7 +69,12 @@ const userSchema = new mongoose.Schema({
     savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     connections: {
-      friend: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      friend: {
+        type: Map,
+        of: { type: String, enum: ['requested', 'accepted'], default: 'requested' },
+      },
+
+      // friend: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", }],
       blocked: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     },
 

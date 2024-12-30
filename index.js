@@ -15,6 +15,7 @@ const session = require("express-session");
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const csrfProtection = require('@fastify/csrf-protection');
+const compression = require('compression');
 
 // const sanitizeHtml = require('sanitize-html');
 // const cleanHtml = sanitizeHtml(userInput, { allowedTags: [], allowedAttributes: {} });
@@ -80,6 +81,7 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(compression());
 
 // generate hash
 // const crypto = require('crypto')

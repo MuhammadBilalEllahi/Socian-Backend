@@ -3,7 +3,7 @@ const moment = require('moment')
 
 // Helper function to generate tokens
 const generateToken = (user) => {
-  console.log("suer", user);
+  // console.log("suer", user);
   const payload = {
     _id: user._id,
     name: user.name,

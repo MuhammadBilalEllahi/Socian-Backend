@@ -2,7 +2,13 @@ const mongoose = require('mongoose');
 
 const connectToMongoDB = async (app) => {
     try {
-        await mongoose.connect(process.env.MONGO_DB_URI)
+        await mongoose.connect(process.env.MONGO_DB_URI, {
+            // useNewUrlParser: true,
+            // useUnifiedTopology: true,
+            // useCreateIndex: true,
+            // useFindAndModify: false,
+            maxPoolSize: 50,
+        })
         app.locals.db = mongoose.connection;
 
 

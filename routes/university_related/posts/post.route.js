@@ -46,12 +46,13 @@ const getUserDetails = (req) => {
  */
 router.get("/universities/all", async (req, res) => {
     try {
-        console.log("here")
+        // console.log("here")
         const { role, universityOrigin, campusOrigin } = getUserDetails(req)
 
         const posts = await Post.find({
             'references.role': role
         })
+            .sort({ createdAt: -1 })
             .populate([
                 "author",
                 "society",
@@ -60,13 +61,13 @@ router.get("/universities/all", async (req, res) => {
             ]);
 
 
-        console.log("posts", posts)
+        // console.log("posts", posts)
 
         if (!posts) return res.status(304).json("Posts Collection null");
 
         res.status(200).json(posts);
     } catch (error) {
-        console.log("Error in posts.route.js /all", error);
+        console.error("Error in posts.route.js /all", error);
         res.status(500).json("Internal Server Error");
     }
 });
@@ -76,13 +77,14 @@ router.get("/universities/all", async (req, res) => {
  */
 router.get("/campuses/all", async (req, res) => {
     try {
-        console.log("here")
+        // console.log("here")
         const { role, universityOrigin, campusOrigin } = getUserDetails(req)
 
         const posts = await Post.find({
             'references.role': role,
             'references.universityOrigin': universityOrigin,
         })
+            .sort({ createdAt: -1 })
             .populate([
                 "author",
                 "society",
@@ -92,13 +94,13 @@ router.get("/campuses/all", async (req, res) => {
 
 
 
-        console.log("posts", posts)
+        // console.log("posts", posts)
 
         if (!posts) return res.status(304).json("Posts Collection null");
 
         res.status(200).json(posts);
     } catch (error) {
-        console.log("Error in posts.route.js /all", error);
+        console.error("Error in posts.route.js /all", error);
         res.status(500).json("Internal Server Error");
     }
 });
@@ -108,7 +110,7 @@ router.get("/campuses/all", async (req, res) => {
  */
 router.get("/campus/all", async (req, res) => {
     try {
-        console.log("here")
+        // console.log("here")
         const { role, universityOrigin, campusOrigin } = getUserDetails(req)
 
         const posts = await Post.find({
@@ -116,6 +118,7 @@ router.get("/campus/all", async (req, res) => {
             'references.universityOrigin': universityOrigin,
             'references.campusOrigin': campusOrigin
         })
+            .sort({ createdAt: -1 })
             .populate([
                 "author",
                 "society",
@@ -143,16 +146,19 @@ router.get("/campus/all", async (req, res) => {
         //         },
         //     ]);
 
-        console.log("posts", posts)
+        // console.log("posts", posts)
 
         if (!posts) return res.status(304).json("Posts Collection null");
 
         res.status(200).json(posts);
     } catch (error) {
-        console.log("Error in posts.route.js /all", error);
+        console.error("Error in posts.route.js /all", error);
         res.status(500).json("Internal Server Error");
     }
 });
+
+
+
 
 
 
@@ -175,7 +181,7 @@ router.post("/create", async (req, res) => {
             return res.status(400).json("All fields are required");
         }
 
-        console.log(title, body, societyId, author);
+        // console.log(title, body, societyId, author);
         const post = new Post({
             title: title,
             body: body,
@@ -227,11 +233,11 @@ router.post("/create", async (req, res) => {
             { new: true }
         )
         if (!user) return res.status(409).json({ error: "User not found" })
-        console.log("here", societyPostCollection);
+        // console.log("here", societyPostCollection);
 
         res.status(200).json("Post Created");
     } catch (error) {
-        console.log("Error in posts.route.js /create", error);
+        console.error("Error in posts.route.js /create", error);
         res.status(500).json("Internal Server Error");
     }
 });

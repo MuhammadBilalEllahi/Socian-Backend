@@ -55,3 +55,34 @@ HTTP status:
 508 Loop Detected
 510 Not Extended
 511 Network Authentication Required
+
+
+
+
+
+<h4>HOW TO CREATE ANOTHER DATABASE AS A BACKUP OR TEST</h4>
+
+<h5>Pre-requisites: </h5>
+<p>
+1. Download Mongodb command line tools
+2. Extract them to your local drive C
+3. get the bin\ path from those folders (DIY Please, this is small work)
+4. paste it to ENV, search env in windows searchbar
+5. add the  FOR example: 
+<br/>C:\mongodb cli\mongodb-database-tools-windows-x86_64-100.10.0\bin <br/>
+to PATH of system and user viariables
+
+</p>
+
+<h5>Commands</h5>
+<h6>1a. open folder in terminal, where you want to create backup in</h6> 
+<h6>1b. create a backup in a folder of the database you want to create testDB/Backup of, from atlas </h6> 
+D:\MYFOLDER\mongodb JSON duplicate>  <strong>mongodump</strong> --uri "mongodb+srv:// &lt;username&gt;: &lt;password&gt;@cluster123.12345s.mongodb.net/Database_to_be_duplicated" --db="Database_to_be_duplicated"
+
+<h6></h6> 
+2. could do this for just seperate location if you have ADHD , jkjk , however it is same thing 
+THIS ONE IS NOT RECOMMENDED (just use if you want to create another instance {idk what this is called})
+mongodb+srv:// &lt;username&gt;: &lt;password&gt;@cluster123.12345s.mongodb.net/the_new_duplicate_database_name
+
+<h6>3. Now restore it to your Atlas</h6> 
+D:\MYFOLDER\mongodb JSON duplicate>  <strong>mongorestore</strong> --uri "mongodb+srv:// &lt;username&gt;: &lt;password&gt;@cluster123.12345s.mongodb.net/the_new_duplicate_database_name" --db the_new_duplicate_database_name   "D:\MYFOLDER\mongodb JSON duplicate\dump\the_new_duplicate_database_name"
