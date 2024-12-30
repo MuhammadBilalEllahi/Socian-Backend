@@ -364,16 +364,17 @@ router.post("/register", async (req, res) => {
 
       if (role !== 'teacher') {
 
-        const emailPatterns = campus.emailPatterns.studentPatterns.map(
-          (pattern) => pattern.replace(/\d+/g, "\\d+")
-        );
 
-        const combinedPattern = `^(${emailPatterns.join("|")})$`;
-        const regex = new RegExp(combinedPattern);
+
+        if (campus.emailPatterns.regex) {
+          return res.status(425).json("Tell your campus mod to update/register")
+        }
+        const regex = new RegExp(campus.emailPatterns.regex);
         const isEmailValid = regex.test(universityEmail);
-        console.log(emailPatterns);
         // const isEmailValid = emailPatterns.some(pattern => new RegExp(pattern).test(universityEmail));
         console.log("Valid", isEmailValid);
+
+
 
         if (!isEmailValid) {
           // TODO Send report to moderator and superadmin

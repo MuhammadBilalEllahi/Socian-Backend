@@ -109,7 +109,7 @@ const teacherRouter = require("./routes/university_related/teacher/teacher.route
 const pastpaperRouter = require("./routes/university_related/pastpapers/pastpaper.route.js");
 const academicRouter = require("./routes/university_related/pastpapers/academic.format.route.js");
 const discussionRouter = require("./routes/university_related/pastpapers/discussion.route.js");
-const User = require("./models/user/user.model.js");
+
 
 app.use("/api/super", superProtect, superRouter);
 
@@ -143,11 +143,64 @@ const accessibleRoutes = require('./routes/accessibles/accessible.route.js')
 app.use('/api/accessible/', accessibleRoutes)
 
 
-const userRouter = require('./routes/user/user.route.js')
+const userRouter = require('./routes/user/user.route.js');
+
 app.use("/api/user", protectRoute, userRouter);
 
 
 
+// // Test Route for Bulk Email Regex Validation
+// app.post("/test-bulk-email-regex", async (req, res) => {
+//   const { emails, campusId } = req.body;
+
+//   if (!emails || !Array.isArray(emails) || emails.length === 0) {
+//     return res.status(400).json({ error: "Please provide an array of emails." });
+//   }
+
+//   try {
+//     // Fetch campus information from the database
+//     const campus = await Campus.findById(campusId);
+
+//     if (!campus) {
+//       return res.status(404).json({ error: "Campus not found." });
+//     }
+
+//     // Generate the regex dynamically based on the campus email patterns
+//     const results = emails.map(email => {
+//       let isValid = false;
+//       let message = "";
+
+//       // Loop through each of the campus's email patterns and check if the email matches any of them
+//       // for (let pattern of campus.emailPatterns) {
+//       console.log(campus.emailPatterns.regex)
+//       const regex = new RegExp(campus.emailPatterns.regex); // pattern.regex should be a valid regex string
+//       if (regex.test(email)) {
+//         isValid = true;
+//         message = "Email matches the pattern";
+//         // No need to check further if it's already valid
+//       }
+
+//       // }
+
+//       // If no pattern matches
+//       if (!isValid) {
+//         message = "Email does not match the required pattern";
+//       }
+
+//       return {
+//         email,
+//         isValid,
+//         message
+//       };
+//     });
+
+//     // Send the response
+//     return res.status(200).json({ results });
+//   } catch (error) {
+//     console.error("Error:", error);
+//     return res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
 
 
 

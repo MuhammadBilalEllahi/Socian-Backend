@@ -26,6 +26,10 @@ const campusSchema = new Schema({
         },
         domain: {
             type: String,
+        },
+        regex: {
+            type: String,
+            default: ''
         }
         // RollNumberFormat: [String]
     },
