@@ -8,10 +8,13 @@ const Campus = require("../../models/university/campus.university.model");
 router.post("/register", async (req, res) => {
   const { universityOrigin, ...campusData } = req.body;
 
+  const { location, name, regex } = campusData;
+
   try {
     if (!universityOrigin) {
       return res.status(400).json({ message: "University ID is required" });
     }
+    // console.log("CAMPUS DATA", campusData)
 
     const university = await University.findById({ _id: universityOrigin });
 
@@ -20,9 +23,12 @@ router.post("/register", async (req, res) => {
     }
 
     const newCampus = new Campus({
-      ...campusData,
-      universityOrigin: universityOrigin,
+      location,
+      name,
+      "emailPatterns.regex": regex,
+      universityOrigin,
     });
+    // console.log("CAMPUS onbj", newCampus)
     await newCampus.save();
 
     // Update the university's campuses array
