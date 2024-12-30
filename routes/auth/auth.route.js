@@ -364,17 +364,13 @@ router.post("/register", async (req, res) => {
 
       if (role !== 'teacher') {
 
-
-
-        if (campus.emailPatterns.regex) {
+        if (!campus.emailPatterns.regex) {
           return res.status(425).json("Tell your campus mod to update/register")
         }
         const regex = new RegExp(campus.emailPatterns.regex);
         const isEmailValid = regex.test(universityEmail);
         // const isEmailValid = emailPatterns.some(pattern => new RegExp(pattern).test(universityEmail));
         console.log("Valid", isEmailValid);
-
-
 
         if (!isEmailValid) {
           // TODO Send report to moderator and superadmin
@@ -384,13 +380,16 @@ router.post("/register", async (req, res) => {
         }
 
       } else {
-        const studentPatterns = campus.emailPatterns.studentPatterns.map(
-          (pattern) => pattern.replace(/\d+/g, "\\d+")
-        );
-        const combinedPattern = `^(${studentPatterns.join("|")})$`;
-        const studentRegex = new RegExp(combinedPattern);
 
-        if (studentRegex.test(universityEmail)) {
+
+        if (!campus.emailPatterns.regex) {
+          return res.status(425).json("Tell your campus mod to update/register")
+        }
+        const regex = new RegExp(campus.emailPatterns.regex);
+
+
+
+        if (regex.test(universityEmail)) {
           return res.status(400).json({
             error: "Student email detected. You cannot register as a teacher with a student email!",
           });
