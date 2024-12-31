@@ -18,12 +18,12 @@ const campusSchema = new Schema({
     },
 
     emailPatterns: {
-        teacherPatterns: [String],
-        studentPatterns: [String],
-        convertedRegEx: {
-            teacherPatterns: [String],
-            studentPatterns: [String],
-        },
+        // teacherPatterns: [String],
+        // studentPatterns: [String],
+        // convertedRegEx: {
+        //     teacherPatterns: [String],
+        //     studentPatterns: [String],
+        // },
         domain: {
             type: String,
         },
