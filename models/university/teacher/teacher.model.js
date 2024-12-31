@@ -18,6 +18,10 @@ const teacherSchema = new Schema({
             default: '' //e.g drhabib@cuilahore.edu.pk
         }
     },
+    email: {
+        type: String,
+        default: ''
+    },
     name: {
         type: String,
         required: true

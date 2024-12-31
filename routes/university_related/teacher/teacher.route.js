@@ -8,6 +8,7 @@ const router = express.Router();
 const UserReviewTeacherVote = require("../../../models/university/teacher/teacher.user.review.vote");
 const TeacherRating = require("../../../models/university/teacher/rating.teacher.model");
 const { default: mongoose } = require("mongoose");
+const { getUserDetails } = require("../../../utils/utils");
 
 // router.get("/teachers-by-campus", async (req, res) => {
 //   try {
@@ -40,15 +41,53 @@ const { default: mongoose } = require("mongoose");
 
 router.get("/teachers-by-campus", async (req, res) => {
   try {
-    const user = req.session.user;
 
-    const campusLocation = user.university.campusId;
-    if (!campusLocation) return res.status(400).json({ error: "Campus location not provided" });
+    const { campusOrigin } = getUserDetails(req);
 
-    const findCampus = await Campus.findOne({ _id: campusLocation });
+    if (!campusOrigin) return res.status(400).json({ error: "Campus location not provided" });
+
+    const findCampus = await Campus.findOne({ _id: campusOrigin });
     if (!findCampus) return res.status(404).json({ error: "Error finding campus" });
 
-    const teachers = await Teacher.find({ campusOrigin: campusLocation })
+    const teachers = await Teacher.find({ campusOrigin: campusOrigin })
+      .populate({
+        path: "ratingsByStudents",
+        select: "comment upvoteCount userId",
+        match: { isDeleted: false },
+        options: { sort: { upvoteCount: -1 }, limit: 1 },
+      })
+      .lean();
+
+
+    const result = teachers.map((teacher) => {
+      const topRating = teacher.ratingsByStudents?.[0] || null;
+      return {
+        ...teacher,
+        topComment: topRating ? topRating.comment : null,
+        topCommentUser: topRating ? topRating.userId : null,
+      };
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in teacher:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+
+router.get("/super-teachers-by-campus", async (req, res) => {
+  try {
+
+    const campusOrigin = req.query.campusId
+
+    if (!campusOrigin) return res.status(400).json({ error: "Campus location not provided" });
+
+    const findCampus = await Campus.findOne({ _id: campusOrigin });
+    if (!findCampus) return res.status(404).json({ error: "Error finding campus" });
+
+    const teachers = await Teacher.find({ campusOrigin: campusOrigin })
       .populate({
         path: "ratingsByStudents",
         select: "comment upvoteCount userId",
@@ -83,7 +122,7 @@ router.get("/teachers-by-campus", async (req, res) => {
 
 
 router.post("/", async (req, res) => {
-  const { name, departmentId, universityOrigin, campusOrigin } = req.body;
+  const { name, email, picture, departmentId, universityOrigin, campusOrigin } = req.body;
   try {
     const findUni = await University.findOne({ _id: universityOrigin });
     if (!findUni)
@@ -106,6 +145,8 @@ router.post("/", async (req, res) => {
 
     const teacher = await Teacher.create({
       name: name,
+      email: email,
+      imageUrl: picture,
       "department.name": findDepartment.name,
       "department.departmentId": departmentId,
       universityOrigin: universityOrigin,

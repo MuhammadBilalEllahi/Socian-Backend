@@ -170,8 +170,27 @@ router.post("/", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-router.post("/departments", async (req, res) => {
+
+router.get("/campus", async (req, res) => {
   try {
+    const { campusId } = req.query;
+
+    if (!campusId) {
+      return res.status(404).json("Requires Campus Origin");
+    }
+
+    const campus = await Campus.findById({ _id: campusId })
+      .select("departments")
+      .populate(
+        "departments",
+        "name _id",
+        null,
+        { sort: { name: 1 } },
+        { lean: true }
+      )
+
+    res.status(200).json(campus);
+
   } catch (error) {
     console.error("Error in department:", error);
     res.status(500).json({ message: error.message });

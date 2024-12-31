@@ -50,7 +50,12 @@ router.put("/:universityId", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const university = await University.find().populate("campuses");
+    const university = await University.find().populate({
+      path: "campuses",
+      populate: {
+        path: "departments",
+      },
+    });
 
     res.status(200).json(university);
   } catch (error) {
@@ -66,7 +71,8 @@ router.get("/:universityId", async (req, res) => {
   try {
     const university = await University.findOne({
       _id: universityId,
-    }).populate("campuses");
+    })
+      .populate("campuses");
 
     res.status(200).json(university);
   } catch (error) {
