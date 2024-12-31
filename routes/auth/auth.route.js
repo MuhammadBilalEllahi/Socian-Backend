@@ -50,13 +50,14 @@ router.get("/session", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   const { universityId, campusId, email, password } = req.body;
+
   let user;
   let userRoleBool = false;
   try {
     // console.log("login log", universityId, campusId, email, password);
     const platform = req.headers["x-platform"];
 
-    const query = {
+    let query = {
       $or: [
         { universityEmail: email },
         { personalEmail: email },
@@ -76,6 +77,12 @@ router.post("/login", async (req, res) => {
     }
 
     // console.log("later", query);
+
+    if (!email.includes("@")) {
+      query = {
+        username: email
+      }
+    }
     user = await User.findOne(query);
 
     const isPassMatched = await bcryptjs.compare(
