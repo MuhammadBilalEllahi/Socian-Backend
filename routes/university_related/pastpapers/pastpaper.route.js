@@ -104,35 +104,44 @@ router.get("/all-pastpapers-in-subject/:id", async (req, res) => {
             // 'references.departmentId': departmentId,
             'references.universityOrigin': universityOrigin,
             'references.campusOrigin': campusOrigin,
+        }).populate({
+            path: 'pastpapersCollectionByYear',
+            populate: {
+                path: 'pastpapers',
+            }
         })
         if (!findSubject) return res.status(404).json({ message: "no such subject found" })
 
-        console.log(findSubject)
-        console.log(
-            // "findSubject.references.departmentId", findSubject.references.departmentId,
+        console.log("HERE____", findSubject)
+        // console.log(
+        //     // "findSubject.references.departmentId", findSubject.references.departmentId,
 
-            "\ndepartmentId", findSubject.references.departmentId.toHexString(),
-            "\nuniversityOrigin", universityOrigin,
-            "\ncampusOrigin", campusOrigin,
-            "\npastcollection", findSubject.pastpapersCollectionByYear.toHexString(),
-            "\nsubjectId: ", findSubject._id.toHexString(), "\n"
-        )
-
-
-        const findpastpapers = await PastpapersCollectionByYear.find({
-            _id: findSubject.pastpapersCollectionByYear.toHexString(),
-            // references: {
-            //     subjectId: findSubject._id.toHexString(),
-            //     universityOrigin,
-            //     campusOrigin,
-            // }
-        }).populate('pastpapers')
+        //     "\ndepartmentId", findSubject.references.departmentId.toHexString(),
+        //     "\nuniversityOrigin", universityOrigin,
+        //     "\ncampusOrigin", campusOrigin,
+        //     "\npastcollection", findSubject.pastpapersCollectionByYear.toHexString(),
+        //     "\nsubjectId: ", findSubject._id.toHexString(), "\n"
+        // )
 
 
-        console.log("findPastpapersCollection", findpastpapers)
-        console.log("findPastpapersCollection", findpastpapers.map(past => past.pastpapers))
-        const listOfPastPapers = findpastpapers.map(past => past.pastpapers)
-        res.status(200).json({ pastPapers: listOfPastPapers, subjectName: findSubject.name });
+        // const findpastpapers = await PastpapersCollectionByYear.find({
+        //     _id: findSubject.pastpapersCollectionByYear.toHexString(),
+        //     // references: {
+        //     //     subjectId: findSubject._id.toHexString(),
+        //     //     universityOrigin,
+        //     //     campusOrigin,
+        //     // }
+        // }).populate('pastpapers')
+
+
+        // console.log("findPastpapersCollection", findSubject.pastpapersCollectionByYear.pastpapers)
+        // console.log("findPastpapersCollection2", findSubject.pastpapersCollectionByYear)
+        // console.log("findSubjectCollection", findSubject.map(past => past.pastpapers))
+        // const listOfPastPapers = findSubject.map(past => past.pastpapers)
+
+        const papers = findSubject.pastpapersCollectionByYear.pastpapers || []
+        console.log("PASPERS", papers)
+        res.status(200).json({ pastPapers: papers, subjectName: findSubject.name });
 
 
 
@@ -377,101 +386,6 @@ router.post("/create-pastpaper-id-attach-exisiting-subject", async (req, res) =>
         res.status(500).json({ message: error.message });
     }
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
