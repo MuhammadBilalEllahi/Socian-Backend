@@ -92,9 +92,20 @@ router.post('/comment/add-comment', async (req, res) => {
 
         const comment = new DiscussionComment({ content: commentContent, user: user._id });
         await comment.save();
-        const discussion = await Discussion.findOne({ discussion_of: toBeDiscussedId });
-        console.log("Dis ", discussion)
-        discussion.discussioncomments.push(comment._id);
+        comment.populate({
+            "path": "user",
+            "select": "_id name username profile"
+        })
+        // console.log("comemtns", comment)
+
+        const discussion = await Discussion.findOneAndUpdate({ discussion_of: toBeDiscussedId }, {
+            $addToSet: {
+                "discussioncomments": comment._id
+            }
+        });
+        // console.log("Dis ", discussion)
+
+        // discussion.discussioncomments.push(comment._id);
         await discussion.save();
         res.status(200).json(comment)
 

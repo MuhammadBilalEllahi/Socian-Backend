@@ -226,6 +226,7 @@ const suspiciousRoutes = [
   '//shop/wp-includes/wlwmanifest.xml',
   '//test/wp-includes/wlwmanifest.xml',
   '//cms/wp-includes/wlwmanifest.xml',
+  '/wp-includes/js/jquery/jquery.js'
 ];
 // Add suspicious routes to return a safe response
 suspiciousRoutes.forEach((route) => {
