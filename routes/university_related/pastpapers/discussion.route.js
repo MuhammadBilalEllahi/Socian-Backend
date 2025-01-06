@@ -1,7 +1,10 @@
 const express = require("express");
 const Discussion = require("../../../models/university/papers/discussion/discussion");
 const User = require("../../../models/user/user.model");
+const { getUserDetails } = require("../../../utils/utils");
 const DiscussionComment = require("../../../models/university/papers/discussion/discussion.comment");
+const DiscussionCommentVote = require("../../../models/university/papers/discussion/vote.comment.discussion");
+const { default: mongoose } = require("mongoose");
 const router = express.Router()
 
 
@@ -19,14 +22,19 @@ const populateReplies = (path, depth) => {
         {
             path: 'user',
             select: 'name profile username universityEmail personalEmail universityEmailVerified updatedAt createdAt personalEmailVerified __v'
-        }]
+        },
+        {
+            path: "voteId",
+            select: "_id upVotesCount downVotesCount userVotes",
+        }
+        ]
     };
 };
 
 
 router.post("/create-get", async (req, res) => {
     const { toBeDisccusedId } = req.query
-    console.log(toBeDisccusedId)
+    // console.log(toBeDisccusedId)
 
     try {
         const discussion = await Discussion.findOne({ discussion_of: toBeDisccusedId }).populate({
@@ -35,9 +43,14 @@ router.post("/create-get", async (req, res) => {
                 path: 'user',
                 select: 'name profile username universityEmail personalEmail universityEmailVerified updatedAt personalEmailVerified '
             },
+            {
+                path: "voteId",
+                select: "_id upVotesCount downVotesCount userVotes",
+            },
 
             populateReplies("replies", 10)]
         })
+        console.log(discussion)
 
         if (discussion) return res.status(200).json({ discussion })
         console.log(discussion)
@@ -79,10 +92,11 @@ router.post("/:id", async (req, res) => {
 })
 
 router.post('/comment/add-comment', async (req, res) => {
-    const { toBeDiscussedId, userId, commentContent } = req.body
+    const { toBeDiscussedId, commentContent } = req.body
 
-    console.log(" toBeDiscussedId, userId, commentContent: ", toBeDiscussedId, userId, commentContent)
+    console.log(" toBeDiscussedId, userId, commentContent: ", toBeDiscussedId, commentContent)
 
+    const { userId } = getUserDetails(req)
     try {
         const user = await User.findById(userId);
         // console.log(user)
@@ -92,11 +106,17 @@ router.post('/comment/add-comment', async (req, res) => {
 
         const comment = new DiscussionComment({ content: commentContent, user: user._id });
         await comment.save();
-        comment.populate({
+        comment.populate([{
             "path": "user",
             "select": "_id name username profile"
-        })
-        // console.log("comemtns", comment)
+        },
+        {
+            path: "voteId",
+            select: "_id upVotesCount downVotesCount userVotes",
+        },
+        ])
+
+        console.log("comemtns", comment)
 
         const discussion = await Discussion.findOneAndUpdate({ discussion_of: toBeDiscussedId }, {
             $addToSet: {
@@ -118,7 +138,9 @@ router.post('/comment/add-comment', async (req, res) => {
 )
 
 router.post('/comment/reply-to-comment', async (req, res) => {
-    const { commentId, replyContent, userId } = req.body;
+    const { commentId, replyContent } = req.body;
+    const { userId } = getUserDetails(req)
+
     console.log(commentId, replyContent, userId)
     try {
         const user = await User.findById(userId);
@@ -127,6 +149,15 @@ router.post('/comment/reply-to-comment', async (req, res) => {
         }
         const reply = new DiscussionComment({ content: replyContent, user: user._id });
         await reply.save();
+        reply.populate([{
+            "path": "user",
+            "select": "_id name username profile"
+        },
+        {
+            path: "voteId",
+            select: "_id upVotesCount downVotesCount userVotes",
+        },
+        ])
         const comment = await DiscussionComment.findById(commentId);
         comment.replies.push(reply._id);
         await comment.save();
@@ -137,89 +168,116 @@ router.post('/comment/reply-to-comment', async (req, res) => {
 })
 
 
-router.post("/comment/up-vote", async (req, res) => {
-    const { commentId, userId } = req.body;
-    let downVoteBool = false;
-    let upVoteBool = false;
+
+
+/***
+ * VOTE IN A DISCUSSION COMMENT
+ * @param {voteType} String e.g upvote,downvote
+ * @param {commentId} ObjectId 
+ */
+
+router.post("/comment/vote", async (req, res) => {
+    const { commentId, voteType } = req.body;
+
+    // console.log("COM vote,", commentId, voteType)
+
     try {
-        const user = await User.findById(userId)
-        if (!user) return res.status(404).json({ error: "User does not exist" })
+        const { userId } = getUserDetails(req);
 
-        const comment = await DiscussionComment.findById(commentId)
-        if (!comment) return res.status(404).json({ error: "Comment does not exist" })
+        const session = await mongoose.startSession();
 
-        const hasDownvoted = comment.downvotes.includes(userId);
-        if (hasDownvoted) {
-            comment.downvotes.pull(userId);
-            downVoteBool = false;
-        }
+        await session.withTransaction(async () => {
+            // Use `findAndModify` or `updateOne` with atomic operations
+            const voteDoc = await DiscussionCommentVote.findById({ _id: commentId }).session(session);
 
-        const hasUpvoted = comment.upvotes.includes(userId);
-        if (hasUpvoted) {
-
-            comment.upvotes.pull(userId);
-            upVoteBool = false
-        } else {
-
-            comment.upvotes.push(userId);
-            upVoteBool = true
-        }
-
-        const updatedComment = await comment.save();
-        const upVoteCount = updatedComment.upvotes.length;
-        const downVoteCount = updatedComment.downvotes.length * -1;
-
-        return res.status(200).json({ downVoteCount: downVoteCount, upVoteCount: upVoteCount, downVoteBool: downVoteBool, upVoteBool: upVoteBool });
-
-    } catch (error) {
-        res.status(500, error.message)
-    }
-})
-router.post("/comment/down-vote", async (req, res) => {
-    try {
-        const { commentId, userId } = req.body;
-        let downVoteBool = false;
-        let upVoteBool = false;
-        try {
-
-            const user = await User.findById(userId)
-            if (!user) return res.status(404).json({ error: "User does not exist" })
-
-            const comment = await DiscussionComment.findById(commentId)
-            if (!comment) return res.status(404).json({ error: "Comment does not exist" })
-
-
-            const hasUpvoted = comment.upvotes.includes(userId);
-            if (hasUpvoted) {
-                comment.upvotes.pull(userId);
-                upVoteBool = false
-            }
-            const hasDownvoted = comment.downvotes.includes(userId);
-
-            if (hasDownvoted) {
-
-                comment.downvotes.pull(userId);
-                downVoteBool = false;
-            } else {
-
-                comment.downvotes.push(userId);
-                downVoteBool = true;
+            // Ensure the document exists
+            if (!voteDoc) {
+                throw new Error("Vote not found.");
             }
 
-            const updatedComment = await comment.save();
-            const downVoteCount = updatedComment.downvotes.length * -1;
-            const upVoteCount = updatedComment.upvotes.length;
+            // Fetch current vote status
+            const currentVote = voteDoc.userVotes.get(userId) || null;
 
-            return res.status(200).json({ downVoteCount: downVoteCount, upVoteCount: upVoteCount, downVoteBool: downVoteBool, upVoteBool: upVoteBool });
+            // If the user has already voted and is changing their vote
+            if (currentVote !== null && currentVote !== voteType) {
+                const updateOps = {
+                    $set: { [`userVotes.${userId}`]: voteType }
+                };
 
+                // Remove the old vote first (decrement the respective vote count)
+                if (currentVote === 'upvote') {
+                    updateOps.$inc = { upVotesCount: -1 };
+                } else if (currentVote === 'downvote') {
+                    updateOps.$inc = { downVotesCount: -1 };
+                }
 
-        } catch (error) {
-            res.status(500, error.message)
-        }
+                // Apply the new vote and increment the respective vote count
+                if (voteType === 'upvote') {
+                    updateOps.$inc = { ...updateOps.$inc, upVotesCount: 1 };
+                } else if (voteType === 'downvote') {
+                    updateOps.$inc = { ...updateOps.$inc, downVotesCount: 1 };
+                }
+
+                // Perform the update with the changes
+                const voteDocUpdated = await DiscussionCommentVote.findOneAndUpdate({ commentId }, updateOps, { session, new: true });
+
+                return res.status(200).json({
+                    message: "Vote reprocessed successfully.",
+                    upVotesCount: voteDocUpdated.upVotesCount,
+                    downVotesCount: voteDocUpdated.downVotesCount,
+                });
+            }
+
+            // Skip processing if the vote is unchanged
+            if (currentVote === voteType) {
+                const updateOps = {
+                    $set: { [`userVotes.${userId}`]: null }
+                };
+
+                // If the user is undoing the vote, decrement the vote count accordingly
+                if (voteType === 'upvote') {
+                    updateOps.$inc = { upVotesCount: -1 };
+                } else if (voteType === 'downvote') {
+                    updateOps.$inc = { downVotesCount: -1 };
+                }
+
+                const voteDocUpdated = await DiscussionCommentVote.findOneAndUpdate({ commentId }, updateOps, { session, new: true });
+
+                return res.status(200).json({
+                    message: "Vote already registered.",
+                    upVotesCount: voteDocUpdated.upVotesCount,
+                    downVotesCount: voteDocUpdated.downVotesCount,
+                    noneSelected: true
+
+                });
+            }
+
+            // Handle the initial vote if the user hasn't voted yet
+            const updateOps = {
+                $set: { [`userVotes.${userId}`]: voteType }
+            };
+
+            if (voteType === 'upvote') {
+                updateOps.$inc = { upVotesCount: 1 };
+            } else if (voteType === 'downvote') {
+                updateOps.$inc = { downVotesCount: 1 };
+            }
+
+            const voteDocUpdated = await DiscussionCommentVote.findOneAndUpdate({ commentId }, updateOps, { session, new: true });
+
+            return res.status(200).json({
+                message: "Vote processed successfully.",
+                upVotesCount: voteDocUpdated.upVotesCount,
+                downVotesCount: voteDocUpdated.downVotesCount,
+            });
+        });
+
+        session.endSession();
     } catch (error) {
-        res.status(500, error.message)
+        console.error("Error processing vote:", error.message);
+        res.status(500).json({ error: "Internal Server Error" });
     }
-})
+});
 
 
 module.exports = router;
