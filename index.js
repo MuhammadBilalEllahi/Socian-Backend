@@ -110,6 +110,7 @@ const pastpaperRouter = require("./routes/university_related/pastpapers/pastpape
 const academicRouter = require("./routes/university_related/pastpapers/academic.format.route.js");
 const discussionRouter = require("./routes/university_related/pastpapers/discussion.route.js");
 
+const uploadsRouter = require('../backend/utils/aws/servePDF.js')
 
 app.use("/api/super", superProtect, superRouter);
 
@@ -126,6 +127,7 @@ app.use("/api/department", protectRoute, departmentRouter);
 app.use("/api/subject", protectRoute, subjectRouter);
 
 app.use("/api/pastpaper", protectRoute, pastpaperRouter);
+app.use("/api/uploads", uploadsRouter);//protectRoute,
 app.use("/api/academic", protectRoute, academicRouter);
 app.use("/api/discussion", discussionRouter);
 

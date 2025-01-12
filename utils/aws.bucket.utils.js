@@ -49,6 +49,7 @@ const uploadToS3 = async (filePath, bucketName, key, ContentType) => {
 };
 
 
+
 const uploadPostMedia = async (community_sub_com_id, files, req, isSubCommunity) => {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
 
@@ -96,12 +97,6 @@ const uploadCommunityImages = async (communityId, files) => {
         throw error;
     }
 };
-
-
-
-
-
-
 
 const uploadSubCommunityImages = async (subCommunityId, files) => {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
