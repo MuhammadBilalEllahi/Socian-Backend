@@ -57,6 +57,11 @@ const teacherSchema = new Schema({
         // required: true
         default: false
     },
+    hasLeft: {
+        type: Boolean,
+        // required: true,
+        default: false
+    },
     rating: {
         type: Number,
         default: 0

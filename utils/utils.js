@@ -107,11 +107,12 @@ const sendOtp = async (phoneNumber, email, user, name) => {
  * @returns {campusOrigin}
  */
 const getUserDetails = (req) => {
-  let userId, role, universityOrigin, campusOrigin;
+  let user, userId, role, universityOrigin, campusOrigin;
 
   const platform = req.headers["x-platform"];
 
   if (platform === "web") {
+    user = req.session.user;
     userId = req.session.user._id;
     role = req.session.user.role;
     if (role !== "ext_org") {
@@ -119,6 +120,7 @@ const getUserDetails = (req) => {
       campusOrigin = req.session.user.university.campusId._id;
     }
   } else if (platform === "app") {
+    user = req.user;;
     userId = req.user._id;
     role = req.user.role;
     if (role !== "ext_org") {

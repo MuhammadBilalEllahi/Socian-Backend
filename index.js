@@ -3,8 +3,7 @@
 const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 8080;
-const http = require("http");
-const socketIo = require("socket.io");
+
 const dotenv = require("dotenv");
 const bodyParser = require("body-parser");
 const cors = require("cors");
@@ -16,6 +15,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const csrfProtection = require('@fastify/csrf-protection');
 const compression = require('compression');
+const http = require("http");
+const { attachSocketToApp } = require("./socket/socket.js");
 
 // const sanitizeHtml = require('sanitize-html');
 // const cleanHtml = sanitizeHtml(userInput, { allowedTags: [], allowedAttributes: {} });
@@ -72,7 +73,8 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
 });
-process.env.RUN_LIMITER === 'true' && app.use(limiter);
+// process.env.RUN_LIMITER === 'true' &&
+app.use(limiter);
 app.use(helmet());
 // app.use(csrfProtection);
 
@@ -82,6 +84,19 @@ app.use(express.json());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(compression());
+
+
+const server = http.createServer(app)
+attachSocketToApp(app, server)
+
+app.use((req, res, next) => {
+  const io = req.app.get('io');
+  req.io = io;
+  next();
+});
+
+
+
 
 // generate hash
 // const crypto = require('crypto')
@@ -148,62 +163,11 @@ app.use('/api/accessible/', accessibleRoutes)
 
 const userRouter = require('./routes/user/user.route.js');
 
+
 app.use("/api/user", protectRoute, userRouter);
 
 
 
-// // Test Route for Bulk Email Regex Validation
-// app.post("/test-bulk-email-regex", async (req, res) => {
-//   const { emails, campusId } = req.body;
-
-//   if (!emails || !Array.isArray(emails) || emails.length === 0) {
-//     return res.status(400).json({ error: "Please provide an array of emails." });
-//   }
-
-//   try {
-//     // Fetch campus information from the database
-//     const campus = await Campus.findById(campusId);
-
-//     if (!campus) {
-//       return res.status(404).json({ error: "Campus not found." });
-//     }
-
-//     // Generate the regex dynamically based on the campus email patterns
-//     const results = emails.map(email => {
-//       let isValid = false;
-//       let message = "";
-
-//       // Loop through each of the campus's email patterns and check if the email matches any of them
-//       // for (let pattern of campus.emailPatterns) {
-//       console.log(campus.emailPatterns.regex)
-//       const regex = new RegExp(campus.emailPatterns.regex); // pattern.regex should be a valid regex string
-//       if (regex.test(email)) {
-//         isValid = true;
-//         message = "Email matches the pattern";
-//         // No need to check further if it's already valid
-//       }
-
-//       // }
-
-//       // If no pattern matches
-//       if (!isValid) {
-//         message = "Email does not match the required pattern";
-//       }
-
-//       return {
-//         email,
-//         isValid,
-//         message
-//       };
-//     });
-
-//     // Send the response
-//     return res.status(200).json({ results });
-//   } catch (error) {
-//     console.error("Error:", error);
-//     return res.status(500).json({ error: "Internal Server Error" });
-//   }
-// });
 
 
 
@@ -257,7 +221,7 @@ app.all('*', (req, res) => {
 
 // Start Server
 const startServer = () => {
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     mongoDB(app);
     console.log(`Server Running on ${PORT}`);
   });
@@ -304,6 +268,9 @@ startServer();
 
 
 /**has left : teacher
- * @param {hasLeft} Teacher 
+ * @param {hasLeft} Teacher
  * join teacher later
  * */
+
+
+

@@ -11,8 +11,8 @@ const teacherRatingSchema = new Schema({
 
     rating: { type: Number, required: true },
     comment: { type: String },
-    isDeleted: { type: Boolean, default: false},
-    isReported: { type: Boolean, default: false},
+    isDeleted: { type: Boolean, default: false },
+    isReported: { type: Boolean, default: false },
     __v: { type: Number, default: 0 }
 }, { timestamps: true });
 
