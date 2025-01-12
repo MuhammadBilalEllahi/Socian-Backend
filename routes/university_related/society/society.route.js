@@ -312,6 +312,7 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
     const { page = 1, limit = 10 } = req.query; // Default to page 1 and 10 posts per page
 
+    console.log("ID", id)
     try {
         const society = await Society.findOne({ _id: id }).populate([
             'moderators',
@@ -323,6 +324,7 @@ router.get("/:id", async (req, res) => {
             'references.campusOrigin',
             'postsCollectionRef'
         ]);
+        console.log("SOciety", society)
 
         if (!society) return res.status(404).json("No society found");
 
@@ -331,7 +333,7 @@ router.get("/:id", async (req, res) => {
             : [];
 
         if (postsCollection.length === 0) {
-            return res.status(404).json("Be the first one to post");
+            return res.status(200).json({ society: society, posts: [], message: "Be the first one to post" });
         }
 
         const skip = (page - 1) * limit; // Calculate how many posts to skip for pagination
@@ -383,22 +385,41 @@ router.get('/user/subscribedSocieties', async (req, res) => {
  * @summary get all-uni[all parents] societies
  */
 router.get("/universities/all", async (req, res) => {
-    let role;
-    try {
-        if (role === "ext_org")
-            return res.status(417).json("EXT Cant Access this route");
-        const platform = req.headers["x-platform"];
-        if (platform === "web") {
-            role = req.session.user.role;
-        } else if (platform === "app") {
-            role = req.user.role;
-        }
-        const society = await Society.find({
-            "references.role": role,
-        });
 
-        if (!society) return res.status(404).json("no society found");
-        res.status(200).json(society);
+    try {
+        const { role } = getUserDetails(req)
+
+        // Fetch random societies using aggregation
+        const randomSocieties = await Society.aggregate([
+            {
+                $match: {
+                    "references.role": role
+                }
+            },
+            {
+                $sample: { size: 15 } // Adjust size to the number of random documents you want
+            }
+        ]);
+
+        // Extract IDs of the random societies
+        const societyIds = randomSocieties.map(society => society._id);
+
+        // Use the IDs to fetch and populate society data
+        const societies = await Society.find({ _id: { $in: societyIds } }).populate([
+            {
+                path: 'references',
+                populate: {
+                    path: 'universityOrigin campusOrigin',
+                    select: 'name location'
+                }
+            }
+        ]);
+
+        if (!societies || societies.length === 0) {
+            return res.status(404).json("No society found");
+        }
+
+        res.status(200).json(societies);
     } catch (error) {
         console.error("Error in society.route.js ", error);
         res.status(500).json("Internal Server Error");
@@ -411,26 +432,22 @@ router.get("/universities/all", async (req, res) => {
  * @summary get all-campus[parent and child] societies
  */
 router.get("/campuses/all", async (req, res) => {
-    let role;
-    let universityOrigin;
+
+
+    const { universityOrigin, role } = getUserDetails(req)
     try {
-        const platform = req.headers["x-platform"];
-        if (platform === "web") {
-            role = req.session.user.role;
-            if (role !== "ext_org") {
-                universityOrigin = req.session.user.university.universityId._id;
-            }
-        } else if (platform === "app") {
-            role = req.user.role;
-            if (role !== "ext_org") {
-                universityOrigin = req.user.university.universityId._id;
-            }
-        }
+
         // console.log("hey", role);
         const society = await Society.find({
             "references.role": role,
             "references.universityOrigin": universityOrigin,
-        });
+        }).populate([
+            {
+                path: 'references',
+                populate: 'universityOrigin campusOrigin',
+                select: 'name location'
+            }
+        ]);
         // console.log("hey yo", society);
 
         if (!society) return res.status(404).json("no society found");
@@ -446,33 +463,28 @@ router.get("/campuses/all", async (req, res) => {
  */
 router.get("/campus/all", async (req, res) => {
     const { id } = req.params;
-    let role;
-    let universityOrigin;
-    let campusOrigin;
-    try {
-        const platform = req.headers["x-platform"];
-        if (platform === "web") {
-            role = req.session.user.role;
-            if (role !== "ext_org") {
-                (universityOrigin = req.session.user.university.universityId._id),
-                    (campusOrigin = req.session.user.university.campusId._id);
-            }
-        } else if (platform === "app") {
-            role = req.user.role;
-            if (role !== "ext_org") {
-                (universityOrigin = req.user.university.universityId._id),
-                    (campusOrigin = req.user.university.campusId._id);
-            }
-        }
-        const society = await Society.find(
-            { _id: id },
 
+    try {
+        const { universityOrigin, campusOrigin, role } = getUserDetails(req)
+
+        const society = await Society.find({
+            "references.role": role,
+            "references.universityOrigin": universityOrigin,
+            "references.campusOrigin": campusOrigin,
+        }
+        ).populate([
             {
-                "references.role": role,
-                "references.universityOrigin": universityOrigin,
-                "references.campusOrigin": campusOrigin,
+                path: 'references',
+                populate: 'universityOrigin campusOrigin',
+                select: 'name location'
             }
-        );
+        ]);
+        // path: 'postsCollectionRef',
+        //                 populate: {
+        //                     path: 'posts.postId',
+        //                     model: 'Post',
+        //                     populate: [{
+        //                         path: 'author
 
         if (!society) return res.status(404).json("no society found");
         res.status(200).json(society);

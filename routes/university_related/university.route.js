@@ -52,9 +52,15 @@ router.get("/", async (req, res) => {
   try {
     const university = await University.find().populate({
       path: "campuses",
-      populate: {
+      populate: [{
         path: "departments",
+        populate: {
+          path: "subjects"
+        }
       },
+      {
+        path: "teachers"
+      }],
     });
 
     res.status(200).json(university);
