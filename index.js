@@ -110,7 +110,8 @@ const pastpaperRouter = require("./routes/university_related/pastpapers/pastpape
 const academicRouter = require("./routes/university_related/pastpapers/academic.format.route.js");
 const discussionRouter = require("./routes/university_related/pastpapers/discussion.route.js");
 
-const uploadsRouter = require('../backend/utils/aws/servePDF.js')
+const uploadsRouter = require('./utils/aws/servePDF.js')
+
 
 app.use("/api/super", superProtect, superRouter);
 
