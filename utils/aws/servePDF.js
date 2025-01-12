@@ -73,6 +73,44 @@ router.get('/:universityOrigin/:campusOrigin/student/pastpapers/:year/:departmen
 
 
 
+router.get('/:universityOrigin/:campusOrigin/student/pastpapers/:year/:departmentId/:subjectId/:term/:type/:termMode/:filename', async (req, res) => {
+    const { universityOrigin, campusOrigin, year, departmentId, subjectId, term, termMode, type, filename } = req.params;
+    // console.log("Data: ", department, courseId, subject, year, type, scheme, filename)
+    // console.log("URl to fetch ", `pastpapers/${department}/${courseId}/${subject}/${year}/${type}/${scheme}/${filename}`)
+    const key = `${universityOrigin}/${campusOrigin}/student/pastpapers/${year}/${departmentId}/${subjectId}/${term}/${type}/${termMode}/${filename}`
+    key.replace('%20', ' ')
+    console.log("replaced value: ", key)
+    const s3Params = {
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Key: key
+    };
+    console.log("IN term")
+
+    try {
+        const command = new GetObjectCommand(s3Params);
+        const s3Response = await s3Client.send(command);
+
+
+        const passThrough = new stream.PassThrough();
+        stream.pipeline(s3Response.Body, passThrough, (err) => {
+            if (err) {
+                console.error('Error streaming the file:', err);
+                res.status(500).send('Error streaming the file');
+            }
+        });
+
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+        res.setHeader('Content-Type', 'application/pdf');
+        passThrough.pipe(res);
+    } catch (err) {
+        console.error('Error fetching the file from S3:', err);
+        res.status(404).send('File not found');
+    }
+});
+
+
+
+
 router.post('/upload/pastpaper/aws', superProtect, upload.single('file'), async (req, res) => {
     const { departmentId, subjectId, year, type, term, termMode } = req.body;
     const file = req.file;
@@ -87,10 +125,13 @@ router.post('/upload/pastpaper/aws', superProtect, upload.single('file'), async 
     // ${term}.${type}.${termMode}`
     let concat = "/";
     if (type === "assignment" || type === "quiz") {
+        console.log("IN MID OR FINAL", type, type === "assignment", type === "quiz")
         concat = `/${type}`;
     } else if (type === 'mid' || type === 'final') {
+        console.log("IN MID OR FINAL", type, type === 'mid', type === 'final')
         concat = `/${term}/${type}/${termMode}`;
     }
+    console.log("IN MID OR FINAL2", type, type === 'mid', type === 'final')
     const pathNameDefined = `${universityOrigin}/${campusOrigin}/${role}/pastpapers/${year}/${departmentId}/${subjectId}${concat}/${file.originalname}-${Date.now()}`
 
     console.log("Path Name", pathNameDefined)
