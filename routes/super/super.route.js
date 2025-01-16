@@ -18,7 +18,7 @@ router.get("/all-users", async (req, res) => {
 
 router.get("/all-campuses", async (req, res) => {
   try {
-    const campus = await Campus.find().populate("universityOrigin");
+    const campus = await Campus.find().populate("universityOrigin users departments society subSociety");
 
     return res.status(200).json(campus);
   } catch (error) {

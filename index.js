@@ -162,6 +162,8 @@ app.use('/api/accessible/', accessibleRoutes)
 
 
 const userRouter = require('./routes/user/user.route.js');
+// const User = require("./models/user/user.model.js");
+// const Campus = require("./models/university/campus.university.model.js");
 
 
 app.use("/api/user", protectRoute, userRouter);
@@ -266,6 +268,29 @@ startServer();
 // }
 
 
+// const remAllInvalidUserInCampus = async () => {
+//   try {
+//     // Step 1: Get all valid user IDs from the User collection
+//     const validUserIds = await User.find({}, { _id: 1 }); // `toArray()` is unnecessary with Mongoose
+//     const validIds = validUserIds.map(user => user._id);
+
+//     // Step 2: Update the Campus model to remove invalid user IDs
+//     await Campus.updateMany(
+//       { _id: '6714235976333e618a4809bd' }, // Match specific Campus document by ID
+//       {
+//         $pull: {
+//           users: { $nin: validIds }, // Remove users whose IDs are not in the valid list
+//         },
+//       }
+//     );
+
+//     console.log("Invalid users removed successfully!");
+//   } catch (error) {
+//     console.error("Error while removing invalid users:", error);
+//   }
+// };
+
+// remAllInvalidUserInCampus()
 
 /**has left : teacher
  * @param {hasLeft} Teacher

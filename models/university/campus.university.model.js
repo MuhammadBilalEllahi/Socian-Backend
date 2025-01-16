@@ -16,6 +16,11 @@ const campusSchema = new Schema({
         required: true,
         index: true,
     },
+    websiteUrl: {
+        type: String,
+        // required: true,
+        default: ''
+    },
 
     emailPatterns: {
         // teacherPatterns: [String],
