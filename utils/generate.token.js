@@ -32,6 +32,12 @@ const generateToken = (user) => {
     },
   };
 
+  if (user.role === UserRoles.teacher) {
+    payload.teacherConnectivities = {
+      attached: user?.teacherConnectivities?.attached ?? false,
+      teacherModal: user?.teacherConnectivities?.teacherModal ?? null
+    }
+  }
   const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_ACCESS_EXPIRY_TIME,
   });

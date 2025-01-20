@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const User = require('../../user/user.model');
+const UserRoles = require('../../userRoles');
 const Schema = mongoose.Schema;
 
 
@@ -21,6 +23,24 @@ const teacherSchema = new Schema({
     email: {
         type: String,
         default: ''
+    },
+    userAttachedBool: {
+        type: Boolean,
+        default: false
+    },
+    userAttached: {
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    userAttachedBy: {
+        by: {
+            type: Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        userType: {
+            type: String,
+            enum: ['user', 'teacher', 'system']
+        }
     },
     name: {
         type: String,
@@ -79,15 +99,101 @@ const teacherSchema = new Schema({
         ref: 'Subject'
     }
     ],
-    ratingsByStudents: [
-        {
+    ratingsByStudents:
+        [{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'TeacherRating',
-        },
-    ]
+        }],
+
+    ratingsByStudentsMap:
+    {
+        type: Map,
+        of: {
+            type: Number,
+            min: 0,
+            max: 5
+        }, //user._id : rating
+        default: {}
+    }
+
 });
 
 
-const Teacher = mongoose.model('Teacher', teacherSchema);
 
+
+teacherSchema.pre('save', async function (next) {
+
+    if (this.email !== '' && !this.userAttachedBool) {
+        try {
+            const teacherWithThisEmailExists = await User.findOne({ universityEmail: this.email, role: UserRoles.teacher })
+            if (!teacherWithThisEmailExists) return next();
+            this.userAttached = teacherWithThisEmailExists._id;
+            this.userAttachedBool = true;
+            this.userAttachedBy.userType = UserRoles.system
+            // this.save() //dont use this.save in save
+
+            teacherWithThisEmailExists.teacherConnectivities.teacherModal = teacherModalExists._id;
+            teacherWithThisEmailExists.teacherConnectivities.attached = true;
+
+            // await teacherWithThisEmailExists.save()
+
+            req.session.user.teacherConnectivities = {
+                attached: teacherWithThisEmailExists.teacherConnectivities.attached,
+                teacherModal: teacherWithThisEmailExists.teacherConnectivities.teacherModal
+            }
+
+            req.session.save((err) => {
+                if (err) {
+                    console.error("Session save error:", err);
+                    return res.status(500).json({ error: "Internal Server Error" });
+                }
+            })
+
+
+            next()
+
+        } catch (error) {
+            console.error("Error in Teacher model.js in pre save", error)
+        }
+    } else {
+        next()
+    }
+
+})
+
+// // Virtual to calculate ratingAvg
+// teacherSchema.virtual('ratingAvg').get(function () {
+//     if (this.ratingsByStudentsMap && this.ratingsByStudentsMap.size > 0) {
+//         const totalRatings = Array.from(this.ratingsByStudentsMap.values());
+//         const sum = totalRatings.reduce((acc, curr) => acc + curr, 0);
+//         return (sum / totalRatings.length).toFixed(2); // Rounded to 2 decimal places
+//     }
+//     return 0;
+// });
+
+// // Pre-save middleware to calculate and store the average rating
+// teacherSchema.pre('save', function (next) {
+//     if (this.ratingsByStudentsMap && this.ratingsByStudentsMap.size > 0) {
+//         const totalRatings = Array.from(this.ratingsByStudentsMap.values());
+//         const sum = totalRatings.reduce((acc, curr) => acc + curr, 0);
+//         this.rating = parseFloat((sum / totalRatings.length).toFixed(2)); // Store the rounded value
+//     } else {
+//         this.rating = 0; // Default to 0 if no ratings
+//     }
+//     next();
+// });
+
+
+
+teacherSchema.statics.findSimilarTeachers = async function (campusId, universityId) {
+    return await this.find({
+        campusOrigin: campusId,
+        universityOrigin: universityId,
+    }).populate("department.departmentId");
+};
+
+
+
+
+const Teacher = mongoose.model('Teacher', teacherSchema);
 module.exports = Teacher;

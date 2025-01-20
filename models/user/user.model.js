@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const UserRoles = require("../userRoles");
+const Teacher = require("../university/teacher/teacher.model");
 
 // Remmeber: Apply logic in prioirity on frontend then backend and then model.
 const userSchema = new mongoose.Schema({
@@ -183,6 +185,13 @@ const userSchema = new mongoose.Schema({
       return this.role == "student" ? this.profile.graduationYear : undefined;
     },
   },
+  teacherConnectivities: {
+    teacherModal: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Teacher'
+    },
+    attached: { type: Boolean, default: false },
+  },
 
   // ## Restrictions
   restrictions: {
@@ -233,6 +242,129 @@ const userSchema = new mongoose.Schema({
 });
 
 userSchema.index({ role: 1 });
+
+
+// userSchema.methods.setTeacherModalFORCE
+// userSchema.methods.detachTeacherModalFORCE
+
+
+userSchema.methods.setJoinATeacherModal = async function (teacherId) {
+  try {
+    const teacherModalExists = await Teacher.findById({ _id: teacherId })//.where({ email: '' })
+    if (!teacherModalExists) return { status: 404, message: "No Id With This Teacher Exists" }
+
+    if (!teacherModalExists.userAttached && !teacherModalExists.userAttachedBool) {
+      teacherModalExists.userAttached = this._id
+      teacherModalExists.userAttachedBy.userType = UserRoles.teacher
+      teacherModalExists.userAttachedBy.by = this._id;
+      teacherModalExists.email = this.universityEmail;
+      teacherModalExists.userAttachedBool = true;
+
+      this.teacherConnectivities.teacherModal = teacherModalExists._id;
+      this.teacherConnectivities.attached = true;
+
+      await this.save()
+
+      await teacherModalExists.save()
+
+      req.session.user.teacherConnectivities = {
+        attached: this.teacherConnectivities.attached,
+        teacherModal: this.teacherConnectivities.teacherModal
+      }
+
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ error: "Internal Server Error" });
+        }
+      })
+
+      return { status: 201, message: 'User with role teacher attached with Modal successfully' }
+    } else {
+      return { status: 304, message: 'User already attached with another modal, Please verify before Modifyng' }
+    }
+  } catch (error) {
+    console.error("Error in setJoinATeacherModal user.model.js")
+    return { status: 500, message: "Internal Server Error", error: error.message };
+  }
+
+}
+
+userSchema.methods.setTeacherModal = async function () {
+  try {
+    console.log("ROLE", this)
+    if (this.role === UserRoles.teacher) {
+      const teacherModalExists = await Teacher.findOne({ email: this.universityEmail })
+
+      // if(!teacherModalExists) return res.status(404).json({message: 'No Teacher With This Model Yet'})
+      if (!teacherModalExists) {
+
+        const campusOrigin = this.university.campusId
+        const universityOrigin = this.university.universityId
+        const similarTeacherModals = await Teacher.findSimilarTeachers(campusOrigin, universityOrigin)
+
+        // console.log("TEACHER MODALS", similarTeacherModals, campusOrigin, universityOrigin)
+
+        if (!similarTeacherModals || similarTeacherModals.length === 0) {
+          return { message: 'No similar teachers to show yet', status: 204 };
+        }
+
+        return {
+          status: 200,
+          teachers: similarTeacherModals.map((teacher) => ({
+            _id: teacher._id,
+            name: teacher.name,
+            email: teacher.email,
+            userAttachedBool: teacher.userAttachedBool,
+            imageUrl: teacher.imageUrl,
+            onLeave: teacher.onLeave,
+            hasLeft: teacher.hasLeft,
+            rating: teacher.rating,
+            department: teacher.department.departmentId.name
+          })),
+          attached: false
+        };
+
+      } else {
+
+        if (!teacherModalExists.userAttached && !teacherModalExists.userAttachedBool) {
+          teacherModalExists.userAttached = this._id
+          teacherModalExists.userAttachedBool = true;
+          teacherModalExists.userAttachedBy.userType = UserRoles.teacher
+          teacherModalExists.userAttachedBy.by = this._id
+          await teacherModalExists.save()
+          this.teacherConnectivities.teacherModal = teacherModalExists._id;
+          this.teacherConnectivities.attached = true;
+
+          await this.save()
+
+
+          req.session.user.teacherConnectivities = {
+            attached: this.teacherConnectivities.attached,
+            teacherModal: this.teacherConnectivities.teacherModal
+          }
+
+          req.session.save((err) => {
+            if (err) {
+              console.error("Session save error:", err);
+              return res.status(500).json({ error: "Internal Server Error" });
+            }
+          })
+
+
+          return { status: 200, message: 'User with role teacher attached with Modal successfully', teacher: teacherModalExists, attached: true }
+        } else {
+          return { status: 200, message: 'User already attached with another modal, Please verify before Modifyng', attached: false }
+        }
+
+      }
+    }
+  } catch (error) {
+    console.error("Error in setTeacherModal method in user.model.js", error)
+    return { status: 500, message: "Internal Server Error", error: error.message };
+
+  }
+}
 
 /**
  * Updates the email of the user.
@@ -316,7 +448,8 @@ userSchema.pre("save", async function (next) {
     this.checkGraduation();
   }
   // For teacher or ext_org: apply approval status check
-  else if (this.role === "teacher" || this.role === "ext_org") {
+  else if (this.role === "ext_org") {
+    // this.role === "teacher" || // teacher does not need approval i believe
     if (!this.restrictions.approval.isApproved) {
       this.restrictions.blocking.isBlocked = true; // Block account if not approved
     }

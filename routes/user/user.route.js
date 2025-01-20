@@ -359,7 +359,48 @@ router.get('/societies-top', async (req, res) => {
 
 
 
+router.get('/teacher/attachUser', async (req, res) => {
+    try {
+        const { userId } = getUserDetails(req);
+        const user = await User.findById(userId)
+        const response = await user.setTeacherModal()
+        console.log("DOG", response)
+        res.status(response.status).json({
+            message: response.message,
+            teacher: response.teacher || null,
+            attached: response.attached || false,
+            teachers: response.teachers || null,
+            error: response.error || null,
+        });
+    } catch (error) {
+        res.status(500).json({ error: "Internal Server Error" })
+        console.error("Error in /teacher/attachUser in user.route.js", error.message)
+    }
+})
 
+
+router.get('/teacher/joinModel', async (req, res) => {
+    try {
+        const { teacherId } = req.query;
+        console.log("E", teacherId)
+        if (!teacherId) return res.status(404).json({ error: "Teacher Id not Sent" })
+        const { userId } = getUserDetails(req);
+
+        const user = await User.findById(userId)
+        const response = await user.setJoinATeacherModal(teacherId)
+
+        console.log(response)
+
+        res.status(response.status).json({
+            message: response.message || null,
+            error: response.error || null,
+        });
+    } catch (error) {
+        res.status(500).json({ error: "Internal Server Error" })
+        console.error("Error in /teacher/joinModel in user.route.js", error.message)
+
+    }
+})
 
 
 

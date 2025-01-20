@@ -101,6 +101,7 @@ const sendOtp = async (phoneNumber, email, user, name) => {
  * Extracts user details based on the platform and session or user data.
  * @param {Object} req - The request object
  * @returns {Object} - The user details, including  userId, role, universityOrigin, campusOrigin
+ * @returns {user}
  * @returns {userId}
  * @returns {role}
  * @returns {universityOrigin}
@@ -120,7 +121,7 @@ const getUserDetails = (req) => {
       campusOrigin = req.session.user.university.campusId._id;
     }
   } else if (platform === "app") {
-    user = req.user;;
+    user = req.user;
     userId = req.user._id;
     role = req.user.role;
     if (role !== "ext_org") {

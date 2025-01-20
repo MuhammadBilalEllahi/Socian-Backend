@@ -22,13 +22,15 @@ const Campus = require("../../models/university/campus.university.model.js");
 const University = require("../../models/university/university.register.model.js");
 const generateToken = require("../../utils/generate.token.js");
 const { OTP } = require("../../models/otp/otp.js");
+const Department = require("../../models/university/department/department.university.model.js");
+const UserRoles = require("../../models/userRoles.js");
 // const protectRoute = require("../../middlewares/protect.route.js");
 
 router.get("/session", async (req, res) => {
   // console.log("Req user:", req.session.user)
   // console.log("The session data is in session ", req.session)
   if (req.session.user) {
-    res.status(200).json({
+    const session = {
       _id: req.session.user._id,
       name: req.session.user.name,
       email: req.session.user.email,
@@ -42,7 +44,15 @@ router.get("/session", async (req, res) => {
       joined: req.session.user.joined,
       // joinedSocieties: req.session.user.joinedSocieties,
       // joinedSubSocieties: req.session.user.joinedSubSocieties,
-    });
+    }
+
+    if (req.session.user.role === UserRoles.teacher) {
+      session.teacherConnectivities = {
+        attached: req.session.user?.teacherConnectivities?.attached ?? false,
+        teacherModal: req.session.user?.teacherConnectivities?.teacherModal ?? null
+      }
+    }
+    res.status(200).json(session);
   } else {
     res.status(401).json({ error: "Not authenticated" });
   }
@@ -111,6 +121,8 @@ router.post("/login", async (req, res) => {
       await user.populate([
         { path: "university.universityId", select: "-users _id" },
         { path: "university.campusId", select: "-users _id" },
+        { path: "university.departmentId", select: "name _id" },
+
         // { path: "subscribedSocities", select: "name _id" },
         // { path: "subscribedSubSocities", select: "name _id" },
         // { path: "profile.posts" },
@@ -172,6 +184,12 @@ router.post("/login", async (req, res) => {
         // joinedSocieties: user.subscribedSocities,
         // joinedSubSocieties: user.subscribedSubSocities,
       };
+      if (user.role === UserRoles.teacher) {
+        req.session.user.teacherConnectivities = {
+          attached: user?.teacherConnectivities?.attached ?? false,
+          teacherModal: user?.teacherConnectivities?.teacherModal ?? null
+        }
+      }
 
       // console.log("User in WEB", req.session.user);
 
@@ -261,6 +279,12 @@ const handlePlatformResponse = async (user, res, req) => {
       // joinedSubSocieties: user.joinedSubSocieties,
 
     };
+    if (user.role === UserRoles.teacher) {
+      req.session.user.teacherConnectivities = {
+        attached: user?.teacherConnectivities?.attached ?? false,
+        teacherModal: user?.teacherConnectivities?.teacherModal ?? null
+      }
+    }
 
     // Set references for the session
     req.session.references = {
@@ -291,18 +315,28 @@ const handlePlatformResponse = async (user, res, req) => {
 };
 
 router.post("/register", async (req, res) => {
-  const { name, username, universityEmail, personalEmail, password, universityId, campusId, role } = req.body;
+  const { name, username, universityEmail, personalEmail, password, universityId, campusId, role, departmentId } = req.body;
   let user;
   let query;
 
   // console.log(universityEmail, personalEmail, password, universityId, campusId, role);
   try {
     if (!name) return res.status(302).json({ error: "name is required" });
+    if (!universityEmail) return res.status(302).json({ error: "University Email is required" });
+
     if (!username) return res.status(302).json({ error: "username is required" });
     if (!role) return res.status(302).json({ error: "role is required" });
     if (role === 'alumni' && !personalEmail) return res.status(302).json({ error: "alumni requires personal email is required" });
     if (!universityId && !campusId) { return res.status(302).json("Select a Univerisity"); }
+    if (!departmentId) return res.status(302).json({ error: "No Department Selected" })
 
+    console.log("deprtment ", departmentId)
+    const departmentExists = await Department.findOne({
+      _id: departmentId,
+      'references.universityOrigin': universityId,
+      'references.campusOrigin': campusId
+    })
+    if (!departmentExists) return res.status(404).json({ error: "No Department Found" })
 
     if (role === 'teacher' || role === 'student') {
       query = { universityEmail };
@@ -414,7 +448,7 @@ router.post("/register", async (req, res) => {
 
       newUser = new User({
         name, username, password: hashedPassword,
-        university: { universityId, campusId, },
+        university: { universityId, campusId, departmentId },
         universityEmail,
         role,
         super_role: "none",
