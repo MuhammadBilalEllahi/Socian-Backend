@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
-const moment = require('moment')
+const moment = require('moment');
+const UserRoles = require("../models/userRoles");
 
 // Helper function to generate tokens
 const generateToken = (user) => {

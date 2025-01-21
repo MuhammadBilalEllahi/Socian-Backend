@@ -43,6 +43,21 @@ const teacherRatingSchema = new Schema({
 teacherRatingSchema.index({ _id: 1, teacherId: 1, userId: 1 }, { unique: true });
 
 
+
+
+const feedbackCommentSchema = new Schema({
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    comment: { type: String, required: true },
+    mentions: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    replies: [{ type: Schema.Types.ObjectId, ref: 'FeedBackComment' }],
+    isDeleted: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date },
+});
+
+
+
+
 const TeacherRating = mongoose.model('TeacherRating', teacherRatingSchema);
 
 module.exports = TeacherRating;
