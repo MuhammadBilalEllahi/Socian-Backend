@@ -11,7 +11,7 @@ const cache = new NodeCache({ stdTTL: 3000 });
  * In sign up page this route gets the universities with campus as 6757657-87687687 uni-campus
  */
 // add cache here
-router.get("/universities-grouped-campus", async (req, res) => {
+router.get("/universities/grouped/campus", async (req, res) => {
     try {
         // const cachedData = cache.get("universitiesGroupedCampus");
         // if (cachedData) {
@@ -32,6 +32,7 @@ router.get("/universities-grouped-campus", async (req, res) => {
                 name: `${university.name} - ${campus.name}`, // Combine university and campus names
                 _id: `${university._id}-${campus._id}`,    // Format _id as "universityId-campusId"
                 domain: `${campus.emailPatterns.domain}`,
+                regex: `${campus.emailPatterns.regex}`,
                 departments: campus.departments.map(department =>
                 (
                     {

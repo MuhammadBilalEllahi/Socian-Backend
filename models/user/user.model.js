@@ -320,6 +320,7 @@ userSchema.methods.setTeacherModal = async function () {
             onLeave: teacher.onLeave,
             hasLeft: teacher.hasLeft,
             rating: teacher.rating,
+            userAttachedBool: teacher.userAttachedBool,
             department: teacher.department.departmentId.name
           })),
           attached: false

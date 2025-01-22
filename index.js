@@ -73,8 +73,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
 });
-// process.env.RUN_LIMITER === 'true' &&
-app.use(limiter);
+process.env.RUN_LIMITER === 'true' && app.use(limiter);
 app.use(helmet());
 // app.use(csrfProtection);
 

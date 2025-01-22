@@ -116,6 +116,17 @@ router.post("/login", async (req, res) => {
       }
     }
 
+    if (user.role === UserRoles.student || user.role === UserRoles.teacher) {
+      if (user.universityEmailVerified === false) {
+        deliverOTP(user, resendEmailAccountConfirmation, req, res)
+
+        return res.status(200).json({
+          success: true,
+          redirectUrl: `${process.env.FRONTEND_URL}/otp/${user._id}?email=${user.role === UserRoles.alumni ? user.personalEmail : user.universityEmail}`,
+        });
+      }
+    }
+
     if (user.role === "student" || user.role === "teacher" || user.role === "alumni") {
       userRoleBool = true;
       await user.populate([
