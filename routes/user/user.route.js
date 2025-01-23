@@ -363,7 +363,7 @@ router.get('/teacher/attachUser', async (req, res) => {
     try {
         const { userId } = getUserDetails(req);
         const user = await User.findById(userId)
-        const response = await user.setTeacherModal()
+        const response = await user.setTeacherModal(req)
         console.log("DOG", response)
         res.status(response.status).json({
             message: response.message,
@@ -387,7 +387,7 @@ router.get('/teacher/joinModel', async (req, res) => {
         const { userId } = getUserDetails(req);
 
         const user = await User.findById(userId)
-        const response = await user.setJoinATeacherModal(teacherId)
+        const response = await user.setJoinATeacherModal(teacherId, req)
 
         console.log(response)
 

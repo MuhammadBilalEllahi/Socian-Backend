@@ -248,7 +248,7 @@ userSchema.index({ role: 1 });
 // userSchema.methods.detachTeacherModalFORCE
 
 
-userSchema.methods.setJoinATeacherModal = async function (teacherId) {
+userSchema.methods.setJoinATeacherModal = async function (teacherId, req) {
   try {
     const teacherModalExists = await Teacher.findById({ _id: teacherId })//.where({ email: '' })
     if (!teacherModalExists) return { status: 404, message: "No Id With This Teacher Exists" }
@@ -272,15 +272,20 @@ userSchema.methods.setJoinATeacherModal = async function (teacherId) {
         teacherModal: this.teacherConnectivities.teacherModal
       }
 
-      req.session.save((err) => {
-        if (err) {
-          console.error("Session save error:", err);
-          return res.status(500).json({ error: "Internal Server Error" });
-        }
-      })
+      return new Promise((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error("Session save error:", err);
+            reject({ status: 500, message: "Internal Server Error" });
+          } else {
+            resolve({ status: 201, message: 'User with role teacher attached with Modal successfully' });
+          }
+        });
+      });
 
-      return { status: 201, message: 'User with role teacher attached with Modal successfully' }
+      // return { status: 201, message: 'User with role teacher attached with Modal successfully' }
     } else {
+
       return { status: 304, message: 'User already attached with another modal, Please verify before Modifyng' }
     }
   } catch (error) {
@@ -290,7 +295,7 @@ userSchema.methods.setJoinATeacherModal = async function (teacherId) {
 
 }
 
-userSchema.methods.setTeacherModal = async function () {
+userSchema.methods.setTeacherModal = async function (req) {
   try {
     console.log("ROLE", this)
     if (this.role === UserRoles.teacher) {
@@ -345,15 +350,27 @@ userSchema.methods.setTeacherModal = async function () {
             teacherModal: this.teacherConnectivities.teacherModal
           }
 
-          req.session.save((err) => {
-            if (err) {
-              console.error("Session save error:", err);
-              return res.status(500).json({ error: "Internal Server Error" });
-            }
-          })
+          // req.session.save((err) => {
+          //   if (err) {
+          //     console.error("Session save error:", err);
+          //     return res.status(500).json({ error: "Internal Server Error" });
+          //   }
+          // })
 
 
-          return { status: 200, message: 'User with role teacher attached with Modal successfully', teacher: teacherModalExists, attached: true }
+          return new Promise((resolve, reject) => {
+            req.session.save((err) => {
+              if (err) {
+                console.error("Session save error:", err);
+                reject({ status: 500, message: "Internal Server Error" });
+              } else {
+                resolve({ status: 201, message: 'User with role teacher attached with Modal successfully' });
+              }
+            });
+          });
+
+
+          // return { status: 200, message: 'User with role teacher attached with Modal successfully', teacher: teacherModalExists, attached: true }
         } else {
           return { status: 200, message: 'User already attached with another modal, Please verify before Modifyng', attached: false }
         }

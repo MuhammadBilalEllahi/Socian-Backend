@@ -121,45 +121,51 @@ const teacherSchema = new Schema({
 
 
 
-teacherSchema.pre('save', async function (next) {
+// teacherSchema.pre('save', async function (req, res, next) {
 
-    if (this.email !== '' && !this.userAttachedBool) {
-        try {
-            const teacherWithThisEmailExists = await User.findOne({ universityEmail: this.email, role: UserRoles.teacher })
-            if (!teacherWithThisEmailExists) return next();
-            this.userAttached = teacherWithThisEmailExists._id;
-            this.userAttachedBool = true;
-            this.userAttachedBy.userType = UserRoles.system
-            // this.save() //dont use this.save in save
+//     if (this.email !== '' && !this.userAttachedBool) {
+//         try {
+//             const teacherWithThisEmailExists = await User.findOne({ universityEmail: this.email, role: UserRoles.teacher })
+//             if (!teacherWithThisEmailExists) return next();
+//             this.userAttached = teacherWithThisEmailExists._id;
+//             this.userAttachedBool = true;
+//             this.userAttachedBy.userType = UserRoles.system
+//             // this.save() //dont use this.save in save
 
-            teacherWithThisEmailExists.teacherConnectivities.teacherModal = teacherModalExists._id;
-            teacherWithThisEmailExists.teacherConnectivities.attached = true;
+//             teacherWithThisEmailExists.teacherConnectivities.teacherModal = teacherModalExists._id;
+//             teacherWithThisEmailExists.teacherConnectivities.attached = true;
 
-            // await teacherWithThisEmailExists.save()
+//             // await teacherWithThisEmailExists.save()
 
-            req.session.user.teacherConnectivities = {
-                attached: teacherWithThisEmailExists.teacherConnectivities.attached,
-                teacherModal: teacherWithThisEmailExists.teacherConnectivities.teacherModal
-            }
+//             req.session.user.teacherConnectivities = {
+//                 attached: teacherWithThisEmailExists.teacherConnectivities.attached,
+//                 teacherModal: teacherWithThisEmailExists.teacherConnectivities.teacherModal
+//             }
 
-            req.session.save((err) => {
-                if (err) {
-                    console.error("Session save error:", err);
-                    return res.status(500).json({ error: "Internal Server Error" });
-                }
-            })
+//             new Promise((resolve, reject) => {
+//                 req.session.save((err) => {
+//                     if (err) {
+//                         console.error("Session save error:", err);
+//                         reject({ status: 500, message: "Internal Server Error" });
+//                         next()
+//                     } else {
+//                         resolve({ status: 201, message: 'User with role teacher attached with Modal successfully' });
+//                         next()
+//                     }
+//                 });
+//             });
 
 
-            next()
+//             next()
 
-        } catch (error) {
-            console.error("Error in Teacher model.js in pre save", error)
-        }
-    } else {
-        next()
-    }
+//         } catch (error) {
+//             console.error("Error in Teacher model.js in pre save", error)
+//         }
+//     } else {
+//         next()
+//     }
 
-})
+// })
 
 // // Virtual to calculate ratingAvg
 // teacherSchema.virtual('ratingAvg').get(function () {

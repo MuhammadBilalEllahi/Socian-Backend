@@ -232,6 +232,7 @@ router.get("/reviews/feedbacks", async (req, res) => {
     const populatedRatings = await Promise.all(
       teacher.ratingsByStudents.map(async (review) => {
         let userIdData;
+        // console.log("REVIEWs", review)
         if (review.userId) {
           userIdData = {
             _id: review.userId._id,

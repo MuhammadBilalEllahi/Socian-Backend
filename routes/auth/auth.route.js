@@ -45,8 +45,11 @@ router.get("/session", async (req, res) => {
       // joinedSocieties: req.session.user.joinedSocieties,
       // joinedSubSocieties: req.session.user.joinedSubSocieties,
     }
+    // console.log("USER CONNECTIVITY", req.session.user.role, UserRoles.teacher)
 
     if (req.session.user.role === UserRoles.teacher) {
+      // console.log("USER CONNECTIVITY2", req.session.user.role, UserRoles.teacher)
+
       session.teacherConnectivities = {
         attached: req.session.user?.teacherConnectivities?.attached ?? false,
         teacherModal: req.session.user?.teacherConnectivities?.teacherModal ?? null
