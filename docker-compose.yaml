@@ -1,0 +1,8 @@
+services:
+  backend:
+    image: backend-beyondtheclass-image-pnpm
+    container_name: backend-beyondtheclass-container-pnpm
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env

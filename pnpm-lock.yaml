@@ -98,6 +98,9 @@ importers:
       morgan:
         specifier: ^1.10.0
         version: 1.10.0
+      multer:
+        specifier: 1.4.5-lts.1
+        version: 1.4.5-lts.1
       node-cache:
         specifier: ^5.1.2
         version: 5.1.2
@@ -132,9 +135,6 @@ importers:
         specifier: ^4.8.1
         version: 4.8.1
     devDependencies:
-      multer:
-        specifier: 1.4.5-lts.1
-        version: 1.4.5-lts.1
       nodemon:
         specifier: ^3.1.7
         version: 3.1.7
