@@ -173,13 +173,14 @@ router.post("/", async (req, res) => {
 
 router.get("/campus", async (req, res) => {
   try {
-    const { campusId } = req.query;
+    // const { campusId } = req.query;
+    const { campusOrigin } = getUserDetails(req)
 
-    if (!campusId) {
+    if (!campusOrigin) {
       return res.status(404).json("Requires Campus Origin");
     }
 
-    const campus = await Campus.findById({ _id: campusId })
+    const campus = await Campus.findById({ _id: campusOrigin })
       .select("departments")
       .populate(
         "departments",

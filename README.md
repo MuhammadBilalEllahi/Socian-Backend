@@ -201,3 +201,9 @@ scp -i "D:\Your Project\EC2-RSA\your-key.pem" -r D:/Your\ Project/project-folder
 <bold>NOW Wait till your marriage... your project is uploading</bold>
 
 #### just dont upload .git files or node_modules (or else say byebye to your precious time)
+
+once upload complete. cd to your project path.
+
+1. Do <code>docker login</code> and then
+2. run <code> docker build -t pnpm-backend-beyondtheclass .</code>
+3. <code> docker-compose up -d </code>
