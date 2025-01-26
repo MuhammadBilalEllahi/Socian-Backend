@@ -7,6 +7,7 @@ const AcademicFormat = require('../../../models/university/academic.format.model
 const { PastPaper, PastpapersCollectionByYear } = require('../../../models/university/papers/pastpaper.subject.model');
 const { getUserDetails } = require('../../../utils/utils');
 const router = express.Router()
+const redisClient = require("../../../db/reddis.js")
 
 
 
@@ -95,6 +96,9 @@ router.get('/finals/:paperId', (req, res) => fetchPastPaperData(req, res, 'final
 router.get("/all-pastpapers-in-subject/:id", async (req, res) => {
     const subjectId = req.params.id
     // console.log("Refernces: ", req.session.references, subjectId)
+
+    const cacheKey = `pastpapers_${subjectId}`;
+
     try {
         const { userId, role, universityOrigin, campusOrigin } = getUserDetails(req)
         // const universityOrigin = req.session.references.university._id;
@@ -108,6 +112,15 @@ router.get("/all-pastpapers-in-subject/:id", async (req, res) => {
 
         // const findDepartment = await Department.findOne({ _id: departmentId, 'references.campusOrigin': campusOrigin, "references.universityOrigin": universityOrigin })
         // if (!findDepartment) return res.status(404).json({ message: "no such Department found" })
+
+
+        // Check Redis cache
+        const cachedData = await redisClient.get(cacheKey); // Directly use get method
+        if (cachedData) {
+            console.log('Cache hit');
+            return res.status(200).json(JSON.parse(cachedData));
+        }
+
 
         const findSubject = await Subject.findOne({
             _id: subjectId,
@@ -151,7 +164,16 @@ router.get("/all-pastpapers-in-subject/:id", async (req, res) => {
 
         const papers = findSubject.pastpapersCollectionByYear.pastpapers || []
         console.log("PASPERS", papers)
-        res.status(200).json({ pastPapers: papers, subjectName: findSubject.name });
+
+        const response = { pastPapers: papers, subjectName: findSubject.name };
+
+        // Cache the response
+        await redisClient.set(cacheKey, JSON.stringify(response), 'EX', 3600); // Set with expiration time
+
+
+        return res.status(200).json(response);
+
+
 
 
 
@@ -679,75 +701,7 @@ router.get("/all-pastpapers-in-subject/:id", async (req, res) => {
 
 
 
-router.post("/upload/types", async (req, res) => {
-    const { year, type, term, termMode, paperName, pdfUrl, teachers, subjectId, departmentId } = req.body;
 
-    // console.log(year, "\n", type, "\n", term, "\n", termMode, "\n", paperName, "\n", pdfUrl, "\n", subjectId, "\n", departmentId);
-
-    const { universityOrigin, campusOrigin } = getUserDetails(req);
-
-    try {
-        // Find the subject and validate
-        const findSubject = await Subject.findOne({
-            _id: subjectId,
-            'references.departmentId': departmentId,
-            'references.universityOrigin': universityOrigin,
-            'references.campusOrigin': campusOrigin,
-        });
-        if (!findSubject) return res.status(404).json({ message: "No such subject found" });
-
-        // Update or create the collection directly
-        const update = {
-            $setOnInsert: { year, references: { subjectId, universityOrigin, campusOrigin } },
-            $push: {},
-        };
-
-        if (type === 'quiz') {
-            update.$push.quizzes = { name: paperName, teachers, 'file.pdf': pdfUrl };
-        } else if (type === 'assignment') {
-            update.$push.assignments = { name: paperName, teachers, 'file.pdf': pdfUrl };
-        } else if (type === 'mid' || type === 'final') {
-            const termField = `${term}.${type}.${termMode}`;
-            // console.log("TERM FIELD", termField
-            update.$push[`${termField}`] = { name: paperName, teachers, 'file.pdf': pdfUrl };
-        } else if (type === 'sessional') {
-            update.$push.sessional = { name: paperName, teachers, 'file.pdf': pdfUrl };
-        }
-
-        const updatedPastPaper = await PastPaper.findOneAndUpdate(
-            { year, 'references.subjectId': subjectId, 'references.universityOrigin': universityOrigin, 'references.campusOrigin': campusOrigin },
-            update,
-            { upsert: true, new: true }
-        );
-
-        // Save to the collection
-        const pastpapersCollectionUpdate = {
-            $addToSet: { pastpapers: updatedPastPaper._id },
-        };
-
-        const updatedCollection = await PastpapersCollectionByYear.findOneAndUpdate(
-            {
-                _id: findSubject.pastpapersCollectionByYear._id,
-                'references.subjectId': subjectId,
-                'references.universityOrigin': universityOrigin,
-                'references.campusOrigin': campusOrigin,
-            },
-            pastpapersCollectionUpdate,
-            { new: true }
-        );
-
-        if (!updatedCollection) return res.status(404).json({ message: "No past papers collection found" });
-
-        res.status(200).json({
-            message: `${type} added successfully`,
-            createdPastPaper: updatedPastPaper,
-            updatedSubject: findSubject,
-        });
-    } catch (error) {
-        console.error('Error adding paper:', error);
-        res.status(500).json({ message: error.message });
-    }
-});
 
 
 // router.post("/upload/types", async (req, res) => {

@@ -4,8 +4,7 @@ const router = express.Router()
 
 const NodeCache = require("node-cache");
 const User = require('../../models/user/user.model');
-const cache = new NodeCache({ stdTTL: 3000 });
-
+const redisClient = require('../../db/reddis')
 
 /**
  * In sign up page this route gets the universities with campus as 6757657-87687687 uni-campus
@@ -13,11 +12,14 @@ const cache = new NodeCache({ stdTTL: 3000 });
 // add cache here
 router.get("/universities/grouped/campus", async (req, res) => {
     try {
-        // const cachedData = cache.get("universitiesGroupedCampus");
-        // if (cachedData) {
-        //     // console.log("Cache hit: universitiesGroupedCampus");
-        //     return res.status(200).json(cachedData);
-        // }
+        const cacheKey = "universitiesGroupedCampus";
+        const cachedData = await redisClient.get(cacheKey);
+
+        if (cachedData) {
+            console.log("Cache hit: universitiesGroupedCampus");
+            return res.status(200).json(JSON.parse(cachedData)); // Return parsed JSON from cache
+        }
+
 
         const universities = await University.find().populate({
             path: "campuses",
@@ -43,8 +45,9 @@ router.get("/universities/grouped/campus", async (req, res) => {
                 )
             }))
         );
-        // Store the data in the cache
-        // cache.set("universitiesGroupedCampus", uniWithCampus);
+
+        await redisClient.set(cacheKey, JSON.stringify(uniWithCampus), 'EX', 36000);
+
 
         res.status(200).json(uniWithCampus);
     } catch (error) {
@@ -55,12 +58,19 @@ router.get("/universities/grouped/campus", async (req, res) => {
 
 router.get('/usernames', async (req, res) => {
     try {
-        // const cachedData = cache.get("usernames");
-        // if (cachedData) {
-        //     console.log("Cache hit: usernames");
-        //     return res.status(200).json(cachedData);
-        // }
+
+
+
         const username = req.query.username
+
+
+        const cacheKey = `username_${username}`; // ## delete username on username update
+        const cachedData = await redisClient.get(cacheKey);
+
+        if (cachedData) {
+            console.log("Cache hit: usernames");
+            return res.status(200).json(true); // If the username exists in cache, return true
+        }
 
         // console.log(username)
         if (!username) return res.status(302).json("Username not provided")
@@ -71,8 +81,8 @@ router.get('/usernames', async (req, res) => {
         if (!usernameExists) return res.status(200).json(false)
         // usernameExists,
         // console.log(usernameExists)
+        await redisClient.set(cacheKey, true, 'EX', 36000);
 
-        // cache.set("usernames", usernameExistList);
         res.status(200).json(true);
     } catch (error) {
         console.error("Error creating campus:", error);

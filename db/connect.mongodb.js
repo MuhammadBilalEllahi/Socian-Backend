@@ -24,7 +24,7 @@ const connectToMongoDB = async (app) => {
         //     key: { "postId": 1 }  // Shard key: postId
         // });
 
-        console.log("Connected To Mongo Database");
+        console.log("Mongo Database:- Connected");
     } catch (error) {
         console.error("Mongo Database Error Catch Messgae: ", error.message)
         // throw new Error(error)
