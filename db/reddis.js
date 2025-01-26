@@ -7,8 +7,9 @@ const Redis = require('ioredis');
 //     db: 0
 // });
 
+console.log("REDIS URL", process.env.REDIS_URL + '?family=0')
 
-const redis = new Redis(process.env.REDIS_URL);
+const redis = new Redis(process.env.REDIS_URL + '?family=0');
 
 redis.on('connect', () => {
     console.log("Redis:- Connected")
