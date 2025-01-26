@@ -3,7 +3,6 @@ const User = require("../../models/user/user.model");
 const Campus = require("../../models/university/campus.university.model");
 const University = require("../../models/university/university.register.model");
 const Society = require("../../models/society/society.model");
-const Teacher = require("../../models/university/teacher/teacher.model");
 const router = express.Router();
 
 router.get("/all-users", async (req, res) => {
@@ -126,18 +125,5 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.get("/teacher-all", async(req,res)=>{
-  try {
-    const teachers = await Teacher.findById({_id:'671aa29365bd12f086a82afa'})
-    console.log(teachers)
-    return res.status(200).json(teachers)
-    
-  
-  } catch (error) {
-    debug.console.error("Error in /teacher-all super.route.js ", error);
-    res.status(500).json("Internal Server Error");
-  }
-
-});
 
 module.exports = router;
