@@ -100,7 +100,7 @@ const sendOtp = async (phoneNumber, email, user, name) => {
 /**
  * Extracts user details based on the platform and session or user data.
  * @param {Object} req - The request object
- * @returns {Object} - The user details, including  userId, role, universityOrigin, campusOrigin
+ * @returns {Object} - The user details, including  user, userId, role, universityOrigin, campusOrigin, departmentId
  * @returns {user}
  * @returns {userId}
  * @returns {role}
@@ -108,7 +108,13 @@ const sendOtp = async (phoneNumber, email, user, name) => {
  * @returns {campusOrigin}
  */
 const getUserDetails = (req) => {
-  let user, userId, role, universityOrigin, campusOrigin;
+
+  // Validate `res` only if `checks` is true
+  // if (checks && !res) {
+  //   throw new Error("Response object (`res`) is required when `checks` is true");
+  // }
+
+  let user, userId, role, universityOrigin, campusOrigin, departmentId;
 
   const platform = req.headers["x-platform"];
 
@@ -116,6 +122,7 @@ const getUserDetails = (req) => {
     user = req.session.user;
     userId = req.session.user._id;
     role = req.session.user.role;
+    departmentId = req.session.user.university.departmentId;
     if (role !== "ext_org") {
       universityOrigin = req.session.user.university.universityId._id;
       campusOrigin = req.session.user.university.campusId._id;
@@ -124,13 +131,24 @@ const getUserDetails = (req) => {
     user = req.user;
     userId = req.user._id;
     role = req.user.role;
+    departmentId = req.user.university.departmentId;
     if (role !== "ext_org") {
       universityOrigin = req.user.university.universityId._id;
       campusOrigin = req.user.university.campusId._id;
     }
   }
 
-  return { userId, role, universityOrigin, campusOrigin };
+  // if (checks) {
+  //   if (!userId) return res.status(400).json({ message: "User ID is missing" }); // This will never happen
+  //   if (!role) return res.status(400).json({ message: "User role is missing" }); // This will never happen
+  //   if (!departmentId) { // This will never happen (only for those who created an account already unitl Today 26th Jan 2025 )
+  //     return res
+  //       .status(422)
+  //       .json({ message: "Please select a department in profile settings" });
+  //   }
+  // }
+
+  return { user, userId, role, universityOrigin, campusOrigin, departmentId };
 };
 
 module.exports = {

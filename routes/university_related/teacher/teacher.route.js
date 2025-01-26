@@ -9,6 +9,9 @@ const UserReviewTeacherVote = require("../../../models/university/teacher/teache
 const TeacherRating = require("../../../models/university/teacher/rating.teacher.model");
 const { default: mongoose } = require("mongoose");
 const { getUserDetails } = require("../../../utils/utils");
+const UserRoles = require("../../../models/userRoles");
+const User = require("../../../models/user/user.model");
+const { sessionSaveHandler } = require("../../../utils/save.session");
 
 // router.get("/teachers-by-campus", async (req, res) => {
 //   try {
@@ -115,6 +118,182 @@ router.get("/super-teachers-by-campus", async (req, res) => {
 });
 
 
+
+
+
+
+// // CREATEBYTEACHER a TEACHER modal created by a teacher
+// router.post("/by/teacher/create", async (req, res) => {
+
+//   const { user, userId, role, universityOrigin, campusOrigin, departmentId } = getUserDetails(req)
+
+//   console.log(user, userId, role, universityOrigin, campusOrigin, departmentId)
+//   if (!role === UserRoles.teacher) return res.status(304).json({ error: "Your role is not Teacher" })
+//   try {
+//     const findUni = await University.findOne({ _id: universityOrigin });
+//     if (!findUni)
+//       return res.status(404).json({ error: "no such University found" });
+
+//     const findCampus = await Campus.findOne({
+//       _id: campusOrigin,
+//       universityOrigin: universityOrigin,
+//     });
+//     if (!findCampus)
+//       return res.status(404).json({ error: "no such Campus found" });
+
+//     const findDepartment = await Department.findOne({
+//       _id: departmentId,
+//       "references.campusOrigin": campusOrigin,
+//       "references.universityOrigin": universityOrigin,
+//     });
+//     if (!findDepartment)
+//       return res.status(404).json({ error: "no such Department found" });
+
+//     const userExists = await User.findById(userId);
+
+//     // addd gender also later
+//     const teacher = await Teacher.findOneAndUpdate(
+//       {
+//         userAttachedBool: true,
+//         userAttached: userId,
+//         'userAttachedBy.by': userId,
+//         'userAttachedBy.userType': 'teacher'
+//       },
+//       {
+//         name: user.name,
+//         email: user.universityEmail,
+//         imageUrl: user.profile.picture ?? 'https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg',
+//         "department.name": findDepartment.name,
+//         "department.departmentId": departmentId,
+//         universityOrigin: universityOrigin,
+//         campusOrigin: campusOrigin,
+//         userAttachedBool: true,
+//         userAttached: userId,
+//         'userAttachedBy.by': userId,
+//         'userAttachedBy.userType': 'teacher'
+//       }, {
+//       upsert: true
+//     });
+
+//     teacher.save();
+
+//     findDepartment.teachers.push(teacher);
+//     findCampus.teachers.push(teacher);
+
+//     findDepartment.save();
+//     findCampus.save();
+
+//     userExists.teacherConnectivities.teacherModal = teacher._id;
+//     userExists.teacherConnectivities.attached = true;
+
+//     userExists.save()
+
+
+//     console.log("\nuser", userExists, "\nteacher", teacher)
+
+//     if (!teacher)
+//       return res.status(502).json({ error: "Failed to create teacher" });
+
+//     // res.status(200).json(teacher);
+
+//     req.session.user.teacherConnectivities = {
+//       attached: user.teacherConnectivities.attached,
+//       teacherModal: user.teacherConnectivities.teacherModal
+//     }
+//     sessionSaveHandler()
+//   } catch (error) {
+//     console.error("Error in teacher:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// });
+
+
+// CREATEBYTEACHER a TEACHER modal created by a teacher
+router.post("/by/teacher/create", async (req, res) => {
+  const { user, userId, role, universityOrigin, campusOrigin, departmentId } = getUserDetails(req);
+
+  console.log(user, userId, role, universityOrigin, campusOrigin, departmentId);
+
+  if (role !== UserRoles.teacher) {
+    return res.status(403).json({ error: "Your role is not Teacher" });
+  }
+
+  try {
+    // Validate University
+    const findUni = await University.findById(universityOrigin);
+    if (!findUni) return res.status(404).json({ error: "No such University found" });
+
+    // Validate Campus
+    const findCampus = await Campus.findOne({
+      _id: campusOrigin,
+      universityOrigin: universityOrigin,
+    });
+    if (!findCampus) return res.status(404).json({ error: "No such Campus found" });
+
+    // Validate Department
+    const findDepartment = await Department.findOne({
+      _id: departmentId,
+      "references.campusOrigin": campusOrigin,
+      "references.universityOrigin": universityOrigin,
+    });
+    if (!findDepartment) return res.status(404).json({ error: "No such Department found" });
+
+    // Validate User
+    const userExists = await User.findById(userId);
+    if (!userExists) return res.status(404).json({ error: "User not found" });
+
+    // Upsert Teacher Record
+    const teacher = await Teacher.findOneAndUpdate(
+      {
+        userAttachedBool: true,
+        userAttached: userId,
+        "userAttachedBy.by": userId,
+        "userAttachedBy.userType": "teacher",
+      },
+      {
+        name: user.name,
+        email: user.universityEmail,
+        imageUrl: user.profile.picture ?? "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
+        "department.name": findDepartment.name,
+        "department.departmentId": departmentId,
+        universityOrigin: universityOrigin,
+        campusOrigin: campusOrigin,
+        userAttachedBool: true,
+        userAttached: userId,
+        "userAttachedBy.by": userId,
+        "userAttachedBy.userType": "teacher",
+      },
+      { upsert: true, new: true }
+    );
+
+    if (!teacher) return res.status(502).json({ error: "Failed to create teacher" });
+
+    // Save Related Data
+    await Promise.all([
+      teacher.save(),
+      Department.findByIdAndUpdate(departmentId, { $push: { teachers: teacher._id } }),
+      Campus.findByIdAndUpdate(campusOrigin, { $push: { teachers: teacher._id } }),
+      User.findByIdAndUpdate(userId, {
+        $set: {
+          "teacherConnectivities.teacherModal": teacher._id,
+          "teacherConnectivities.attached": true,
+        },
+      }),
+    ]);
+
+    // Update Session
+    req.session.user.teacherConnectivities = {
+      attached: true,
+      teacherModal: teacher._id,
+    };
+
+    await sessionSaveHandler(req, res);
+    // res.status(201).json({ message: "Teacher created successfully", teacher });
+  } catch (error) {
+    console.error("Error in creating teacher:", error);
+    res.status(500).json({ error: error.message || "Internal Server Error" });
+  }
+});
 
 
 

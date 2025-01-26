@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema({
     // },
     // update default picture url
     picture: {
-      type: String,
+      type: String, // MAKE this array of pictures
       default:
         "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
     },
