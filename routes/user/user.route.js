@@ -86,6 +86,7 @@ const Society = require('../../models/society/society.model')
 
 router.get('/profile', async (req, res) => {
     try {
+        const { userId } = getUserDetails(req);
         // Fetch user data from the database
         const userExists = await User.findById({ _id: req.query.id })
             .select("-password")
@@ -113,12 +114,14 @@ router.get('/profile', async (req, res) => {
                     options: { sort: { createdAt: -1 } }
                 },
                 {
-                    path: 'profile.connections.friend', // Populating friend connections map
-                    select: 'name _id profile.picture status', // Adjust fields to select based on the new map structure
+                    path: 'profile.connections.friend',
+                    select: 'name _id profile.picture status',
                 }
             ]);
 
-        if (!userExists) return res.status(404).json({ message: "User Not Found", error: "User Not Found" });
+        if (!userExists || userExists.profile.connections.blocked.includes(userId)) return res.status(404).json({ message: "User Not Found", error: "User Not Found" });
+
+
 
         // Construct the user profile response
         const user = {
@@ -182,49 +185,53 @@ router.get('/subscribedSocieties', async (req, res) => {
 })
 
 
-
+//USE THIS FOR OWN PROFILE SETTINGS PAGE
 router.get('/connections', async (req, res) => {
     try {
         const userId = req.query.id;
 
         // Fetch the user by ID and only retrieve the connections field
         const userExists = await User.findById({ _id: userId })
-            .select('profile.connections.friend -_id'); // Exclude unnecessary fields
+            .select('profile.connections.friend -_id -password'); // Exclude unnecessary fields
 
         if (!userExists) {
             return res.status(404).json({ message: "User Not Found", error: "User Not Found" });
         }
 
-        // Extract friend user IDs and statuses from the Map (embedded document)
-        const friendsMap = userExists.profile?.connections?.friend || {};
+        // Extract friend user connections from the array
+        const friendsArray = userExists.profile?.connections?.friend || [];
 
-
-
-        let friendUserIds = Array.from(friendsMap.keys());
-
-
-        // console.log("FID", friendsMap, friendUserIds, friendsMap['67634a2cdb5edf37564334ea'])
-
-        if (friendUserIds.length === 0) {
-            return res.status(200).json({ connections: [] }); // No connections
+        if (friendsArray.length === 0) {
+            return res.status(200).json({ connections: [], message: "No Connections" }); // No connections
         }
+
+        // Create an array of friend user IDs
+        const friendUserIds = friendsArray.map(conn => conn.user.toString());
 
         // Fetch details of friends using their IDs
         const friendsDetails = await User.find({ _id: { $in: friendUserIds } })
             .select('name _id profile.picture');
 
-        // Map statuses back to friend details
-        const connections = friendsDetails.map((friend, idx) => {
-            if (idx >= 5) return;
-            return ({
+        // Filter out blocked users by checking the current user's blocked list
+        const blockedUsers = userExists.profile?.connections?.blocked || [];
+
+        const filteredConnections = friendsDetails.filter(friend => {
+            // Check if the friend is blocked by the current user
+            return !blockedUsers.includes(friend._id.toString());
+        });
+
+        // Map statuses and other details back to the filtered friends
+        const connections = filteredConnections.map(friend => {
+            // Find the connection status in the original array
+            const connection = friendsArray.find(conn => conn.user.toString() === friend._id.toString());
+            return {
                 _id: friend._id,
                 name: friend.name,
                 picture: friend.profile?.picture,
-                status: friendsMap.get(friend._id.toHexString()),
-            })
+                status: connection ? connection.status : 'unknown', // Default to 'unknown' if no status
+            };
         });
 
-        // console.log("connections", connections)
         return res.status(200).json({ connections });
     } catch (error) {
         console.error("Error in /connections route:", error);
@@ -233,85 +240,134 @@ router.get('/connections', async (req, res) => {
 });
 
 
-router.post('/add-friend', async (req, res) => {
+router.get('/connection/stream', async (req, res) => {
     try {
-        const { toFriendUser } = req.body;
-        const toFriendUserExists = await User.findById(toFriendUser).select('profile.connections.friend')
-        if (!toFriendUserExists) {
-            return res.status(404).json({ message: "User Not Found" });
+
+        const { userId } = getUserDetails(req)
+
+        const user = await User.findById({ _id: userId })
+            .select('profile.connections.friend').populate('profile.connections.friend.user');
+
+        if (!user || !user.profile?.connections?.friend) {
+            return res.status(404).json({ message: "No connections yet", connections: [] });
         }
+        const connections = user.profile.connections.friend.map(friend => {
+            // console.log(
+            //     // friend,
+            //     friend.user.name,
+            //     friend.user.profile.picture,
+            //     friend.status,
 
-        const { userId } = getUserDetails(req);
-        const currentUser = await User.findById(userId).select('profile.connections.friend');
-        if (!currentUser) {
-            return res.status(404).json({ message: "User Not Found" });
-        }
-
-        // Ensure that profile.connections.friend is a Map
-        if (!(currentUser.profile.connections.friend instanceof Map)) {
-            currentUser.profile.connections.friend = new Map();
-        }
-
-        if (!(toFriendUserExists.profile.connections.friend instanceof Map)) {
-            toFriendUserExists.profile.connections.friend = new Map();
-        }
-
-        // Check if friend request already exists
-        const currentFriendStatus = currentUser.profile.connections.friend.get(toFriendUser);
-        const toFriendStatus = toFriendUser.profile?.connections?.friend.get(currentUser);
-
-        if (currentFriendStatus && toFriendStatus) {
-            return res.status(400).json({ message: `Friend request already ${currentFriendStatus}`, status: currentFriendStatus });
-        }
+            //     friend.requestedBy,
+            //     friend.requestedBy.toHexString()
+            // )
+            return {
+                status: friend.status === 'requested' ? (friend.requestedBy.toHexString() === userId ? 'outgoing' : 'incoming') : 'friends',
+                name: friend.user.name,
+                picture: friend.user.profile.picture,
+            }
+        })
 
 
-        // Create a new friend request - store just the status string
-        currentUser.profile.connections.friend.set(toFriendUser, 'requested');
-        await currentUser.save();
+        return res.status(200).json({ connections });
 
-        toFriendUserExists.profile.connections.friend.set(currentUser._id, 'requested');
-        await toFriendUserExists.save();
-
-        return res.status(200).json({ connections: currentUser.profile.connections.friend });
     } catch (error) {
-        console.error("Error in add-friend route:", error);
-        return res.status(500).json({ message: "Internal Server Error" });
+        console.error("Error in /connection/stream in user.route.js", error);
+        res.status(500).json({ message: "Internal Server Error" });
     }
-});
+})
+
+
+
 
 router.post('/cancel-friend-request', async (req, res) => {
     try {
         const { toFriendUser } = req.body;
         const { userId } = getUserDetails(req);
 
-        const currentUser = await User.findById(userId).select('profile.connections.friend');
-        const toFriendUserExists = await User.findById(toFriendUser).select('profile.connections.friend');
+        const currentUser = await User.findById(userId);
+        const toFriendUserExists = await User.findById(toFriendUser);
 
         if (!currentUser || !toFriendUserExists) {
             return res.status(404).json({ message: "User Not Found" });
         }
 
-        // Ensure profile.connections.friend is a Map
-        if (!(currentUser.profile.connections.friend instanceof Map)) {
-            currentUser.profile.connections.friend = new Map();
-        }
-        if (!(toFriendUserExists.profile.connections.friend instanceof Map)) {
-            toFriendUserExists.profile.connections.friend = new Map();
-        }
-
-        // Remove the friend request
-        currentUser.profile.connections.friend.delete(toFriendUser);
+        // Remove the friend request if it exists
+        currentUser.profile.connections.friend = currentUser.profile.connections.friend.filter(
+            conn => conn.user.toString() !== toFriendUser
+        );
         await currentUser.save();
 
-        toFriendUserExists.profile.connections.friend.delete(userId);
+        toFriendUserExists.profile.connections.friend = toFriendUserExists.profile.connections.friend.filter(
+            conn => conn.user.toString() !== userId
+        );
         await toFriendUserExists.save();
 
         return res.status(200).json({ message: "Friend request canceled" });
+
     } catch (error) {
         console.error("Error in cancel-friend-request route:", error);
         return res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
+
+router.post('/add-friend', async (req, res) => {
+    try {
+        const { toFriendUser } = req.body;
+        const { userId } = getUserDetails(req);
+
+        // Find the user to send the friend request to
+        const toFriendUserExists = await User.findById(toFriendUser);
+        if (!toFriendUserExists) {
+            return res.status(404).json({ message: "User Not Found" });
+        }
+
+        // Find the current user
+        const currentUser = await User.findById(userId);
+        if (!currentUser) {
+            return res.status(404).json({ message: "User Not Found" });
+        }
+
+        // Ensure neither user is blocked
+        if (currentUser.profile.connections.blocked.includes(toFriendUser)) {
+            return res.status(400).json({ message: "You have blocked this user." });
+        }
+        if (toFriendUserExists.profile.connections.blocked.includes(userId)) {
+            return res.status(400).json({ message: "This user has house full." });
+        }
+
+        // Check if a friend request already exists
+        const friendRequestExists = currentUser.profile.connections.friend.some(conn =>
+            conn.user.toString() === toFriendUser && conn.status === 'requested');
+
+        if (friendRequestExists) {
+            return res.status(400).json({ message: "Friend request already sent" });
+        }
+
+        // Create a new friend request
+        currentUser.profile.connections.friend.push({
+            user: toFriendUser,
+            status: 'requested',
+            requestedBy: userId,
+        });
+        await currentUser.save();
+
+        toFriendUserExists.profile.connections.friend.push({
+            user: userId,
+            status: 'requested',
+            requestedBy: userId,
+        });
+        await toFriendUserExists.save();
+
+        return res.status(200).json({ message: "Friend request sent" });
+
+    } catch (error) {
+        console.error("Error in add-friend route:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
 
 
 
