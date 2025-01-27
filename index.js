@@ -24,11 +24,12 @@ const { attachSocketToApp } = require("./socket/socket.js");
 const MongoStore = require("connect-mongo");
 const path = require("path");
 // const RedisStore = require('connect-redis').default;
-const redisClient = require("./db/reddis.js")
 
 // const Redis = require('ioredis');
 
 dotenv.config();
+
+const redisClient = require("./db/reddis.js")
 
 // const redis = new Redis(process.env.REDIS_URL);
 // redis.on('error', (err) => {
