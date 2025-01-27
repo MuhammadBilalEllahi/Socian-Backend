@@ -8,9 +8,11 @@ const PostsCollection = require("../../../models/society/post/collection/post.co
 const User = require("../../../models/user/user.model");
 const { getUserDetails } = require("../../../utils/utils");
 const Post = require("../../../models/society/post/post.model");
+const UserRoles = require("../../../models/userRoles");
 const router = express.Router();
+const redisClient = require('../../../db/reddis')
 
-router.post("/create-SocietyTypes", async (req, res) => {
+router.post("/types/create", async (req, res) => {
     try {
         const type = req.body.type;
 
@@ -35,57 +37,22 @@ router.post("/create-SocietyTypes", async (req, res) => {
  */
 router.post("/create", async (req, res) => {
     try {
-        let role;
-        let userId;
-        let universityId;
-        let campusId;
+
         let companyId;
         // get societyTypes from cache later on
-        const {
-            name,
-            description,
-            societyTypeId,
-            category,
-            icon,
-            banner,
-            allows,
-            president,
-        } = req.body;
+        const { name, description, societyTypeId, category, icon, banner, allows, president } = req.body;
+        const { userId, role, universityOrigin, campusOrigin, departmentId } = getUserDetails(req)
 
-        // console.log("hi", "\n\n", req.session.user, "\n\n")
-
-        // console.log("jere", req.body);
-        const platform = req.headers["x-platform"];
-        if (platform === "web") {
-            userId = req.session.user._id;
-            role = req.session.user.role;
-            if (role !== "ext_org") {
-                (universityId = req.session.user.university.universityId._id),
-                    (campusId = req.session.user.university.campusId._id);
-            }
-            // else{
-            //     companyId = null;
-            // }
-        }
-        if (platform === "app") {
-            userId = req.user._id;
-            role = req.user.role;
-            if (role !== "ext_org") {
-                (universityId = req.user.university.universityId._id),
-                    (campusId = req.user.university.campusId._id);
-            }
-        }
-        // else { }
 
         const alreadyExists = await Society.findOne(
             { name: name },
-            role === "ext_org"
+            role === UserRoles.ext_org
                 ? { companyReference: { isCompany: true } }
                 : {
                     references: {
-                        role: role,
-                        universityId,
-                        campusId,
+                        role,
+                        universityOrigin,
+                        campusOrigin,
                     },
                 }
         );
@@ -108,7 +75,7 @@ router.post("/create", async (req, res) => {
             moderators: [userId],
             totalMembers: 1,
             societyType: societyTypeIdExists._id,
-            ...(role === "ext_org"
+            ...(role === UserRoles.ext_org
                 ? {
                     companyReference: {
                         isCompany: true,
@@ -119,11 +86,11 @@ router.post("/create", async (req, res) => {
                 : {
                     references: {
                         role,
-                        universityOrigin: universityId,
-                        campusOrigin: campusId,
+                        universityOrigin,
+                        campusOrigin,
                     },
                 }),
-            allows: [allows ? allows : userId.role],
+            allows: [allows ? allows : role],
         });
 
         // console.log("es1", newSociety);
@@ -152,7 +119,7 @@ router.post("/create", async (req, res) => {
         const postsCollectionRef = new PostsCollection({
             _id: newSociety._id,
             societyId: newSociety._id,
-            ...(role === "ext_org"
+            ...(role === UserRoles.ext_org
                 ? {
                     companyReference: {
                         isCompany: true,
@@ -161,9 +128,9 @@ router.post("/create", async (req, res) => {
                 }
                 : {
                     references: {
-                        role: role,
-                        universityOrigin: universityId,
-                        campusOrigin: campusId,
+                        role,
+                        universityOrigin,
+                        campusOrigin
                     },
                 }),
         });
@@ -312,8 +279,27 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
     const { page = 1, limit = 10 } = req.query; // Default to page 1 and 10 posts per page
 
-    console.log("ID", id)
+    const cacheKeySociety = `society_${id}`;
+    const cacheKeyPosts = `society_${id}_posts_page_${page}`;
+
+
+
+
+    console.log("ID-", id)
     try {
+
+        // Try fetching cached society data
+        const cachedSociety = await redisClient.get(cacheKeySociety);
+        if (cachedSociety) {
+            const society = JSON.parse(cachedSociety);
+            // Fetch cached posts if available
+            const cachedPosts = await redisClient.get(cacheKeyPosts);
+            if (cachedPosts) {
+                return res.status(200).json({ society, posts: JSON.parse(cachedPosts) });
+            }
+        }
+
+
         const society = await Society.findOne({ _id: id }).populate([
             'moderators',
             'president',
@@ -327,6 +313,9 @@ router.get("/:id", async (req, res) => {
         console.log("SOciety", society)
 
         if (!society) return res.status(404).json("No society found");
+
+        await redisClient.set(cacheKeySociety, JSON.stringify(society), 'EX', 3600);
+
 
         const postsCollection = Array.isArray(society.postsCollectionRef?.posts)
             ? society.postsCollectionRef.posts
@@ -349,6 +338,8 @@ router.get("/:id", async (req, res) => {
                 { path: 'voteId', model: 'SocietyPostAndCommentVote' },
             ]);
 
+        await redisClient.set(cacheKeyPosts, JSON.stringify(posts), 'EX', 600); // Shorter expiry for posts
+
         res.status(200).json({ society: society, posts: posts });
     } catch (error) {
         console.error("Error in society.route.js /:id", error);
@@ -359,14 +350,8 @@ router.get("/:id", async (req, res) => {
 
 
 router.get('/user/subscribedSocieties', async (req, res) => {
-    let userId;
     try {
-        const platform = req.headers["x-platform"];
-        if (platform === "web") {
-            userId = req.session.user._id;
-        } else if (platform === "app") {
-            userId = req.user._id;
-        }
+        const { userId } = getUserDetails(req)
 
 
         const user = await User.findById({ _id: userId })
@@ -575,41 +560,18 @@ router.get("/campus/all", async (req, res) => {
  * FOR
  */
 router.get("/with-company/all", async (req, res) => {
-    let role;
-    let universityId;
-    let campusId;
+
     try {
-        const platform = req.headers["x-platform"];
-        if (platform === "web") {
-            role = req.session.user.role;
-            if (role !== "ext_org") {
-                (universityId = req.session.user.university.universityId._id),
-                    (campusId = req.session.user.university.campusId._id);
-            }
-            // else {
-            //     // TODO IMPLEMENT LATER - to make query faster, give company id
-            //     // companyId
-            // }
-        } else if (platform === "app") {
-            userId = req.user._id;
-            role = req.user.role;
-            if (role !== "ext_org") {
-                (universityId = req.user.university.universityId._id),
-                    (campusId = req.user.university.campusId._id);
-            }
-            // else {
-            //     // TODO IMPLEMENT LATER - to make query faster, give company id
-            //     // companyId
-            // }
-        }
+        const { role, universityOrigin, campusOrigin } = getUserDetails(req)
+
         const society = await Society.find(
             role === "ext_org"
                 ? { companyReference: { isCompany: true } }
                 : {
                     references: {
                         role: role,
-                        universityId,
-                        campusId,
+                        universityOrigin,
+                        campusOrigin
                     },
                 }
         );
@@ -676,25 +638,16 @@ router.get("/sub-societies/:societyId", async (req, res) => {
  */
 router.post("/role-based/:id", async (req, res) => {
     const { id } = req.params;
-    let roleFromMiddleware;
 
     try {
-        const platform = req.header["x-platform"];
-
-        if (platform === "web") {
-            roleFromMiddleware = req.session.user.role;
-        } else if (platform === "app") {
-            roleFromMiddleware = req.user.role;
-        }
-
-        if (!roleFromMiddleware) return res.status(404).json("role required");
+        const { role } = getUserDetails(req);
         const society = await Society.findOne(
             { _id: id },
-            { "references.role": roleFromMiddleware }
+            { "references.role": role }
         );
 
         if (!society)
-            return res.status(404).json("no society found in " + roleFromMiddleware);
+            return res.status(404).json("no society found in " + role);
         res.status(200).json(society);
     } catch (error) {
         console.error("Error in society.route.js ", error);
@@ -743,27 +696,19 @@ router.get("/ext-org/:companyId", async (req, res) => {
     }
 });
 
-router.post("/join-society/:societyId", async (req, res) => {
+router.get("/join/:societyId", async (req, res) => {
     const { societyId } = req.params;
-    let role;
-    let userId;
 
+    console.log("society join", societyId)
     try {
-        const platform = req.headers["x-platform"];
-        if (platform === "web") {
-            role = req.session.user.role;
-            userId = req.session.user._id;
-        } else if (platform === "app") {
-            role = req.user.role;
-            userId = req.user._id;
-            return res.status(501).json("Platform not supported yet");
-        }
+        const { role, userId } = getUserDetails(req)
 
+        console.log(role, userId, "/;hhh", societyId)
         // Fetch the society and validate the role
         const society = await Society.findOne({ _id: societyId });
-        if (!society) return res.status(404).json("Society not found");
-        if (!society.allows.includes(role))
-            return res.status(403).json(`Society does not allow role: ${role}`);
+        if (!society) return res.status(404).json({ error: "Society not found" });
+        if (!society.allows.includes(role) && !society.allows.includes("all"))
+            return res.status(403).json({ message: `Society does not allow role: ${role}` });
 
 
         // Check if the user is already a member
@@ -791,7 +736,7 @@ router.post("/join-society/:societyId", async (req, res) => {
         );
 
         if (!updatedSociety)
-            return res.status(404).json("Failed to update society");
+            return res.status(404).json({ error: "Failed to update society" });
 
         // Optional: Sync with Members collection if necessary
         await Members.updateOne(
@@ -818,40 +763,29 @@ router.post("/join-society/:societyId", async (req, res) => {
             });
     } catch (error) {
         console.error("Error in join-society route: ", error);
-        res.status(500).json("Internal Server Error");
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-router.post("/leave-society/:id", async (req, res) => {
-    const { id } = req.params;
-    let role;
-    let userId;
-
+router.get("/leave/:societyId", async (req, res) => {
+    const { societyId } = req.params;
     try {
-        const platform = req.headers["x-platform"];
-        if (platform === "web") {
-            role = req.session.user.role;
-            userId = req.session.user._id;
-        } else if (platform === "app") {
-            role = req.user.role;
-            userId = req.user._id;
-            return res.status(501).json("Platform not supported yet");
-        }
+        const { role, userId } = getUserDetails(req)
 
         // Fetch the society and validate existence
-        const society = await Society.findOne({ _id: id })
+        const society = await Society.findOne({ _id: societyId })
             .populate("members")
             .select("_id");
-        if (!society) return res.status(404).json("Society not found");
+        if (!society) return res.status(404).json({ error: "Society not found" });
 
         // Check if the user is already a member
         if (!society.members.members.includes(userId)) {
-            return res.status(400).json("You are not a member of this society");
+            return res.status(400).json({ error: "You are not a member of this society" });
         }
 
         // Update the society to remove the user
         const updatedSociety = await Society.findOneAndUpdate(
-            { _id: id },
+            { _id: societyId },
             {
                 // $pull: { 'members.members': userId }, // Remove user from members array
                 $inc: { totalMembers: -1 }, // Decrement the total member count
@@ -860,9 +794,9 @@ router.post("/leave-society/:id", async (req, res) => {
         );
 
         if (!updatedSociety)
-            return res.status(404).json("Failed to update society");
+            return res.status(404).json({ error: "Failed to update society" });
 
-        await Members.updateOne({ societyId: id }, { $pull: { members: userId } });
+        await Members.updateOne({ societyId: societyId }, { $pull: { members: userId } });
 
         await User.findByIdAndUpdate(
             { _id: userId },
@@ -878,7 +812,7 @@ router.post("/leave-society/:id", async (req, res) => {
             .json({ message: "Left society successfully", society: updatedSociety });
     } catch (error) {
         console.error("Error in leave-society route: ", error);
-        res.status(500).json("Internal Server Error");
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 

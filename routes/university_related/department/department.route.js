@@ -4,8 +4,8 @@ const University = require("../../../models/university/university.register.model
 const Campus = require("../../../models/university/campus.university.model");
 const { getUserDetails } = require("../../../utils/utils");
 const router = express.Router();
-const NodeCache = require("node-cache");
-const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
+
+const redisClient = require('../../../db/reddis')
 
 
 router.get("/by-university", async (req, res) => {
@@ -80,18 +80,18 @@ router.get("/by-campus", async (req, res) => {
 // });
 
 
-router.get("/with-subjects-by-campus", async (req, res) => {
+router.get("/campus/subjects", async (req, res) => {
   const { campusOrigin } = getUserDetails(req);
 
   // Cache key (specific to the campus)
-  const cacheKey = `campus-with-subjects-${campusOrigin}`;
+  const cacheKey = `campus_and_subjects-${campusOrigin}`;
 
   try {
-    // Check if data is in cache
-    const cachedData = cache.get(cacheKey);
+    const cachedData = await redisClient.get(cacheKey);
     if (cachedData) {
-      return res.status(200).json(cachedData);
+      return res.status(200).json(JSON.parse(cachedData));
     }
+
 
     // Fetch data from the database if not in cache
     const campus = await Campus.find({ _id: campusOrigin })
@@ -112,7 +112,8 @@ router.get("/with-subjects-by-campus", async (req, res) => {
     }
 
     // Store the fetched data in cache
-    cache.set(cacheKey, campus);
+    await redisClient.set(cacheKey, JSON.stringify(campus), 'EX', 3600);
+
 
     res.status(200).json(campus);
   } catch (error) {
@@ -164,6 +165,10 @@ router.post("/", async (req, res) => {
 
     findCampus.departments.push(departmentCreated);
     findCampus.save();
+
+    const cacheKey = `campus_and_subjects-${campusId}`;
+    await redisClient.del(cacheKey);
+
     res.status(200).json({ message: departmentCreated });
   } catch (error) {
     console.error("Error in department:", error);

@@ -12,6 +12,7 @@ const { getUserDetails } = require("../../../utils/utils");
 const UserRoles = require("../../../models/userRoles");
 const User = require("../../../models/user/user.model");
 const { sessionSaveHandler } = require("../../../utils/save.session");
+const redisClient = require('../../../db/reddis')
 
 // router.get("/teachers-by-campus", async (req, res) => {
 //   try {
@@ -43,10 +44,17 @@ const { sessionSaveHandler } = require("../../../utils/save.session");
 
 // GET all teachers by campus on student feedback page
 
-router.get("/teachers-by-campus", async (req, res) => {
+router.get("/campus/teachers", async (req, res) => {
   try {
 
     const { campusOrigin } = getUserDetails(req);
+
+    const cacheKey = `campus_teachers_${campusOrigin}`;
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+      console.log("Cache hit: campus teachers");
+      return res.status(200).json(JSON.parse(cachedData))
+    }
 
     if (!campusOrigin) return res.status(400).json({ error: "Campus location not provided" });
 
@@ -71,6 +79,8 @@ router.get("/teachers-by-campus", async (req, res) => {
         topFeedbackUser: topRating ? topRating.userId : null,
       };
     });
+
+    await redisClient.set(cacheKey, JSON.stringify(result), 'EX', 3600)
 
     res.status(200).json(result);
   } catch (error) {
@@ -372,6 +382,14 @@ router.get("/info", async (req, res) => {
   const { id } = req.query;
   // console.log("info id", id);
   try {
+    const cacheKey = `campus_teacher_${id}`;
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+      console.log("Cache hit: teacher");
+      return res.status(200).json(JSON.parse(cachedData))
+    }
+
+
     const teacher = await Teacher.findById(id).populate({
       path: "department.departmentId campusOrigin",
     });
@@ -379,6 +397,9 @@ router.get("/info", async (req, res) => {
       return res.status(404).json({ message: "Teacher not found" });
     }
     // console.log(teacher)
+    await redisClient.set(cacheKey, JSON.stringify(teacher), 'EX', 36000);
+
+
     res.status(200).json(teacher);
   } catch (error) {
     console.error("Error In teacherSpeficicInfo", {

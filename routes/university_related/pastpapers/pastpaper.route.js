@@ -16,6 +16,15 @@ async function fetchPastPaperData(req, res, type) {
     try {
         const { paperId } = req.params;
 
+        const cacheKey = `pastpaper_${type}_${paperId}`;
+
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+            return res.status(200).json(JSON.parse(cachedData));
+        }
+
+
+
         const findSubject = await Subject.findOne({ _id: paperId });
         if (!findSubject) return res.status(404).json({ message: "No such subject found" });
 
@@ -72,6 +81,13 @@ async function fetchPastPaperData(req, res, type) {
 
         // If no data is found, return null instead of an empty object
         const finalResult = Object.keys(result).length === 0 ? null : result;
+
+        // After computing the result
+        await redisClient.set(cacheKey, JSON.stringify({ finalResult, subjectName: findSubject.name }), 'EX', 3600);
+
+
+
+
         res.status(200).json({ finalResult, subjectName: findSubject.name });
     } catch (error) {
         console.error(error);
