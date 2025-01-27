@@ -5,6 +5,7 @@ const moment = require('moment')
 const { getUserDetails } = require('../../utils/utils')
 const { default: mongoose } = require('mongoose')
 const Society = require('../../models/society/society.model')
+const FriendRequest = require('../../models/user/friend.request.model')
 
 // No create user search field
 
@@ -113,13 +114,40 @@ router.get('/profile', async (req, res) => {
                     ],
                     options: { sort: { createdAt: -1 } }
                 },
-                {
-                    path: 'profile.connections.friend',
-                    select: 'name _id profile.picture status',
-                }
+                // {
+                //     path: 'profile.connections.friends',
+                //     select: 'name _id profile.picture status',
+                // }
             ]);
 
         if (!userExists || userExists.profile.connections.blocked.includes(userId)) return res.status(404).json({ message: "User Not Found", error: "User Not Found" });
+
+        // Check friend status
+        let friendStatus = null;
+        let friendConnection
+        friendConnection = await FriendRequest.findOne({
+            user: userExists._id,
+            requestedBy: userId
+        })
+        if (!friendConnection) {
+            friendConnection = await FriendRequest.findOne({
+                user: userId,
+                requestedBy: userExists._id
+            })
+        }
+        friendStatus = friendConnection?.status || null;
+
+        if (friendConnection) {
+            if (friendConnection.status === 'requested' && friendConnection.requestedBy.toString() === userId) {
+                friendStatus = 'canCancel'; // User can cancel their sent request
+            } else if (friendConnection.status === 'requested') {
+                friendStatus = 'accept/reject'; // User can accept or reject the received request
+            } else if (friendConnection.status === 'accepted') {
+                friendStatus = 'friends'; // They are friends
+            }
+        } else {
+            friendStatus = 'connect'; // No connection exists
+        }
 
 
 
@@ -138,7 +166,8 @@ router.get('/profile', async (req, res) => {
             joined: moment(userExists.createdAt).format('MMMM DD, YYYY'),
             joinedSocieties: userExists.subscribedSocities,
             verified: userExists.universityEmailVerified,
-            connections: userExists.profile.connections.friend, // Adding friend connections
+            connections: userExists.profile.connections.friends, // Adding friend connections
+            friendStatus
         };
 
         // Return the user profile
@@ -192,14 +221,18 @@ router.get('/connections', async (req, res) => {
 
         // Fetch the user by ID and only retrieve the connections field
         const userExists = await User.findById({ _id: userId })
-            .select('profile.connections.friend -_id -password'); // Exclude unnecessary fields
+            .select('profile.connections.friends -_id -password')
+            .populate({
+                path: 'profile.connections.friends.user',
+                // select: ''
+            })
 
         if (!userExists) {
             return res.status(404).json({ message: "User Not Found", error: "User Not Found" });
         }
 
         // Extract friend user connections from the array
-        const friendsArray = userExists.profile?.connections?.friend || [];
+        const friendsArray = userExists.profile?.connections?.friends || [];
 
         if (friendsArray.length === 0) {
             return res.status(200).json({ connections: [], message: "No Connections" }); // No connections
@@ -280,6 +313,57 @@ router.get('/connection/stream', async (req, res) => {
 
 
 
+router.post('/unfriend-request', async (req, res) => {
+    try {
+        const { toUn_FriendUser } = req.body;
+        const { userId } = getUserDetails(req);
+
+        const currentUser = await User.findById(userId);
+        const toUn_FriendUserExists = await User.findById(toUn_FriendUser);
+
+        if (!currentUser || !toUn_FriendUserExists) {
+            return res.status(404).json({ message: "User Not Found" });
+        }
+
+        // Remove the friend request if it exists
+        let friendRequestExists;
+        friendRequestExists = await FriendRequest.findOneAndDelete({
+            user: toUn_FriendUser,
+            requestedBy: userId
+        })
+        if (!friendRequestExists) {
+            friendRequestExists = await FriendRequest.findOneAndDelete({
+                user: userId,
+                requestedBy: toUn_FriendUser
+            })
+        }
+
+        if (!friendRequestExists) {
+            return res.status(400).json({ message: "Friend request does not Exists" });
+        }
+
+        const currentUserUpdate = await User.findByIdAndUpdate(userId, {
+
+            $pull: {
+                'profile.connections.friends': friendRequestExists._id
+            }
+
+        });
+        const toUn_FriendUserExistsUpdate = await User.findByIdAndUpdate(toUn_FriendUser, {
+            $pull: {
+                'profile.connections.friends': friendRequestExists._id
+            }
+        });
+
+        return res.status(200).json({ message: "Friend request canceled" });
+
+    } catch (error) {
+        console.error("Error in cancel-friend-request route:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+
 router.post('/cancel-friend-request', async (req, res) => {
     try {
         const { toFriendUser } = req.body;
@@ -293,15 +377,28 @@ router.post('/cancel-friend-request', async (req, res) => {
         }
 
         // Remove the friend request if it exists
-        currentUser.profile.connections.friend = currentUser.profile.connections.friend.filter(
-            conn => conn.user.toString() !== toFriendUser
-        );
-        await currentUser.save();
+        const friendRequestExists = await FriendRequest.findOneAndDelete({
+            user: toFriendUser,
+            status: 'requested',
+            requestedBy: userId
+        })
 
-        toFriendUserExists.profile.connections.friend = toFriendUserExists.profile.connections.friend.filter(
-            conn => conn.user.toString() !== userId
-        );
-        await toFriendUserExists.save();
+        if (!friendRequestExists) {
+            return res.status(400).json({ message: "Friend request does not Exists" });
+        }
+
+        const currentUserUpdate = await User.findByIdAndUpdate(userId, {
+
+            $pull: {
+                'profile.connections.friends': friendRequestExists._id
+            }
+
+        });
+        const toFriendUserExistsUpdate = await User.findByIdAndUpdate(toFriendUser, {
+            $pull: {
+                'profile.connections.friends': friendRequestExists._id
+            }
+        });
 
         return res.status(200).json({ message: "Friend request canceled" });
 
@@ -337,30 +434,35 @@ router.post('/add-friend', async (req, res) => {
             return res.status(400).json({ message: "This user has house full." });
         }
 
+
+
         // Check if a friend request already exists
-        const friendRequestExists = currentUser.profile.connections.friend.some(conn =>
-            conn.user.toString() === toFriendUser && conn.status === 'requested');
+        const friendRequestExists = await FriendRequest.findOne({
+            user: toFriendUser,
+            requestedBy: userId
+        })
 
         if (friendRequestExists) {
             return res.status(400).json({ message: "Friend request already sent" });
         }
 
+
+        const createNewRequest = await FriendRequest.create(
+            {
+                user: toFriendUser,
+                status: 'requested',
+                requestedBy: userId
+            }
+        )
+        if (!createNewRequest) return res.status(304).json({ error: "New Request could not be created" })
         // Create a new friend request
-        currentUser.profile.connections.friend.push({
-            user: toFriendUser,
-            status: 'requested',
-            requestedBy: userId,
-        });
+        currentUser.profile.connections.friends.push(createNewRequest._id);
         await currentUser.save();
 
-        toFriendUserExists.profile.connections.friend.push({
-            user: userId,
-            status: 'requested',
-            requestedBy: userId,
-        });
+        toFriendUserExists.profile.connections.friends.push(createNewRequest._id);
         await toFriendUserExists.save();
 
-        return res.status(200).json({ message: "Friend request sent" });
+        return res.status(200).json({ requested: true, message: "Friend request sent" });
 
     } catch (error) {
         console.error("Error in add-friend route:", error);
@@ -368,6 +470,97 @@ router.post('/add-friend', async (req, res) => {
     }
 });
 
+
+router.post('/reject-friend-request', async (req, res) => {
+    try {
+        const { toRejectUser } = req.body;
+        const { userId } = getUserDetails(req);
+
+        const currentUser = await User.findById(userId);
+        const toRejectFriendship = await User.findById(toRejectUser);
+
+        if (!currentUser || !toRejectFriendship) {
+            return res.status(404).json({ message: "User Not Found" });
+        }
+
+        // Remove the friend request if it exists
+        const friendRequestExists = await FriendRequest.findOneAndDelete({
+            user: userId,
+            status: 'requested',
+            requestedBy: toRejectUser
+        })
+
+        if (!friendRequestExists) {
+            return res.status(400).json({ message: "Friend request does not Exists" });
+        }
+
+        const currentUserUpdate = await User.findByIdAndUpdate(userId, {
+
+            $pull: {
+                'profile.connections.friends': friendRequestExists._id
+            }
+
+        });
+        const toRejectFriendshipUpdate = await User.findByIdAndUpdate(toRejectUser, {
+            $pull: {
+                'profile.connections.friends': friendRequestExists._id
+            }
+        });
+
+        return res.status(200).json({ message: "Friend request rejected" });
+
+    } catch (error) {
+        console.error("Error in cancel-friend-request route:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+
+router.post('/accept-friend-request', async (req, res) => {
+    try {
+        const { toAcceptFriendUser } = req.body;
+        const { userId } = getUserDetails(req);
+
+        const currentUser = await User.findById(userId);
+        const toAcceptFriendship = await User.findById(toAcceptFriendUser);
+
+        if (!currentUser || !toAcceptFriendship) {
+            return res.status(404).json({ message: "User Not Found" });
+        }
+
+        // Remove the friend request if it exists
+        const friendRequestExists = await FriendRequest.findOneAndUpdate({
+            user: userId,
+            status: 'requested',
+            requestedBy: toAcceptFriendUser
+        }, {
+            status: 'accepted'
+        })
+
+        if (!friendRequestExists) {
+            return res.status(400).json({ message: "Friend request does not Exists" });
+        }
+
+        const currentUserUpdate = await User.findByIdAndUpdate(userId, {
+
+            $push: {
+                'profile.connections.friends': friendRequestExists._id
+            }
+
+        });
+        const toAcceptFriendshipUpdate = await User.findByIdAndUpdate(toAcceptFriendUser, {
+            $push: {
+                'profile.connections.friends': friendRequestExists._id
+            }
+        });
+
+        return res.status(200).json({ message: "Friend request accepted" });
+
+    } catch (error) {
+        console.error("Error in cancel-friend-request route:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+});
 
 
 

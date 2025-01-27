@@ -71,14 +71,7 @@ const userSchema = new mongoose.Schema({
     savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     connections: {
-      friend: [
-        {
-          user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // The friend user ID
-          status: { type: String, enum: ['requested', 'accepted'], default: 'requested' }, // Status of the request
-          requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // The user who initiated the request
-          createdAt: { type: Date, default: Date.now }, // Timestamp for when the request was made
-        }
-      ],
+      friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "FriendRequest" }],
 
       // friend: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", }],
       blocked: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
