@@ -122,7 +122,7 @@ const getUserDetails = (req) => {
     user = req.session.user;
     userId = req.session.user._id;
     role = req.session.user.role;
-    departmentId = req.session.user.university.departmentId;
+    departmentId = req.session.user.university.departmentId._id;
     if (role !== "ext_org") {
       universityOrigin = req.session.user.university.universityId._id;
       campusOrigin = req.session.user.university.campusId._id;
@@ -131,7 +131,7 @@ const getUserDetails = (req) => {
     user = req.user;
     userId = req.user._id;
     role = req.user.role;
-    departmentId = req.user.university.departmentId;
+    departmentId = req.user.university.departmentId._id;
     if (role !== "ext_org") {
       universityOrigin = req.user.university.universityId._id;
       campusOrigin = req.user.university.campusId._id;

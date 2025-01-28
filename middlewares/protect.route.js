@@ -12,6 +12,7 @@ const protectRoute = async (req, res, next) => {
      *  you cant access the code without it 
      */
     const platform = req.headers["x-platform"];
+    // console.log("pltfomr", platform)
 
     if (!platform)
       return res.status(505).json({ error: "platform not authorized" });

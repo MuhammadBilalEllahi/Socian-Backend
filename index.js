@@ -146,7 +146,7 @@ app.use("/api/subject", protectRoute, subjectRouter);
 app.use("/api/pastpaper", protectRoute, pastpaperRouter);
 app.use("/api/uploads", uploadsRouter);//protectRoute,
 app.use("/api/academic", protectRoute, academicRouter);
-app.use("/api/discussion", discussionRouter);
+app.use("/api/discussion", protectRoute, discussionRouter);
 
 const societyRouter = require("./routes/university_related/society/society.route.js")
 // const subSocietyRouter = require("./routes/university_related/subsociety/sub.society.route.js")
