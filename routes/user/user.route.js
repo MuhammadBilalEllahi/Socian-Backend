@@ -223,7 +223,8 @@ router.get('/connections', async (req, res) => {
         const userExists = await User.findById({ _id: userId })
             .select('profile.connections.friends -_id -password')
             .populate({
-                path: 'profile.connections.friends.user',
+                path: 'profile.connections.friends',
+                populate: 'user'
                 // select: ''
             })
 
@@ -278,13 +279,20 @@ router.get('/connection/stream', async (req, res) => {
 
         const { userId } = getUserDetails(req)
 
-        const user = await User.findById({ _id: userId })
-            .select('profile.connections.friend').populate('profile.connections.friend.user');
+        const user = await User.findById({ _id: userId }).populate({
+            path: "profile.connections.friends",
+            populate: {
+                path: "user requestedBy", // Populate the `user` field in `FriendRequest`
+                model: "User", // Specify the model
+            },
+        })
 
-        if (!user || !user.profile?.connections?.friend) {
+        // .select('profile.connections.friend').populate('profile.connections.friend.user');
+
+        if (!user || !user.profile?.connections?.friends) {
             return res.status(404).json({ message: "No connections yet", connections: [] });
         }
-        const connections = user.profile.connections.friend.map(friend => {
+        const connections = user.profile.connections.friends.map(friend => {
             // console.log(
             //     // friend,
             //     friend.user.name,
@@ -294,10 +302,15 @@ router.get('/connection/stream', async (req, res) => {
             //     friend.requestedBy,
             //     friend.requestedBy.toHexString()
             // )
+            console.log(friend.user._id === userId,
+                friend.user._id.toString(), userId
+            )
+            const friendUser = friend.user._id.toString() === userId ? friend.requestedBy : friend.user;
+
             return {
                 status: friend.status === 'requested' ? (friend.requestedBy.toHexString() === userId ? 'outgoing' : 'incoming') : 'friends',
-                name: friend.user.name,
-                picture: friend.user.profile.picture,
+                name: friendUser.name,
+                picture: friendUser.profile.picture,
             }
         })
 
@@ -541,18 +554,7 @@ router.post('/accept-friend-request', async (req, res) => {
             return res.status(400).json({ message: "Friend request does not Exists" });
         }
 
-        const currentUserUpdate = await User.findByIdAndUpdate(userId, {
 
-            $push: {
-                'profile.connections.friends': friendRequestExists._id
-            }
-
-        });
-        const toAcceptFriendshipUpdate = await User.findByIdAndUpdate(toAcceptFriendUser, {
-            $push: {
-                'profile.connections.friends': friendRequestExists._id
-            }
-        });
 
         return res.status(200).json({ message: "Friend request accepted" });
 
