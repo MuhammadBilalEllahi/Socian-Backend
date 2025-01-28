@@ -181,9 +181,21 @@ router.get("/campus", async (req, res) => {
     // const { campusId } = req.query;
     const { campusOrigin } = getUserDetails(req)
 
+    const cacheKey = `departments_campus_${campusOrigin}`
+
+
     if (!campusOrigin) {
       return res.status(404).json("Requires Campus Origin");
     }
+
+    const cachedData = await redisClient.get(cacheKey);
+
+    if (cachedData) {
+      console.log("Cache hit: departments_campus_");
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+
+
 
     const campus = await Campus.findById({ _id: campusOrigin })
       .select("departments")
@@ -195,6 +207,7 @@ router.get("/campus", async (req, res) => {
         { lean: true }
       )
 
+    await redisClient.set(cacheKey, JSON.stringify(campus, 'EX', 3600))
     res.status(200).json(campus);
 
   } catch (error) {
