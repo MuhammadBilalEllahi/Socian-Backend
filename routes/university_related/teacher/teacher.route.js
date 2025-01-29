@@ -47,7 +47,8 @@ const redisClient = require('../../../db/reddis')
 router.get("/campus/teachers", async (req, res) => {
   try {
 
-    const { campusOrigin } = getUserDetails(req);
+    const { user, userId, role, universityOrigin, campusOrigin, departmentId } = getUserDetails(req);
+    console.log("Campus Origin", user, userId, role, universityOrigin, campusOrigin, departmentId)
 
     const cacheKey = `campus_teachers_${campusOrigin}`;
     const cachedData = await redisClient.get(cacheKey);

@@ -83,6 +83,7 @@ router.get("/by-campus", async (req, res) => {
 router.get("/campus/subjects", async (req, res) => {
   const { campusOrigin } = getUserDetails(req);
 
+
   // Cache key (specific to the campus)
   const cacheKey = `campus_and_subjects-${campusOrigin}`;
 
@@ -92,6 +93,7 @@ router.get("/campus/subjects", async (req, res) => {
       return res.status(200).json(JSON.parse(cachedData));
     }
 
+    // console.log("CHECKING", campusOrigin)
 
     // Fetch data from the database if not in cache
     const campus = await Campus.find({ _id: campusOrigin })

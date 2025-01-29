@@ -4,6 +4,7 @@ const Post = require("../../../models/society/post/post.model");
 const SocietyPostAndCommentVote = require("../../../models/society/post/vote/vote.post.community.model");
 const mongoose = require("mongoose");
 const User = require("../../../models/user/user.model");
+const { getUserDetails } = require("../../../utils/utils");
 const router = express.Router();
 
 /**
@@ -11,29 +12,29 @@ const router = express.Router();
  * @param {Object} req - The request object
  * @returns {Object} - The user details, including userId, role, universityId, and campusId
  */
-const getUserDetails = (req) => {
-    let userId, role, universityOrigin, campusOrigin;
+// const getUserDetails = (req) => {
+//     let userId, role, universityOrigin, campusOrigin;
 
-    const platform = req.headers["x-platform"];
+//     const platform = req.headers["x-platform"];
 
-    if (platform === "web") {
-        userId = req.session.user._id;
-        role = req.session.user.role;
-        if (role !== "ext_org") {
-            universityOrigin = req.session.user.university.universityId._id;
-            campusOrigin = req.session.user.university.campusId._id;
-        }
-    } else if (platform === "app") {
-        userId = req.user._id;
-        role = req.user.role;
-        if (role !== "ext_org") {
-            universityOrigin = req.user.university.universityId._id;
-            campusOrigin = req.user.university.campusId._id;
-        }
-    }
+//     if (platform === "web") {
+//         userId = req.session.user._id;
+//         role = req.session.user.role;
+//         if (role !== "ext_org") {
+//             universityOrigin = req.session.user.university.universityId._id;
+//             campusOrigin = req.session.user.university.campusId._id;
+//         }
+//     } else if (platform === "app") {
+//         userId = req.user._id;
+//         role = req.user.role;
+//         if (role !== "ext_org") {
+//             universityOrigin = req.user.university.universityId._id;
+//             campusOrigin = req.user.university.campusId._id;
+//         }
+//     }
 
-    return { userId, role, universityOrigin, campusOrigin };
-};
+//     return { userId, role, universityOrigin, campusOrigin };
+// };
 
 
 
@@ -112,6 +113,7 @@ router.get("/campus/all", async (req, res) => {
     try {
         // console.log("here")
         const { role, universityOrigin, campusOrigin } = getUserDetails(req)
+        console.log("/campus/all", role, universityOrigin, campusOrigin)
 
         const posts = await Post.find({
             'references.role': role,

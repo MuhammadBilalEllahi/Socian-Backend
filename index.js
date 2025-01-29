@@ -104,7 +104,7 @@ app.use((req, res, next) => {
 // console.log(crypto.randomBytes(6).toString('hex'))
 
 const authRouter = require("./routes/auth/auth.route.js");
-// const oAuthRouter = require('./routes/oauth');
+const oAuthRouter = require('./routes/auth/oAuth/oAuth.route.js');
 // const requestRoute = require('./routes/request');
 // const emailRoute = require('./routes/email.route.js');
 
@@ -133,7 +133,7 @@ app.use("/api/super", superProtect, superRouter);
 
 app.use("/api/auth", authRouter);
 // app.use("/api/mob/auth", mobAuthRouter); // will not use maybe
-// app.use('/api/oauth', oAuthRouter);
+app.use('/api/oauth', oAuthRouter);
 // app.use('/api/request', requestRoute);
 // app.use('/email', emailRoute);
 app.use("/api/university", superProtect, universityRouter);
@@ -207,6 +207,7 @@ suspiciousRoutes.forEach((route) => {
 
 // Default catch-all route for undefined paths
 app.all('*', (req, res) => {
+  console.log("Not Registered /*")
   res.status(404).json({ message: 'Not Found' });
 });
 
