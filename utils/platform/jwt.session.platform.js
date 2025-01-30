@@ -48,16 +48,16 @@ const platformSessionOrJwt_CALL_on_glogin_only = async (user, req, res) => {
 
         // console.log("User in WEB", req.session.user);
 
-        req.session.references = {
-            university: {
-                name: user.university.universityId.name,
-                _id: user.university.universityId._id,
-            },
-            campus: {
-                name: user.university.campusId.name,
-                _id: user.university.campusId._id,
-            },
-        };
+        // req.session.references = {
+        //     university: {
+        //         name: user.university.universityId.name,
+        //         _id: user.university.universityId._id,
+        //     },
+        //     campus: {
+        //         name: user.university.campusId.name,
+        //         _id: user.university.campusId._id,
+        //     },
+        // };
 
         req.session.save((err) => {
             if (err) {

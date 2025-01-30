@@ -13,11 +13,14 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    // required: true,
+    required: function () {
+      return !this.google_EmailVerified; // Password is required only if Google login is NOT used
+    }
   },
   role: {
     type: String,
-    enum: ["student", "alumni", "teacher", "ext_org"],
+    enum: ["student", "alumni", "teacher", "ext_org", "no_access"],
     required: true,
   },
   super_role: {
@@ -227,6 +230,10 @@ const userSchema = new mongoose.Schema({
     },
   },
 
+  hd: {
+    type: String,
+    default: ''
+  },
   // ## Query Updates
   createdAt: {
     type: Date,

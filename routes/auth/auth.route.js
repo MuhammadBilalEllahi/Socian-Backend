@@ -15,6 +15,7 @@ const {
   generateOtp6Digit,
   createUniqueUsername,
   sendOtp,
+  getUserDetails,
 } = require("../../utils/utils.js");
 
 const User = require("../../models/user/user.model.js");
@@ -24,6 +25,7 @@ const generateToken = require("../../utils/generate.token.js");
 const { OTP } = require("../../models/otp/otp.js");
 const Department = require("../../models/university/department/department.university.model.js");
 const UserRoles = require("../../models/userRoles.js");
+const { platformSessionOrJwt_CALL_on_glogin_only } = require("../../utils/platform/jwt.session.platform.js");
 // const protectRoute = require("../../middlewares/protect.route.js");
 
 router.get("/session", async (req, res) => {
@@ -393,7 +395,7 @@ router.post("/register", async (req, res) => {
         //   .redirect(`${process.env.FRONTEND_URL}/otp/${user._id}`)
 
       } else {
-        return res.status(302).json({ error: "Already Registered?" }); // already registered
+        return res.status(302).json({ error: "Already Registered" }); // already registered
       }
     }
     // console.log("No", user);
@@ -475,6 +477,9 @@ router.post("/register", async (req, res) => {
       campus.users.push(newUser._id);
       uniExists.users.push(newUser._id);
 
+      departmentExists.users.push(newUser._id)
+      departmentExists.save()
+
       await campus.save();
       await uniExists.save();
     } else if (role === 'ext_org') {
@@ -496,6 +501,8 @@ router.post("/register", async (req, res) => {
 
     deliverOTP(newUser, resendEmailAccountConfirmation, req, res)
 
+
+
     return res.status(200).json({
       success: true,
       redirectUrl: `${process.env.FRONTEND_URL}/otp/${newUser._id}?email=${role === 'alumni' ? user.personalEmail : user.universityEmail}`,
@@ -506,6 +513,64 @@ router.post("/register", async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
+
+router.post('/complete/info', async (req, res) => {
+  try {
+    const { departmentId, name, username, personalEmail, role, password } = req.body;
+    console.log("0...", departmentId, name, username, personalEmail, role, password)
+
+    if (!departmentId) return res.status(404).json({ error: "Select a Department" })
+    if (!name) return res.status(404).json({ error: "Select a Name" })
+    if (!username) return res.status(404).json({ error: "Select a Username" })
+    if (!role) return res.status(404).json({ error: "Select a Role" })
+    if (!password) return res.status(404).json({ error: "Select a Password" })
+    if (!personalEmail && role === UserRoles.alumni) return res.status(404).json({ error: "Alumni requires Personal Email" })
+    console.log("1...", departmentId, name, username, personalEmail, role, password)
+
+    const { userId } = getUserDetails(req)
+    const departmentExists = await Department.findById(departmentId);
+    if (!departmentExists) return res.status(404).json({ error: "No Such Department Id Exists" })
+
+    const hashedPassword = await bcryptjs.hash(password, 10);
+
+    console.log("2...", departmentId, name, username, personalEmail, role, password)
+
+
+    const userExists = await User.findByIdAndUpdate(
+      userId, {
+      'university.departmentId': departmentId,
+      username: username,
+      name: name,
+
+      role,
+      password: hashedPassword,
+      super_role: 'none'
+    });
+    if (!userExists) return res.status(404).json({ error: "This User doesnot exists" })
+
+    if (role === UserRoles.alumni) {
+      userExists.personalEmail = personalEmail
+    }
+    userExists.save()
+    departmentExists.users.push(userExists._id)
+    departmentExists.save()
+
+    await userExists.populate([
+      { path: "university.universityId", select: "-users _id" },
+      { path: "university.campusId", select: "-users _id" },
+      { path: "university.departmentId", select: "name _id" },
+    ]);
+
+    platformSessionOrJwt_CALL_on_glogin_only(userExists, req, res)
+
+    res.status(200).json({ message: "Completed" });
+  } catch (error) {
+    console.error("Error in complete/info:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+})
+
 
 /**
  * Verifies the OTP sent to the user.
@@ -1255,6 +1320,7 @@ router.post("/register-resend-otp", async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
 
 
 module.exports = router;

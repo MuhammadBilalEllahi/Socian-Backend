@@ -44,6 +44,34 @@ router.get("/by-campus", async (req, res) => {
   }
 });
 
+router.get("/campus/auth", async (req, res) => {
+  const { campusOrigin } = getUserDetails(req);
+  try {
+    const departments = await Department.find({
+      "references.campusOrigin": campusOrigin,
+    })
+
+    if (!departments)
+      return res.status(300).json({ message: "Error fetching Department" });
+
+    // console.log(departments)
+
+
+    const departmentsInFormat = departments.map(department => {
+      return {
+        name: `${department.name}`,
+        _id: `${department._id}`
+      }
+    })
+    console.log("IN format", departmentsInFormat)
+
+    res.status(200).json({ departmentsInFormat });
+  } catch (error) {
+    console.error("Error in department:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // TO FIX : req.session will always have campusId, if it doesnot then such user doesnot need it
 // router.get("/with-subjects-by-campus", async (req, res) => {
 //   // const { campusId } = req.body;

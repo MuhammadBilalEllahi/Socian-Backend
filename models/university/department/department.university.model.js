@@ -32,7 +32,11 @@ const departmentSchema = new Schema({
             required: true,
             index: true,
         },
-    }
+    },
+    users: [{
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, { timestamps: true })
 
 

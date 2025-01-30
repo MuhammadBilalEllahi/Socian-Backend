@@ -122,19 +122,19 @@ const getUserDetails = (req) => {
     user = req.session.user;
     userId = req.session.user._id;
     role = req.session.user.role;
-    departmentId = req.session.user.university.departmentId._id ?? req.session.user.university.departmentId;
+    departmentId = req.session.user.university.departmentId?._id ?? req.session.user.university.departmentId;
     if (role !== "ext_org") {
-      universityOrigin = req.session.user.university.universityId._id ?? req.session.user.university.universityId;
-      campusOrigin = req.session.user.university.campusId._id ?? req.session.user.university.campusId;
+      universityOrigin = req.session.user.university.universityId?._id ?? req.session.user.university.universityId;
+      campusOrigin = req.session.user.university.campusId?._id ?? req.session.user.university.campusId;
     }
   } else if (platform === "app") {
     user = req.user;
     userId = req.user._id;
     role = req.user.role;
-    departmentId = req.user.university.departmentId._id ?? req.user.university.departmentId;
+    departmentId = req.user.university.departmentId?._id ?? req.user.university.departmentId;
     if (role !== "ext_org") {
-      universityOrigin = req.user.university.universityId._id ?? req.user.university.universityId;
-      campusOrigin = req.user.university.campusId._id ?? req.user.university.campusId;
+      universityOrigin = req.user.university.universityId?._id ?? req.user.university.universityId;
+      campusOrigin = req.user.university.campusId?._id ?? req.user.university.campusId;
     }
   }
 

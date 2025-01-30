@@ -2,18 +2,19 @@ const express = require('express');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../../../models/user/user.model');
 const { platformSessionOrJwt_CALL_on_glogin_only } = require('../../../utils/platform/jwt.session.platform');
+const Campus = require('../../../models/university/campus.university.model');
 const router = express.Router();
 
 
 
 async function getUserData(access_token, user, req, res) {
 
-    console.log("%c THIS IS USER", "background: #333; color: #fff; padding: 5px; border-radius: 3px;");
+    console.log("%c THIS IS USER", "background: red; color: green; padding: 5px; border-radius: 3px;");
 
 
     const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${access_token}`);
     // console.log("Access Token", access_token)
-    console.log('response', response);
+    // console.log('response', response);
     const data = await response.json();
     console.log('data', data);
     console.log('data2', data.email, data.email_verified);
@@ -61,6 +62,64 @@ async function getUserData(access_token, user, req, res) {
         ]);
 
         platformSessionOrJwt_CALL_on_glogin_only(userInDatabase, req, res)
+    }
+    else {
+        const campusList = await Campus.find({}, "emailPatterns universityOrigin"); // Fetch only emailPatterns field
+
+        let isUniversityEmail = false;
+        let theCampusUserIsIn = null;
+
+        for (const campus of campusList) {
+            if (campus.emailPatterns?.regex && new RegExp(campus.emailPatterns.regex).test(email)) {
+                isUniversityEmail = true;
+                theCampusUserIsIn = campus;
+                break;
+            }
+        }
+
+        if (isUniversityEmail && theCampusUserIsIn) {
+            console.log("Email matches a university pattern.");
+            console.log("Campus User Is In:", theCampusUserIsIn);
+
+            const baseUsername = data.email.split("@")[0]; // Use name or email prefix
+            username = await generateUniqueUsername(baseUsername);
+
+
+            const newUser = await User.create({
+                universityEmail: email,
+                username,
+                name: data.name,
+                university: {
+                    universityId: theCampusUserIsIn.universityOrigin,
+                    campusId: theCampusUserIsIn._id
+                },
+                universityEmailVerified: true,
+                google_EmailVerified: true,
+                hd: data?.hd,
+                role: "no_access",
+                restrictions: { approval: { isApproved: true } },
+            });
+
+            const addUserToCampus = await Campus.findByIdAndUpdate(theCampusUserIsIn._id, {
+                $push: {
+                    users: newUser._id
+                }
+            })
+
+            if (!newUser) return 0;
+            await newUser.populate([
+                { path: "university.universityId", select: "-users _id" },
+                { path: "university.campusId", select: "-users _id" },
+                // { path: "university.departmentId", select: "name _id" },
+            ]);
+
+            platformSessionOrJwt_CALL_on_glogin_only(newUser, req, res)
+            // return res.status(200).json({ message: "Valid university email", user: newUser });
+        } else {
+            console.log("Email does not match any university pattern.");
+            return res.status(400).json({ message: "Invalid university email" });
+        }
+
     }
 
     return userInDatabase._id;
@@ -281,7 +340,18 @@ async function getUserData(access_token, user, req, res) {
 
 }
 
+const generateUniqueUsername = async (baseUsername) => {
+    let username = baseUsername.toLowerCase().replace(/\s+/g, ""); // Remove spaces
+    let exists = await User.findOne({ username });
 
+    let counter = 1;
+    while (exists) {
+        username = `${baseUsername}${counter}`; // Append a number
+        exists = await User.findOne({ username });
+        counter++;
+    }
+    return username;
+};
 
 async function retryOAuth2ClientGetToken(oAuth2Client, code, retries = 2, delay = 1000) {
     for (let i = 0; i < retries; i++) {
