@@ -122,6 +122,7 @@ const userSchema = new mongoose.Schema({
   // ##  EMAIL
   universityEmail: {
     type: String,
+    unique: true,
     index: true,
     required: function () {
       return !this.personalEmail;
@@ -134,6 +135,7 @@ const userSchema = new mongoose.Schema({
   personalEmail: {
     type: String,
     index: true,
+    unique: true,
     required: function () {
       return !this.universityEmail;
     },
@@ -145,6 +147,7 @@ const userSchema = new mongoose.Schema({
   secondaryPersonalEmail: {
     type: String,
     index: true,
+    unique: true,
     match: [
       /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$/,
       "Please fill a valid email address",
@@ -191,6 +194,11 @@ const userSchema = new mongoose.Schema({
       ref: 'Teacher'
     },
     attached: { type: Boolean, default: false },
+  },
+
+  requiresMoreInformation: {
+    type: Boolean,
+    default: false
   },
 
   // ## Restrictions

@@ -44,6 +44,7 @@ router.get("/session", async (req, res) => {
 
       verified: req.session.user.universityEmailVerified,
       joined: req.session.user.joined,
+      requiresMoreInformation: req.session?.requiresMoreInformation ?? false
       // joinedSocieties: req.session.user.joinedSocieties,
       // joinedSubSocieties: req.session.user.joinedSubSocieties,
     }
@@ -545,7 +546,8 @@ router.post('/complete/info', async (req, res) => {
 
       role,
       password: hashedPassword,
-      super_role: 'none'
+      super_role: 'none',
+      requiresMoreInformation: false
     });
     if (!userExists) return res.status(404).json({ error: "This User doesnot exists" })
 

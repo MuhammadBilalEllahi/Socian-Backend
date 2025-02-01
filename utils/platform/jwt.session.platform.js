@@ -5,23 +5,6 @@ const moment = require('moment');
 const platformSessionOrJwt_CALL_on_glogin_only = async (user, req, res) => {
     try {
 
-        // if (platform === "app") {
-
-        //     const { accessToken, refreshToken } = generateToken(user);
-
-        //     user.tokens = {
-        //         access_token: accessToken,
-        //         refresh_token: refreshToken,
-        //     };
-        //     await user.save();
-        //     // console.log("in app", token);
-
-        //     // Send JWT to the client
-        //     res.status(200).json({
-        //         access_token: accessToken,
-        //         refresh_token: refreshToken,
-        //     });
-        // } else if (platform === "web") {
         req.session.user = {
             _id: user._id,
             name: user.name,
@@ -36,8 +19,9 @@ const platformSessionOrJwt_CALL_on_glogin_only = async (user, req, res) => {
             role: user.role,
             verified: user.universityEmailVerified,
             joined: moment(user.createdAt).format('MMMM DD, YYYY'),
-            // joinedSocieties: user.subscribedSocities,
-            // joinedSubSocieties: user.subscribedSubSocities,
+            requiresMoreInformation: user?.requiresMoreInformation ?? false
+
+            // ...(Array.isArray(extra) ? extra[0] : extra)
         };
         if (user.role === UserRoles.teacher) {
             req.session.user.teacherConnectivities = {
@@ -46,18 +30,7 @@ const platformSessionOrJwt_CALL_on_glogin_only = async (user, req, res) => {
             }
         }
 
-        // console.log("User in WEB", req.session.user);
-
-        // req.session.references = {
-        //     university: {
-        //         name: user.university.universityId.name,
-        //         _id: user.university.universityId._id,
-        //     },
-        //     campus: {
-        //         name: user.university.campusId.name,
-        //         _id: user.university.campusId._id,
-        //     },
-        // };
+        console.log("User in WEB", req.session.user);
 
         req.session.save((err) => {
             if (err) {
@@ -67,19 +40,19 @@ const platformSessionOrJwt_CALL_on_glogin_only = async (user, req, res) => {
             // console.log("Session user in Longin Controller : ", req.session.user)
         });
 
+
         // console.log(req.session.references);
         // res.setHeader("Authorization", `Bearer ${token}`);
 
-        // return res.status(200).json(req.session.user);
+        const isUserRequireINfo = user?.requiresMoreInformation ? 'complete/info' : '';
 
+        return { newSession: req.session.user, status: 200, redirect: isUserRequireINfo };
 
-        // } 
-        // else {
-        //     return res.status(400).json({ error: "Invalid platform" });
-        // }
+        // return res.status(200).json({ newSession: req.session.user });
+
     } catch (error) {
         console.error("Internal server error ", error)
-        return res.status(500).json({ error: "Internal Server Error" });
+        return { status: 500, error: "Internal Server Error" };
 
     }
 
