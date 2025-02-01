@@ -12,7 +12,7 @@ const router = express.Router();
 
 async function getUserData(access_token, user, req, res) {
 
-    console.log("%c THIS IS USER", user, "background: red; color: green; padding: 5px; border-radius: 3px;");
+    // console.log("%c THIS IS USER", user, "background: red; color: green; padding: 5px; border-radius: 3px;");
 
 
     const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${access_token}`);
@@ -22,8 +22,8 @@ async function getUserData(access_token, user, req, res) {
     // if (!response) return res.status(response.response.status).json({ error: response.response.statusText })
 
     const data = await response.json();
-    console.log('data', data);
-    console.log('data2', data.email, data.email_verified);
+    // console.log('data', data);
+    // console.log('data2', data.email, data.email_verified);
 
     const email = data.email;
 
@@ -38,7 +38,7 @@ async function getUserData(access_token, user, req, res) {
     const userInDatabase = await User.findOne(query);
 
 
-    console.log("USer in google", userInDatabase, "RE", userInDatabase.requiresMoreInformation);
+    // console.log("USer in google", userInDatabase, "RE", userInDatabase.requiresMoreInformation);
 
     if (userInDatabase && userInDatabase.requiresMoreInformation) {
         await userInDatabase.populate([
@@ -80,8 +80,8 @@ async function getUserData(access_token, user, req, res) {
         }
 
         if ((isUniversityStudent || isUniversityTeacher) && theCampusUserIsIn) {
-            console.log("Email matches a university pattern.");
-            console.log("Campus User Is In:", theCampusUserIsIn);
+            // console.log("Email matches a university pattern.");
+            // console.log("Campus User Is In:", theCampusUserIsIn);
 
             const baseUsername = data.email.split("@")[0]; // Use name or email prefix
             username = await generateUniqueUsername(baseUsername);
@@ -121,7 +121,7 @@ async function getUserData(access_token, user, req, res) {
 
             // return res.status(200).json({ message: "Valid university email", user: newUser });
         } else {
-            console.log("Email does not match any university pattern.");
+            console.info("Email does not match any university pattern.");
             const addNonUniMailToDB = await NonUniversityEmail.create({
                 email: data?.email,
                 sub: data?.sub,
@@ -227,8 +227,7 @@ router.post('/google/request', async (req, res, next) => {
             redirectURL
         );
 
-        console.log(process.env.CLIENT_ID,
-            process.env.CLIENT_SECRET,)
+        // console.log(process.env.CLIENT_ID,  process.env.CLIENT_SECRET,)
 
 
 
@@ -241,7 +240,7 @@ router.post('/google/request', async (req, res, next) => {
             // hd: "cuilahore.edu.pk"
         });
 
-        console.log("Auth url: ", authorizeUrl)
+        // console.log("Auth url: ", authorizeUrl)
 
         res.json({ url: authorizeUrl })
     } catch (error) {

@@ -957,20 +957,24 @@ router.put("/forgot-password", async (req, res) => {
   const { email } = req.body;
   let user;
   try {
-    if (isValidEduEmail(email)) {
-      query = { universityEmail: email };
-    } else {
-      query = {
-        $or: [{ personalEmail: email }, { secondaryPersonalEmail: email }],
-      };
-    }
+    // if (isValidEduEmail(email)) {
+    //   query = { universityEmail: email };
+    // } else {
+    query = {
+      $or: [
+        { universityEmail: email },
+        { personalEmail: email },
+        { secondaryPersonalEmail: email }
+      ],
+    };
+    // }
     // console.log(query);
 
     user = await User.findOne(query);
 
     if (!user)
-      return res.status(200).json({
-        message: "Check your mail for OTP (if user exists)",
+      return res.status(304).json({
+        message: "No Account Exists",
       });
 
     const { otp, otpResponse } = await sendOtp(
@@ -1069,20 +1073,20 @@ router.put("/refresh-token", async (req, res) => {
   }
 });
 
-function isValidEduEmail(email) {
-  // Check for exactly one "@" and ".edu." after "@"
-  const atIndex = email.indexOf("@");
-  const lastAtIndex = email.lastIndexOf("@");
+// function isValidEduEmail(email) {
+//   // Check for exactly one "@" and ".edu." after "@"
+//   const atIndex = email.indexOf("@");
+//   const lastAtIndex = email.lastIndexOf("@");
 
-  // Ensure only one '@' exists and it's followed by ".edu."
-  if (atIndex === -1 || atIndex !== lastAtIndex) {
-    return false; // More than one "@" or no "@" at all
-  }
+//   // Ensure only one '@' exists and it's followed by ".edu."
+//   if (atIndex === -1 || atIndex !== lastAtIndex) {
+//     return false; // More than one "@" or no "@" at all
+//   }
 
-  // Check if ".edu." comes after the "@"
-  const domain = email.substring(atIndex + 1); // Extract the domain part after "@"
-  return domain.includes(".edu.") && domain.indexOf(".edu.") > 0;
-}
+//   // Check if ".edu." comes after the "@"
+//   const domain = email.substring(atIndex + 1); // Extract the domain part after "@"
+//   return domain.includes(".edu.") && domain.indexOf(".edu.") > 0;
+// }
 
 /**
  * Verifies the OTP sent to the user.
@@ -1148,6 +1152,99 @@ router.post("/verify-otp", async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
+
+
+router.post("/verify/otp/password", async (req, res) => {
+  const { email, phoneNumber, otp } = req.body;
+
+  // Validate inputs
+  if ((!email && !phoneNumber) || !otp) {
+    return res
+      .status(400)
+      .json({ message: "Email or phoneNumber and OTP are required." });
+  }
+
+  try {
+    const query = email ? { email, used: false } : { phoneNumber, used: false };
+
+    // Find the OTP entry
+    const otpEntry = await OTP.findOne(query);
+
+
+    if (!otpEntry) {
+      return res
+        .status(404)
+        .json({ message: "No OTP found for the provided details." });
+    }
+
+    if (otpEntry.used === true) {
+      await OTP.findByIdAndDelete({ _id: otpEntry._id })
+      return res.status(404)
+        .json({ message: "OTP used already." });
+    }
+
+
+
+    const isOTPMatched = await bcryptjs.compare(
+      otp,
+      otpEntry.otp || ""
+    );
+
+
+    if (!isOTPMatched) {
+      return res.status(401).json({ message: "Invalid OTP." });
+    }
+
+    if (moment().isAfter(moment(otpEntry.otpExpiration))) {
+      return res.status(401).json({ message: "OTP has expired." });
+    }
+    console.log("Id", otpEntry.ref)
+
+    // OTP is valid
+    const token = jwt.sign(
+      { email, token_id: otpEntry.ref },
+      process.env.JWT_SECRET,
+      { expiresIn: "10m" } // Token valid for 10 minutes
+    );
+
+
+    otpEntry.used = true;
+    // delete after this: abhi ni. abhi tou hash k andr expiry time bhi dalna h
+    await otpEntry.save();
+    res.status(200).json({ message: "OTP verified successfully.", token: token });
+  } catch (error) {
+    console.error("Error in verify-otp:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+router.post('/newPassword', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    console.log(token, newPassword)
+    if (!token) return res.status(404).json({ message: "No Token Found" })
+    if (newPassword === '') return res.status(404).json({ message: "No Password Found" })
+
+    const data = jwt.verify(token, process.env.JWT_SECRET)
+    if (!data) return res.status(404).json({ message: "Token Time Expired" })
+
+    // console.log(data)
+    const hashedpassword = await bcryptjs.hash(newPassword, 10)
+    const user = await User.findByIdAndUpdate(data.token_id, { password: hashedpassword });
+
+
+    if (!user) return res.status(404).json({ message: "No User For this Id" })
+    res.status(200).json({ message: "Password Updated, Back to Login" })
+
+
+  } catch (error) {
+    console.error("Error in newPassword:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+})
 
 const OTP_RESEND_LIMIT = Number(process.env.OTP_RESEND_LIMIT); // Max number of resends allowed
 const OTP_COOLDOWN_PERIOD = Number(process.env.OTP_COOLDOWN_PERIOD); // 1 minutes in milliseconds

@@ -30,7 +30,7 @@ const platformSessionOrJwt_CALL_on_glogin_only = async (user, req, res) => {
             }
         }
 
-        console.log("User in WEB", req.session.user);
+        // console.log("User in WEB", req.session.user);
 
         req.session.save((err) => {
             if (err) {
