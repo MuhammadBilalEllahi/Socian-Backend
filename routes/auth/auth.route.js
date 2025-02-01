@@ -1165,6 +1165,7 @@ router.post("/verify/otp/password", async (req, res) => {
       .json({ message: "Email or phoneNumber and OTP are required." });
   }
 
+  // console.log()
   try {
     const query = email ? { email, used: false } : { phoneNumber, used: false };
 
@@ -1228,7 +1229,7 @@ router.post('/newPassword', async (req, res) => {
     if (!token) return res.status(404).json({ message: "No Token Found" })
     if (newPassword === '') return res.status(404).json({ message: "No Password Found" })
 
-    // const data = jwt.verify(token, process.env.JWT_SECRET)
+    const data = jwt.verify(token, process.env.JWT_SECRET)
     if (!data) return res.status(404).json({ message: "Token Time Expired" })
 
     // console.log(data)
@@ -1259,15 +1260,19 @@ router.post("/resend-otp", async (req, res) => {
 
   try {
     const query = email ? { email } : { phoneNumber };
+    //     , used: false 
+    // , used: false 
 
     // Find the existing OTP entry
-    const otpEntry = await OTP.findOne(query, { used: false });
+    const otpEntry = await OTP.findOne(query);
 
     if (!otpEntry) {
       return res
         .status(404)
         .json({ message: "No OTP found for the provided details." });
     }
+
+
 
     // Check if the resend limit has been exceeded
     if (otpEntry.resendCount >= OTP_RESEND_LIMIT) {
@@ -1293,9 +1298,11 @@ router.post("/resend-otp", async (req, res) => {
 
     // Generate a new OTP
     const newOtp = generateOtp6Digit();
+    const hashedOTP = await bcryptjs.hash(newOtp, 10);
+
 
     // Update the OTP entry
-    otpEntry.otp = newOtp;
+    otpEntry.otp = hashedOTP;
     otpEntry.otpExpiration = moment().add(2, "minutes"); // 2 minutes validity
     otpEntry.resendCount += 1;
     otpEntry.lastResentAt = moment();
@@ -1304,7 +1311,7 @@ router.post("/resend-otp", async (req, res) => {
     const datas = {
       name: otpEntry.refName,
       email: otpEntry.email,
-      otp: otpEntry.otp,
+      otp: newOtp,
     };
 
     // Send the OTP to the user
