@@ -519,7 +519,7 @@ router.post("/register", async (req, res) => {
 router.post('/complete/info', async (req, res) => {
   try {
     const { departmentId, name, username, personalEmail, role, password } = req.body;
-    console.log("0...", departmentId, name, username, personalEmail, role, password)
+    // console.log("0...", departmentId, name, username, personalEmail, role, password)
 
     if (!departmentId) return res.status(404).json({ error: "Select a Department" })
     if (!name) return res.status(404).json({ error: "Select a Name" })
@@ -527,7 +527,7 @@ router.post('/complete/info', async (req, res) => {
     if (!role) return res.status(404).json({ error: "Select a Role" })
     if (!password) return res.status(404).json({ error: "Select a Password" })
     if (!personalEmail && role === UserRoles.alumni) return res.status(404).json({ error: "Alumni requires Personal Email" })
-    console.log("1...", departmentId, name, username, personalEmail, role, password)
+    // console.log("1...", departmentId, name, username, personalEmail, role, password)
 
     const { userId } = getUserDetails(req)
     const departmentExists = await Department.findById(departmentId);
@@ -535,7 +535,7 @@ router.post('/complete/info', async (req, res) => {
 
     const hashedPassword = await bcryptjs.hash(password, 10);
 
-    console.log("2...", departmentId, name, username, personalEmail, role, password)
+    // console.log("2...", departmentId, name, username, personalEmail, role, password)
 
 
     const userExists = await User.findByIdAndUpdate(
@@ -1224,11 +1224,11 @@ router.post('/newPassword', async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
-    console.log(token, newPassword)
+    // console.log(token, newPassword)
     if (!token) return res.status(404).json({ message: "No Token Found" })
     if (newPassword === '') return res.status(404).json({ message: "No Password Found" })
 
-    const data = jwt.verify(token, process.env.JWT_SECRET)
+    // const data = jwt.verify(token, process.env.JWT_SECRET)
     if (!data) return res.status(404).json({ message: "Token Time Expired" })
 
     // console.log(data)
