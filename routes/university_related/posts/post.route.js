@@ -228,7 +228,7 @@ router.post("/create", async (req, res) => {
                 },
             },
             { new: true, upsert: true } // ToRemember: `upsert` ensures a new document is created if it doesn't exist
-        );
+        ).populate('societyId');
 
         const user = await User.findByIdAndUpdate({ _id: userId },
             { $addToSet: { "profile.posts": post._id } },
@@ -237,7 +237,7 @@ router.post("/create", async (req, res) => {
         if (!user) return res.status(409).json({ error: "User not found" })
         // console.log("here", societyPostCollection);
 
-        res.status(200).json("Post Created");
+        res.status(200).json({ message: "Post Created", society: societyId, societyName: societyPostCollection.societyId.name, postId: post._id, postTitle: post.title });
     } catch (error) {
         console.error("Error in posts.route.js /create", error);
         res.status(500).json("Internal Server Error");
@@ -357,5 +357,34 @@ router.post("/vote-post", async (req, res) => {
 });
 
 
+router.get("/single/post", async (req, res) => {
+    try {
+        // console.log("here")
+        const { postId } = req.query;
+        const { role, universityOrigin, campusOrigin } = getUserDetails(req)
+
+        const post = await Post.findOne({
+            _id: postId,
+            'references.role': role
+        })
+            .sort({ createdAt: -1 })
+            .populate([
+                "author",
+                "society",
+                "subSociety",
+                "voteId"
+            ]);
+
+
+        // console.log("post", post)
+
+        if (!post) return res.status(304).json({ message: "No Post" });
+
+        res.status(200).json(post);
+    } catch (error) {
+        console.error("Error in posts.route.js /all", error);
+        res.status(500).json("Internal Server Error");
+    }
+});
 
 module.exports = router;
