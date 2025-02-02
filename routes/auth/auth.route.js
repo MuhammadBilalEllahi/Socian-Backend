@@ -198,6 +198,7 @@ router.post("/login", async (req, res) => {
         role: user.role,
         verified: user.universityEmailVerified,
         joined: moment(user.createdAt).format('MMMM DD, YYYY'),
+        requiresMoreInformation: user.requiresMoreInformation ?? false,
         // joinedSocieties: user.subscribedSocities,
         // joinedSubSocieties: user.subscribedSubSocities,
       };
@@ -292,6 +293,7 @@ const handlePlatformResponse = async (user, res, req) => {
       role: user.role,
       verified: user.universityEmailVerified,
       joined: user.joined,
+      requiresMoreInformation: user.requiresMoreInformation ?? false,
       // joinedSocieties: user.joinedSocieties,
       // joinedSubSocieties: user.joinedSubSocieties,
 
@@ -506,11 +508,11 @@ router.post("/register", async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      redirectUrl: `${process.env.FRONTEND_URL}/otp/${newUser._id}?email=${role === 'alumni' ? user.personalEmail : user.universityEmail}`,
+      redirectUrl: `${process.env.FRONTEND_URL}/otp/${newUser._id}?email=${role === 'alumni' ? personalEmail : universityEmail}`,
     });
     // return res.status(201).json({ message: "OTP has been delivered to your account" });
   } catch (error) {
-    console.error("Error in ", error.message);
+    console.error("Error in /register", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });

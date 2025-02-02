@@ -21,6 +21,7 @@ const generateToken = (user) => {
     joinedSocieties: user.subscribedSocities,
     joinedSubSocieties: user.subscribedSubSocities,
     verified: user.universityEmailVerified,
+    requiresMoreInformation: user.requiresMoreInformation ?? false,
     references: {
       university: {
         name: user.university.universityId.name,
