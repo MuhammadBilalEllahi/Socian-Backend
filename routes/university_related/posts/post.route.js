@@ -5,6 +5,7 @@ const SocietyPostAndCommentVote = require("../../../models/society/post/vote/vot
 const mongoose = require("mongoose");
 const User = require("../../../models/user/user.model");
 const { getUserDetails } = require("../../../utils/utils");
+const { uploadPostMedia } = require("../../../utils/aws.bucket.utils");
 const router = express.Router();
 
 /**
@@ -170,29 +171,54 @@ router.get("/campus/all", async (req, res) => {
  * @function flows: posts in a society-> societyId needed
  * @ -> create a post on id of society -> attach post to collection inside postcollection of society
  */
-
+const multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage() });
 /**
  * post in a society
  */
-router.post("/create", async (req, res) => {
+router.post("/create", upload.single('file'), async (req, res) => {
     try {
         const { userId, campusOrigin, universityOrigin, role } = getUserDetails(req);
         const { title, body, societyId, author } = req.body;
+        const file = req.file;
 
-        if (!title || !body || !societyId || !author) {
+        console.log("/create ", { title, body, file, societyId, author })
+
+        if (!title || !societyId || !author) {
             return res.status(400).json("All fields are required");
         }
+        if (!body && !file) return res.status(400).json({ message: 'Body or image/video is required' })
 
+        let postContent;
+        if (body) {
+            postContent = {
+                title: title,
+                body: body,
+                author: author,
+                society: societyId,
+                "references.role": role,
+                "references.campusOrigin": campusOrigin,
+                "references.universityOrigin": universityOrigin,
+            }
+        }
+        else if (file) {
+            const { url, type } = await uploadPostMedia(societyId, file, req)
+            console.log("DTA IN ", url, type)
+            postContent = {
+                title: title,
+                media: {
+                    type: type,
+                    url: url
+                },
+                author: author,
+                society: societyId,
+                "references.role": role,
+                "references.campusOrigin": campusOrigin,
+                "references.universityOrigin": universityOrigin,
+            }
+        }
         // console.log(title, body, societyId, author);
-        const post = new Post({
-            title: title,
-            body: body,
-            author: author,
-            society: societyId,
-            "references.role": role,
-            "references.campusOrigin": campusOrigin,
-            "references.universityOrigin": universityOrigin,
-        });
+        const post = new Post(postContent);
         await post.save();
 
         const postCommentId = new SocietyPostAndCommentVote({
@@ -202,18 +228,6 @@ router.post("/create", async (req, res) => {
         post.voteId = postCommentId._id;
         await post.save();
 
-        // const societyPostCollection = await PostsCollection.findOneAndUpdate(
-        //     { societyId: societyId },
-        //     {
-        //         $addToSet: {
-        //             posts: [
-        //                 {
-        //                     postId: post._id,
-        //                 },
-        //             ],
-        //         },
-        //     }
-        // );
 
         const societyPostCollection = await PostsCollection.findOneAndUpdate(
             { societyId: societyId },
@@ -243,6 +257,8 @@ router.post("/create", async (req, res) => {
         res.status(500).json("Internal Server Error");
     }
 });
+
+
 /**
  * post in a sub society
  */
@@ -252,7 +268,7 @@ router.post("/create", async (req, res) => {
 /***
  * VOTE IN A POST
  * @param {voteType} String e.g upvote,downvote
- * @param {postId} ObjectId 
+ * @param {postId} ObjectId
  */
 
 router.post("/vote-post", async (req, res) => {

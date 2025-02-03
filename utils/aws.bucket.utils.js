@@ -48,24 +48,54 @@ const uploadToS3 = async (filePath, bucketName, key, ContentType) => {
     }
 };
 
+const uploadToS3FromMemory = async (filePath, bucketName, key, ContentType) => {
+    try {
+        const fileContent = filePath;
+
+        const params = {
+            Bucket: bucketName,
+            Key: key,
+            Body: fileContent,
+            ContentType: ContentType,
+            ACL: "public-read-write" //give ACL access in aws website
+        };
+
+        const command = new PutObjectCommand(params);
+        const response = await s3Client.send(command);
+
+        return `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    } catch (err) {
+        console.error('Error uploading file to S3:', err);
+        throw err;
+    }
+};
 
 
-const uploadPostMedia = async (community_sub_com_id, files, req, isSubCommunity) => {
-    const bucketName = process.env.AWS_S3_BUCKET_NAME;
-
+/**
+ * 
+ * @param {society_or_subSociety_id} society_or_subSociety_id This is soicey id or subscoiety id
+ * @param {*} file the file in which content is
+ * @param {*} req request
+ * @param {*} isSubCommunity falsy by default
+ * @returns url where data is stored
+ */
+const uploadPostMedia = async (society_or_subSociety_id, file, req, isSubCommunity = false) => {
+    const bucketName = process.env.AWS_S3_IMAGE_BUCKET_NAME;
+    console.log("Bucker", bucketName)
     try {
         let mediaUrl = null;
 
 
-        if (files['media']) {
-            const mediaFile = files['media'][0];
-            // console.log("This is media file: ", mediaFile)
-            const mediaKey = `${isSubCommunity ? 'sub_' : ''}community/${community_sub_com_id}/posts/${Date.now()}-${mediaFile.filename}`;
-            mediaUrl = await uploadToS3(mediaFile.path, bucketName, mediaKey, req.body.contentType);
+        if (file) {
+            const mediaFile = file;
+            console.log("This is media file: ", mediaFile)
+            const mediaKey = `${isSubCommunity ? 'sub_' : ''}community/${society_or_subSociety_id}/posts/${Date.now()}-${mediaFile.originalname}`;
+            mediaUrl = await uploadToS3FromMemory(mediaFile.buffer, bucketName, mediaKey, req.body.contentType);
         }
 
+        console.log("THIS IS MEDIA UL", mediaUrl)
 
-        return { mediaUrl };
+        return { url: mediaUrl, type: file.mimetype };
     } catch (error) {
         console.error('Error uploading images to S3 by SubCommunityImages:', error);
         throw error;
