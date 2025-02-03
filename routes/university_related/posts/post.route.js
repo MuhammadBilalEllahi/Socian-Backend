@@ -176,45 +176,41 @@ const upload = multer({ storage: multer.memoryStorage() });
 /**
  * post in a society
  */
-router.post("/create", upload.single('file'), async (req, res) => {
+router.post("/create", upload.array('file'), async (req, res) => {
     try {
         const { userId, campusOrigin, universityOrigin, role } = getUserDetails(req);
         const { title, body, societyId, author } = req.body;
-        const file = req.file;
+        const files = req.files;
 
-        console.log("/create ", { title, body, file, societyId, author })
+        console.log("/create ", { title, body, files, societyId, author })
 
         if (!title || !societyId || !author) {
             return res.status(400).json("All fields are required");
         }
-        if (!body && !file) return res.status(400).json({ message: 'Body or image/video is required' })
+        if (!body && !files) return res.status(400).json({ message: 'Body or image/video is required' })
 
-        let postContent;
+        let postContent = {
+            title: title,
+            author: author,
+            society: societyId,
+            "references.role": role,
+            "references.campusOrigin": campusOrigin,
+            "references.universityOrigin": universityOrigin,
+        };
         if (body) {
-            postContent = {
-                title: title,
-                body: body,
-                author: author,
-                society: societyId,
-                "references.role": role,
-                "references.campusOrigin": campusOrigin,
-                "references.universityOrigin": universityOrigin,
-            }
+            postContent.body = body;
         }
-        else if (file) {
-            const { url, type } = await uploadPostMedia(societyId, file, req)
-            console.log("DTA IN ", url, type)
-            postContent = {
-                title: title,
-                media: {
-                    type: type,
-                    url: url
-                },
-                author: author,
-                society: societyId,
-                "references.role": role,
-                "references.campusOrigin": campusOrigin,
-                "references.universityOrigin": universityOrigin,
+        else if (files) {
+            // const { url, type } = await uploadPostMedia(societyId, file, req)
+            // console.log("DTA IN ", url, type)
+
+            if (files && files.length > 0) {
+                let mediaArray = [];
+                for (let file of files) {
+                    const { url, type } = await uploadPostMedia(societyId, file, req);
+                    mediaArray.push({ type, url });
+                }
+                postContent.media = mediaArray;
             }
         }
         // console.log(title, body, societyId, author);
