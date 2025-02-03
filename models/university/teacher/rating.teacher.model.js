@@ -32,7 +32,7 @@ const teacherRatingSchema = new Schema({
     rating: { type: Number, required: true },
 
 
-    replies: [{ type: Schema.Types.ObjectId, ref: 'FeedBackComment' }],
+    replies: [{ type: Schema.Types.ObjectId, ref: 'FeedBackCommentTeacher' }],
 
 
     isDeleted: { type: Boolean, default: false },
@@ -41,21 +41,6 @@ const teacherRatingSchema = new Schema({
 }, { timestamps: true });
 
 teacherRatingSchema.index({ _id: 1, teacherId: 1, userId: 1 }, { unique: true });
-
-
-
-
-const feedbackCommentSchema = new Schema({
-    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    comment: { type: String, required: true },
-    mentions: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    replies: [{ type: Schema.Types.ObjectId, ref: 'FeedBackComment' }],
-    isDeleted: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date },
-});
-
-
 
 
 const TeacherRating = mongoose.model('TeacherRating', teacherRatingSchema);

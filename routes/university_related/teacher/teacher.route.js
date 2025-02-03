@@ -12,7 +12,8 @@ const { getUserDetails } = require("../../../utils/utils");
 const UserRoles = require("../../../models/userRoles");
 const User = require("../../../models/user/user.model");
 const { sessionSaveHandler } = require("../../../utils/save.session");
-const redisClient = require('../../../db/reddis')
+const redisClient = require('../../../db/reddis');
+const FeedBackCommentTeacher = require("../../../models/university/teacher/feedback.rating.teacher.model");
 
 // router.get("/teachers-by-campus", async (req, res) => {
 //   try {
@@ -417,11 +418,18 @@ router.get("/reviews/feedbacks", async (req, res) => {
   try {
     const teacher = await Teacher.findById(id).populate({
       path: "ratingsByStudents",
-      populate: {
+      populate: [{
         path: "userId",
         select:
           "_id name username personalEmail universityEmail profile universityEmailVerified personalEmailVerified",
       },
+      {
+        path: 'replies',
+        populate: {
+          path: 'user mentions',
+          select: "_id name username"
+        }
+      }],
     });
 
     if (!teacher) {
@@ -473,6 +481,7 @@ router.get("/reviews/feedbacks", async (req, res) => {
           updatedAt: review.updatedAt,
           userId: userIdData,
           hideUser: review.hideUser,
+          replies: review.replies
           // userVote: userVote ? userVote.userVotes : "none",
         };
       })
@@ -551,16 +560,165 @@ router.post("/rate", async (req, res) => {
 });
 
 
+// router.post('/reply/feedback', async (req, res) => {
+//   try {
+//     const { feedbackComment, gifUrl, feedbackId, teacherId, mentions } = req.body;
+//     const { userId } = getUserDetails(req)
+
+//     const commentedOnaFeedback = await FeedBackCommentTeacher.create({
+//       teacherId: teacherId,
+//       parentTeacherRatingCommentId: feedbackId,
+//       user: userId,
+//       comment: feedbackComment,
+//       gifUrl: gifUrl || '',
+//       mentions: mentions || []
+
+//     })
+
+//     const teacher = await Teacher.findByIdAndUpdate({teacherId}, {
+//       $push: {
+//         replies: [commentedOnaFeedback]
+//       }
+//     }, {upsert: true})
+
+//   } catch (error) {
+//     console.error("Error in /feedback/reply: ", error)
+//     res.status(500).json({ message: "Internal Server Error" })
+//   }
+// })
+
+
+router.post('/reply/feedback', async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { feedbackComment, gifUrl, feedbackReviewId, teacherId, mentions } = req.body;
+    const { userId } = getUserDetails(req);
+
+    console.log("HEREHERE", { userId, feedbackComment, gifUrl, feedbackReviewId, teacherId, mentions })
+    // Create feedback comment
+    const commentedOnaFeedback = await FeedBackCommentTeacher.create([{
+      teacherId: teacherId,
+      parentTeacherRatingCommentId: feedbackReviewId, // this one is different OK?
+      user: userId,
+      comment: feedbackComment,
+      gifUrl: gifUrl || '',
+      mentions: mentions || []
+    }], { session });
+
+    if (!userId || !feedbackComment) {
+      console.error("ERROR: Missing required fields", { userId, feedbackComment });
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    console.log("commentedOnaFeedback", commentedOnaFeedback, commentedOnaFeedback[0]._id)
+    // Update teacher with the new reply
+    const teacherDone = await TeacherRating.findByIdAndUpdate({ _id: feedbackReviewId }, {
+      $push: { replies: commentedOnaFeedback[0]._id }
+    }, { session, new: true });
+    console.log("DATA", teacherDone)
+
+    if (!teacherDone) return res.status(400).json({ message: "Couldnt add to Review" });
+    // Commit transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(201).json({ message: "Feedback reply added successfully", commentedOnaFeedback });
+  } catch (error) {
+    // Rollback transaction in case of error
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("Error in /reply/feedback: ", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+router.post('/reply/reply/feedback', async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { feedbackComment, gifUrl, feedbackCommentId, teacherId, mentions } = req.body;
+    const { userId } = getUserDetails(req);
+    console.log("HEREHERE_2", { userId, feedbackComment, feedbackCommentId, gifUrl, teacherId, mentions })
+
+    // Create feedback comment
+    const feedBackOnAFeedback = await FeedBackCommentTeacher.create([{
+      teacherId: teacherId,
+      parentFeedbackCommentId: feedbackCommentId, // this one is different OK? //only pass first child id here.
+      user: userId,
+      comment: feedbackComment,
+      gifUrl: gifUrl || '',
+      mentions: mentions || []
+    }], { session });
+
+    if (!userId || !feedbackComment) {
+      console.error("ERROR: Missing required fields", { userId, feedbackComment });
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    console.log("feedBackOnAFeedback", feedBackOnAFeedback, feedBackOnAFeedback[0]._id)
+
+    // Update teacher with the new reply
+    const fdeedBackCommentTeacher = await FeedBackCommentTeacher.findByIdAndUpdate(feedbackCommentId, {
+      $push: { replies: feedBackOnAFeedback[0]._id }
+    }, { session, upsert: true, new: true });
+
+    console.log("new feedback", fdeedBackCommentTeacher)
+    // Commit transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(201).json({ message: "Feedback reply added successfully", feedbackCommentId });
+  } catch (error) {
+    // Rollback transaction in case of error
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("Error in /reply/reply/feedback: ", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+router.get('/reply/reply/feedback', async (req, res) => {
+  try {
+
+    const { feedbackCommentId } = req.query;
+    const getReplies = await FeedBackCommentTeacher.findById(feedbackCommentId).populate([{
+      path: 'replies',
+      populate: {
+        path: 'user',
+        select: 'username name profile.picture'
+      }
+    }])
+    if (!getReplies) return res.status(404).json({ message: "No Reply yet" })// however this operation should never initiate from frontedn
+
+    console.log("FEEDBACK LE", getReplies)
+    res.status(200).json({ replies: getReplies })
+
+  } catch (error) {
+    console.error("Error in /reply/reply/feedback ", error);
+    res.status(500).json({ message: "Internal Server Error" })
+  }
+})
 
 
 
+// router.post('/reply/reply/feedback', async (req, res) => {
+//   try {
+//     const { feedbackComment, replyTo } = req.body;
+//     const { userId } = getUserDetails(req)
 
-
-
-
-
-
-
+//     const commentedOnaFeedback = await FeedBackCommentTeacher.create()
+//   } catch (error) {
+//     console.error("Error in /feedback/reply: ", error)
+//     res.status(500).json({ message: "Internal Server Error" })
+//   }
+// })
 
 
 router.post("/reviews/feedbacks/vote", async (req, res) => {
@@ -676,15 +834,6 @@ router.post("/reviews/feedbacks/vote", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
-
-
-
-
-
-
-
-
 
 
 router.delete("/reviews/feedbacks/delete", async (req, res) => {
