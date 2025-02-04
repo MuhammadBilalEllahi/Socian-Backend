@@ -208,7 +208,7 @@ suspiciousRoutes.forEach((route) => {
 // Default catch-all route for undefined paths
 app.all('*', (req, res) => {
   console.log("Not Registered /*")
-  res.status(404).json({ message: 'Not Found' });
+  res.status(404).json({ message: 'No Such Route Found, Please Check POST,GET,PUT,DELETE Command' });
 });
 
 
