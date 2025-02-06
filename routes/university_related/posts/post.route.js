@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const User = require("../../../models/user/user.model");
 const { getUserDetails } = require("../../../utils/utils");
 const { uploadPostMedia } = require("../../../utils/aws.bucket.utils");
+const upload = require("../../../utils/multer.utils");
 const router = express.Router();
 
 /**
@@ -171,12 +172,14 @@ router.get("/campus/all", async (req, res) => {
  * @function flows: posts in a society-> societyId needed
  * @ -> create a post on id of society -> attach post to collection inside postcollection of society
  */
-const multer = require("multer");
-const upload = multer({ storage: multer.memoryStorage() });
+
 /**
  * post in a society
  */
 router.post("/create", upload.array('file'), async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const { userId, campusOrigin, universityOrigin, role } = getUserDetails(req);
         const { title, body, societyId, author } = req.body;
@@ -215,14 +218,14 @@ router.post("/create", upload.array('file'), async (req, res) => {
         }
         // console.log(title, body, societyId, author);
         const post = new Post(postContent);
-        await post.save();
+        await post.save({ session });
 
         const postCommentId = new SocietyPostAndCommentVote({
             postId: post._id,
         });
-        await postCommentId.save();
+        await postCommentId.save({ session });
         post.voteId = postCommentId._id;
-        await post.save();
+        await post.save({ session });
 
 
         const societyPostCollection = await PostsCollection.findOneAndUpdate(
@@ -237,15 +240,19 @@ router.post("/create", upload.array('file'), async (req, res) => {
                     "references.campusOrigin": campusOrigin,
                 },
             },
-            { new: true, upsert: true } // ToRemember: `upsert` ensures a new document is created if it doesn't exist
+            { new: true, upsert: true, session } // ToRemember: `upsert` ensures a new document is created if it doesn't exist
         ).populate('societyId');
 
         const user = await User.findByIdAndUpdate({ _id: userId },
             { $addToSet: { "profile.posts": post._id } },
-            { new: true }
+            { new: true, session }
         )
         if (!user) return res.status(409).json({ error: "User not found" })
         // console.log("here", societyPostCollection);
+
+
+        await session.commitTransaction();
+        session.endSession();
 
         res.status(200).json({ message: "Post Created", society: societyId, societyName: societyPostCollection.societyId.name, postId: post._id, postTitle: post.title });
     } catch (error) {

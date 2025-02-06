@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { getUserDetails } = require('./utils');
 
 
 
@@ -81,7 +82,10 @@ const uploadToS3FromMemory = async (filePath, bucketName, key, ContentType) => {
  */
 const uploadPostMedia = async (society_or_subSociety_id, file, req, isSubCommunity = false) => {
     const bucketName = process.env.AWS_S3_IMAGE_BUCKET_NAME;
-    console.log("Bucker", bucketName)
+    console.log("Bucker", bucketName,)
+    const { userId, campusOrigin, universityOrigin, role } = getUserDetails(req);
+    console.log("THIS IS MEDIA UL", userId, campusOrigin, universityOrigin, role)
+
     try {
         let mediaUrl = null;
 
@@ -89,8 +93,10 @@ const uploadPostMedia = async (society_or_subSociety_id, file, req, isSubCommuni
         if (file) {
             const mediaFile = file;
             console.log("This is media file: ", mediaFile)
-            const mediaKey = `${isSubCommunity ? 'sub_' : ''}community/${society_or_subSociety_id}/posts/${Date.now()}-${mediaFile.originalname}`;
-            mediaUrl = await uploadToS3FromMemory(mediaFile.buffer, bucketName, mediaKey, req.body.contentType);
+            const mediaKey = `${universityOrigin}/${campusOrigin}/${role}/${isSubCommunity ? 'sub_' : ''}society/${society_or_subSociety_id}/posts/${Date.now()}-${userId}-${mediaFile.originalname}`;
+            mediaUrl = await uploadToS3(mediaFile.path, bucketName, mediaKey, mediaFile.mimetype);
+            console.log("THIS IS MEDIA BLAH", "\n", mediaFile.path, "\n", bucketName, "\n", mediaKey, "\n", req.body.contentType)
+
         }
 
         console.log("THIS IS MEDIA UL", mediaUrl)
@@ -99,6 +105,12 @@ const uploadPostMedia = async (society_or_subSociety_id, file, req, isSubCommuni
     } catch (error) {
         console.error('Error uploading images to S3 by SubCommunityImages:', error);
         throw error;
+    } finally {
+        if (file) {
+            const mediaFile = file;
+            console.log("UnLinking: ", mediaFile)
+            fs.unlinkSync(mediaFile.path)
+        }
     }
 };
 

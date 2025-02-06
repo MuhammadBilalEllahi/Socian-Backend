@@ -50,6 +50,17 @@ const postSchema = new Schema(
           default: "text",
         },
         url: { type: String, default: "" },
+        transcodedVideosUrl: [
+          {
+            resolution: {
+              type: String,
+              enum: ["128p", "320p", "480p", "760p", "1080p", "2k", "4k"],
+            },
+            url: { type: String, default: "" },
+          },
+        ],
+
+        // processedImageUrl:  { type: String, default: "" },
       },
     ],
     flair: { type: String, default: "" },
