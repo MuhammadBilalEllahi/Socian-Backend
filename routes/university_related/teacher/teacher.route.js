@@ -5,7 +5,6 @@ const Campus = require("../../../models/university/campus.university.model");
 const Department = require("../../../models/university/department/department.university.model");
 const Teacher = require("../../../models/university/teacher/teacher.model");
 const router = express.Router();
-const UserReviewTeacherVote = require("../../../models/university/teacher/teacher.user.review.vote");
 const TeacherRating = require("../../../models/university/teacher/rating.teacher.model");
 const { default: mongoose } = require("mongoose");
 const { getUserDetails } = require("../../../utils/utils");

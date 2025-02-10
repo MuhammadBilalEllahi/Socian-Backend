@@ -112,8 +112,12 @@ const oAuthRouter = require('./routes/auth/oAuth/oAuth.route.js');
 
 const protectRoute = require("./middlewares/protect.route.js");
 const superProtect = require("./middlewares/super.protect.js");
+const adminProtect = require("./middlewares/admin.protect.js");
+const modProtect = require("./middlewares/mod.protect.js");
 
 const superRouter = require("./routes/super/super.route.js");
+const adminRouter = require("./routes/admin/admin.route.js");
+const modRouter = require("./routes/mod/mod.route.js");
 
 const universityRouter = require("./routes/university_related/university.route.js");
 const campusRouter = require("./routes/university_related/campus.route.js");
@@ -130,6 +134,9 @@ const uploadsRouter = require('./utils/aws/servePDF.js')
 
 
 app.use("/api/super", superProtect, superRouter);
+app.use("/api/admin", adminProtect, adminRouter);
+app.use("/api/mod", modProtect, modRouter);
+
 
 app.use("/api/auth", authRouter);
 // app.use("/api/mob/auth", mobAuthRouter); // will not use maybe
