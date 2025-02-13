@@ -1,7 +1,7 @@
 const express = require('express');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../../../models/user/user.model');
-const { platformSessionOrJwt_CALL_on_glogin_only } = require('../../../utils/platform/jwt.session.platform');
+const { platformSessionOrJwt_CALL_on_glogin_only, platformJwt_CALL_on_glogin_only } = require('../../../utils/platform/jwt.session.platform');
 const Campus = require('../../../models/university/campus.university.model');
 const UserRoles = require('../../../models/userRoles');
 const { json } = require('body-parser');
@@ -253,6 +253,91 @@ router.post('/google/request', async (req, res, next) => {
 
 
 
+
+
+
+// Mobile Google Login Route
+router.post("/google/mobile", async (req, res) => {
+    try {
+        const { idToken } = req.body;
+        if (!idToken) return res.status(400).json({ error: "ID Token required" });
+
+        const client = new OAuth2Client(process.env.CLIENT_ID);
+
+        // Verify Google ID Token
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: process.env.CLIENT_ID,
+        });
+
+        // console.log("PAYLODTICKET", ticket)
+
+        const payload = ticket.getPayload();
+        const email = payload.email;
+        const name = payload.name;
+
+        // Check if user exists in MongoDB
+        let user = await User.findOne({
+            $or: [
+                { universityEmail: email },
+                { personalEmail: email },
+                { secondaryPersonalEmail: email },
+            ],
+        });
+        // console.log("IS EXISTS", user)
+
+        // if (!user) {
+        //     // Check university email pattern
+        //     const campusList = await Campus.find({}, "emailPatterns universityOrigin");
+        //     let isUniversityStudent = false;
+        //     let isUniversityTeacher = false;
+        //     let theCampusUserIsIn = null;
+
+        //     for (const campus of campusList) {
+        //         if (campus.emailPatterns?.regex && new RegExp(campus.emailPatterns.regex).test(email)) {
+        //             isUniversityStudent = true;
+        //             theCampusUserIsIn = campus;
+        //             break;
+        //         } else if (campus.emailPatterns?.domain && email.split("@")[1] === campus.emailPatterns.domain) {
+        //             isUniversityTeacher = true;
+        //             theCampusUserIsIn = campus;
+        //         }
+        //     }
+
+        //     if (theCampusUserIsIn) {
+        //         const username = email.split("@")[0];
+        //         user = new User({
+        //             universityEmail: email,
+        //             username,
+        //             name,
+        //             university: {
+        //                 universityId: theCampusUserIsIn.universityOrigin,
+        //                 campusId: theCampusUserIsIn._id
+        //             },
+        //             role: isUniversityTeacher ? UserRoles.teacher : UserRoles.student,
+        //             universityEmailVerified: true,
+        //             google_EmailVerified: true,
+        //             requiresMoreInformation: true,
+        //         });
+
+        //         await user.save();
+        //     } else {
+        //         return res.status(409).json({ error: "Invalid university email" });
+        //     }
+        // }
+
+        if (!user) return res.status(204).json({ message: "No User - Test mode" })
+
+        const newSession = await platformJwt_CALL_on_glogin_only(user, req, res);
+        // console.log("newSession", newSession)
+        res.status(newSession.status).json({ token: newSession.tokens })
+    } catch (error) {
+        console.error("Google Sign-In Error:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+module.exports = router;
 
 
 module.exports = router;
