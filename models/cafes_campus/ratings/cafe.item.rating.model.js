@@ -5,15 +5,14 @@ const Schema = mongoose.Schema;
 const cafeItemRatingSchema = new Schema({
 
     favourited: {
-        is: {
-            type: Boolean,
-            default: false
-        },
-        by: {
-            type: Schema.Types.ObjectId,
-            ref: 'CafeUser'
-        }
+        type: Boolean,
+        default: false
     },
+    favouritedBy: {
+        type: Schema.Types.ObjectId,
+        ref: 'CafeUser'
+    },
+
     ratingMessage: {
         type: String,
         required: true
@@ -32,10 +31,7 @@ const cafeItemRatingSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'Cafe',
     },
-    attachedCafeBar: {
-        type: Schema.Types.ObjectId,
-        ref: 'BarCafe',
-    },
+
 
     references: {
         universityId: {

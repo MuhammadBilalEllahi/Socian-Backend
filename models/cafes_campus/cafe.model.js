@@ -12,17 +12,21 @@ const cafeSchema = new Schema({
         ref: 'User',
         required: true
     },
-    bars: [{
+    products: [{
         type: Schema.Types.ObjectId,
-        ref: 'BarCafe',
+        ref: 'FoodItem'
     }],
 
+    categories: [{
+        type: Schema.Types.ObjectId,
+        ref: 'FoodCategory',
+    }],
     status: {
-        is: {
-            type: String,
-            deafult: ['active', 'archived', 'deleted']
-        }
+        type: String,
+        enum: ['active', 'archived', 'deleted'],
+        default: 'active'
     },
+
     contact: {
         type: String,
         default: ''
@@ -36,20 +40,21 @@ const cafeSchema = new Schema({
         default: ''
     },
 
-    coordinted: {
+    coordinates: {
         latitude: {
-            type: String,
-            default: ''
+            type: Number,
+            default: 0
         },
         longitude: {
-            type: String,
-            default: ''
+            type: Number,
+            default: 0
         },
         locationInText: {
             type: String,
             default: ''
         }
     },
+
 
     createdBy: {
         user: {

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+const bcrypt = require('bcryptjs')
 const Schema = mongoose.Schema;
 
 const cafeUserSchema = new Schema({
@@ -9,11 +10,14 @@ const cafeUserSchema = new Schema({
     },
     username: {
         type: String,
-        required: true
+        required: true,
+        lowercase: true
     },
     email: {
         type: String,
-    },
+        lowercase: true
+    }
+    ,
     phone: {
         // ?No need to verify the phone number. Cafe workers know phone number more than email.
         // ? In case if we buy sms to number packge. will add otp to logn but very expensive
@@ -34,11 +38,6 @@ const cafeUserSchema = new Schema({
         required: true
     },
 
-    attachedBarCafe: {
-        type: Schema.Types.ObjectId,
-        ref: 'BarCafe',
-    },
-
     verfication: {
         email: {
             type: Boolean,
@@ -52,11 +51,11 @@ const cafeUserSchema = new Schema({
     status: {
         activated: {
             type: Boolean,
-            deafult: false
+            default: false
         },
         activationKey: {
             type: String,
-            default: '4hF-c#Cec$F}lp-'
+            default: () => bcrypt.randomInt(10000000, 99999999).toString()
         }
     },
     createdBy: {

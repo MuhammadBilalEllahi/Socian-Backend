@@ -12,8 +12,8 @@ const cafeVoteSchema = new Schema({
     vote: {
         type: Map,
         of: String,
-        // enum: ['haha', 'love', 'yuck', 'thumbsUp', 'thumbsDown'],
-        default: () => ({})  // ? userId: funny, love, hate, yuck
+        enum: ['haha', 'love', 'yuck', 'thumbsUp', 'thumbsDown'],
+        default: () => ({})
     },
 
     reactions: {
@@ -36,10 +36,6 @@ const cafeVoteSchema = new Schema({
     attachedCafe: {
         type: Schema.Types.ObjectId,
         ref: 'Cafe',
-    },
-    attachedCafeBar: {
-        type: Schema.Types.ObjectId,
-        ref: 'BarCafe',
     },
 
     references: {

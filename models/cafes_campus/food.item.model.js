@@ -2,19 +2,53 @@ const mongoose = require('mongoose');
 
 const Schema = mongoose.Schema;
 
-const barCafeSchema = new Schema({
+const foodItemsSchema = new Schema({
     name: { // ? Snack bar, Fast food bar, desi bar, fries bar
         type: String,
         required: true
     },
-    attachedCafeEmployees: [{
+    slug: {
+        type: String,
+        default: ''
+    },
+
+    price: {
+        type: Number,
+        default: 0
+    },
+
+    category: {
         type: Schema.Types.ObjectId,
-        ref: 'CafeUser',
-    }],
-    products: [{
+        ref: 'FoodCategory', // Reference to category
+        required: true
+    },
+
+    ratings: [{
         type: Schema.Types.ObjectId,
-        ref: 'FoodItem'
+        ref: 'CafeItemRating'
     }],
+
+    ratingsMap: {
+        type: Map,
+        of: Number,
+        default: {}, // ? userId: Rating
+        min: 0,
+        max: 5
+    },
+
+
+
+    discount: {
+        type: Number,
+        default: 0
+    },
+
+    attachedCafe: {
+        type: Schema.Types.ObjectId,
+        ref: 'Cafe',
+    },
+
+
     references: {
         universityId: {
             type: Schema.Types.ObjectId,
@@ -28,7 +62,6 @@ const barCafeSchema = new Schema({
         }
     },
 
-
     createdAt: {
         type: Date,
         default: Date.now
@@ -40,6 +73,6 @@ const barCafeSchema = new Schema({
 
 }, { timestamps: true });
 
-const BarCafe = mongoose.model('BarCafe', barCafeSchema);
+const FoodItem = mongoose.model('FoodItem', foodItemsSchema);
 
-module.exports = BarCafe;
+module.exports = FoodItem;
