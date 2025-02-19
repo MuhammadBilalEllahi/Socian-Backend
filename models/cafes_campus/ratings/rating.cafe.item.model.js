@@ -27,6 +27,9 @@ const cafeItemRatingSchema = new Schema({
 
 
 
+
+
+
     attachedCafe: {
         type: Schema.Types.ObjectId,
         ref: 'Cafe',
@@ -45,6 +48,24 @@ const cafeItemRatingSchema = new Schema({
             required: true
         }
     },
+
+
+    reported: {
+        type: Boolean,
+        default: false
+    },
+
+    reportedBy: {
+        type: Schema.Types.ObjectId,
+        refPath: 'reportedByModel'
+    },
+    reportedByModel: {
+        type: String,
+        enum: ['User', 'CafeUser']
+    },
+
+
+
 
     createdAt: {
         type: Date,

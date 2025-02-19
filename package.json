@@ -37,6 +37,7 @@
     "express-ejs-layouts": "^2.5.1",
     "express-rate-limit": "^7.4.1",
     "express-session": "^1.18.1",
+    "express-validator": "^7.2.1",
     "fs": "0.0.1-security",
     "geolib": "^3.3.4",
     "google-auth-library": "^9.15.0",

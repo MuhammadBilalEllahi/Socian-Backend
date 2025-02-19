@@ -2,6 +2,7 @@ const express = require('express');
 const User = require('../../models/user/user.model');
 const { getUserDetails } = require('../../utils/utils');
 const router = express.Router();
+const modCafeRouter = require('./cafe/cafe.mod.route');
 
 
 
@@ -57,6 +58,10 @@ router.get('/users', async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
+
+
+router.use('/cafe', modCafeRouter)
 
 
 

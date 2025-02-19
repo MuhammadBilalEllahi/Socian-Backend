@@ -4,8 +4,12 @@ const Schema = mongoose.Schema;
 const foodCategorySchema = new Schema({
     name: {
         type: String,
-        required: true
+        required: true,
+        trim: true
     },
+
+
+
     slug: {
         type: String,
         unique: true,
@@ -19,6 +23,23 @@ const foodCategorySchema = new Schema({
         type: String,
         default: ''
     },
+
+    categoryAddedBy: {
+        type: Schema.Types.ObjectId,
+        refPath: 'reportedByModel'
+    },
+
+    categoryAddedByModel: {
+        type: String,
+        enum: ['User', 'CafeUser']
+    },
+
+    deleted: {
+        type: Boolean,
+        default: false
+    },
+
+
     createdAt: {
         type: Date,
         default: Date.now
@@ -27,7 +48,18 @@ const foodCategorySchema = new Schema({
         type: Date,
         default: Date.now
     }
+
+
 }, { timestamps: true });
+
+
+foodCategorySchema.pre('save', function (next) {
+    if (!this.slug) {
+        this.slug = slugify(this.name, { lower: true, strict: true });
+    }
+    next();
+});
+
 
 const FoodCategory = mongoose.model('FoodCategory', foodCategorySchema);
 module.exports = FoodCategory;

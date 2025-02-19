@@ -130,12 +130,25 @@ const pastpaperRouter = require("./routes/university_related/pastpapers/pastpape
 const academicRouter = require("./routes/university_related/pastpapers/academic.format.route.js");
 const discussionRouter = require("./routes/university_related/pastpapers/discussion.route.js");
 
-const uploadsRouter = require('./utils/aws/servePDF.js')
+const uploadsRouter = require('./utils/aws/servePDF.js');
+
+
+
+const societyRouter = require("./routes/university_related/society/society.route.js");
+// const subSocietyRouter = require("./routes/university_related/subsociety/sub.society.route.js")
+const postsRouter = require('./routes/university_related/posts/post.route.js');
+
+const accessibleRoutes = require('./routes/accessibles/accessible.route.js');
+
+const userRouter = require('./routes/user/user.route.js');
+const cafeRouter = require('./routes/university_related/cafe/cafe.route.js');
+
+
 
 
 app.use("/api/super", superProtect, superRouter);
 app.use("/api/admin", adminProtect, adminRouter);
-app.use("/api/mod", modProtect, modRouter);
+app.use("/api/mod", modProtect, modRouter); // ?
 
 
 app.use("/api/auth", authRouter);
@@ -155,9 +168,6 @@ app.use("/api/uploads", uploadsRouter);//protectRoute,
 app.use("/api/academic", protectRoute, academicRouter);
 app.use("/api/discussion", protectRoute, discussionRouter);
 
-const societyRouter = require("./routes/university_related/society/society.route.js")
-// const subSocietyRouter = require("./routes/university_related/subsociety/sub.society.route.js")
-const postsRouter = require('./routes/university_related/posts/post.route.js')
 
 app.use("/api/society", protectRoute, societyRouter);
 // app.use("/api/sub-society", protectRoute, subSocietyRouter);
@@ -165,16 +175,18 @@ app.use("/api/posts", protectRoute, postsRouter);
 
 // cafe role doesnot exist
 
-const accessibleRoutes = require('./routes/accessibles/accessible.route.js')
-app.use('/api/accessible/', accessibleRoutes)
+app.use('/api/accessible', accessibleRoutes)
 
 
-const userRouter = require('./routes/user/user.route.js');
 // const User = require("./models/user/user.model.js");
 // const Campus = require("./models/university/campus.university.model.js");
 
 
 app.use("/api/user", protectRoute, userRouter);
+
+
+// const cafeProtect = require("./middlewares/cafe.protect.js");
+app.use('/api/cafe', cafeRouter);
 
 
 

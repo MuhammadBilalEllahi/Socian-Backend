@@ -151,10 +151,54 @@ const getUserDetails = (req) => {
   return { user, userId, role, universityOrigin, campusOrigin, departmentId };
 };
 
+
+
+
+
+
+
+
+/**
+ * Extracts cafe user details based on the platform and session or user data.
+ * @param {Object} req - The request object
+ * @returns {Object} - The user details, including  cafeUser, cafeUserId, role, universityId, campusId
+ * @returns {user}
+ * @returns {userId}
+ * @returns {role}
+ * @returns {universityId}
+ * @returns {campusId}
+ */
+const getCafeUserDetails = (req) => {
+
+  let cafeUser, cafeUserId, role, universityId, campusId;
+
+  const platform = req.headers["x-platform"];
+
+  if (platform === "web") {
+    cafeUser = req.session.cafe.user;
+    cafeUserId = req.session.cafe.user._id;
+    role = req.session.cafe.user.role;
+    if (role !== "ext_org") {
+      universityId = req.session.cafe.user.references.universityId?._id ?? req.session.cafe.user.references.universityId;
+      campusId = req.session.cafe.user.references.campusId?._id ?? req.session.cafe.user.references.campusId;
+    }
+  } else if (platform === "app") {
+    cafeUser = req.cafe.user;
+    cafeUserId = req.cafe.user._id;
+    role = req.cafe.user.role;
+    if (role !== "ext_org") {
+      universityId = req.cafe.user.references.universityId?._id ?? req.cafe.user.references.universityId;
+      campusId = req.cafe.user.references.campusId?._id ?? req.cafe.user.references.campusId;
+    }
+  }
+  return { cafeUser, cafeUserId, role, universityId, campusId };
+};
+
 module.exports = {
   generateOtp6Digit,
   createDateTime,
   createUniqueUsername,
   sendOtp,
-  getUserDetails
+  getUserDetails,
+  getCafeUserDetails
 };

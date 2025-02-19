@@ -5,12 +5,26 @@ const Schema = mongoose.Schema;
 const foodItemsSchema = new Schema({
     name: { // ? Snack bar, Fast food bar, desi bar, fries bar
         type: String,
-        required: true
+        required: true,
+        trim: true
     },
+
+    description: {
+        type: String,
+        default: ''
+    },
+
+    imageUrl: {
+        type: String,
+        default: ''
+    },
+
+
     slug: {
         type: String,
         default: ''
     },
+
 
     price: {
         type: Number,
@@ -22,6 +36,35 @@ const foodItemsSchema = new Schema({
         ref: 'FoodCategory', // Reference to category
         required: true
     },
+
+    flavours: [
+        { type: String }
+    ],
+
+    bestSelling: {
+        type: Boolean,
+        default: false
+    },
+
+    volume: {
+        type: String,
+        enum: ['liter', 'kilo', 'gram']
+    },
+
+
+    lastBestSellingDates: [{
+        type: Date,
+        default: Date.now
+    }],
+
+
+    favouritebByUsersCount: {
+        type: Map,
+        of: Number,
+        default: {}
+    },
+
+
 
     ratings: [{
         type: Schema.Types.ObjectId,
@@ -43,9 +86,33 @@ const foodItemsSchema = new Schema({
         default: 0
     },
 
+    discountDuration: {
+        type: Date,
+    },
+    discountStatus: {
+        type: String,
+        enum: ['active', 'archived', 'none', 'deleted'],
+        default: 'none'
+    },
+    deleted: {
+        type: Boolean,
+        default: false
+    },
     attachedCafe: {
         type: Schema.Types.ObjectId,
         ref: 'Cafe',
+    },
+
+
+
+    foodItemAddedBy: {
+        type: Schema.Types.ObjectId,
+        refPath: 'reportedByModel'
+    },
+
+    foodItemAddedByModel: {
+        type: String,
+        enum: ['User', 'CafeUser']
     },
 
 
@@ -72,6 +139,23 @@ const foodItemsSchema = new Schema({
     }
 
 }, { timestamps: true });
+
+foodItemsSchema.pre('save', function (next) {
+    if (!this.slug) {
+        this.slug = slugify(this.name, { lower: true, strict: true });
+    }
+    next();
+});
+
+
+foodItemsSchema.pre('save', async function (next) {
+    const categoryExists = await FoodCategory.exists({ _id: this.category });
+    if (!categoryExists) {
+        return next(new Error('Invalid category ID'));
+    }
+    next();
+});
+
 
 const FoodItem = mongoose.model('FoodItem', foodItemsSchema);
 
