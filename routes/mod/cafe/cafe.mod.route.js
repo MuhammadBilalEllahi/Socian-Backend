@@ -5,7 +5,7 @@ const { body, validationResult } = require('express-validator');
 const { getUserDetails } = require('../../../utils/utils');
 const FoodCategory = require('../../../models/cafes_campus/category.food.item.model');
 const FoodItem = require('../../../models/cafes_campus/food.item.model');
-const Cafe = require('../../../models/cafes_campus/Cafe.model');
+const Cafe = require('../../../models/cafes_campus/cafe.model');
 
 
 // Cafe admin might be able to read and write. translate the reviews to them. or Speak the revies. Or just make app view in URDU
