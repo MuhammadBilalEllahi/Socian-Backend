@@ -34,7 +34,8 @@ const LastChangesSchema = new Schema({
 const CoordinatesSchema = new Schema({
     _id: {
         type: Schema.Types.ObjectId,
-        required: true
+        ref: 'Cafe'
+        // required: true
     },
     latitude: {
         type: Number,
@@ -60,8 +61,8 @@ const cafeSchema = new Schema({
     },
     attachedCafeAdmin: {
         type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+        ref: 'CafeUser',
+        // required: true
     },
     foodItems: [{
         type: Schema.Types.ObjectId,
@@ -75,8 +76,8 @@ const cafeSchema = new Schema({
 
     status: {
         type: String,
-        enum: ['active', 'archived', 'deleted'],
-        default: 'active'
+        enum: ['active', 'archived', 'deactive'],
+        default: 'deactive'
     },
 
     contact: [{
@@ -90,6 +91,10 @@ const cafeSchema = new Schema({
     information: {
         type: String,
         default: ''
+    },
+    deleted: {
+        type: Boolean,
+        default: false
     },
 
     // coordinates: {
@@ -156,7 +161,18 @@ const cafeSchema = new Schema({
 
 }, { timestamps: true });
 
-const Cafe = mongoose.model('Cafe', cafeSchema);
+
+/**
+ * Pre-save hook to add cafeId to coordinates on first creation
+ */
+cafeSchema.pre('save', function (next) {
+    if (this.isNew) { // Only set coordinates if it's a new document
+        this.coordinates._id = this._id;
+    }
+    next();
+});
+
+const Cafe = mongoose.model('Cafe', cafeSchema, 'cafes');
 
 module.exports = Cafe;
 

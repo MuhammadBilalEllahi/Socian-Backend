@@ -65,7 +65,7 @@ app.use(
     // origin: ["http://localhost:4352", "https://m.bilalellahi.com"],
     origin: [process.env.FRONTEND_URL, process.env.APP_ID, process.env.LOCALHOST],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   })
 );
 // app.options("*", cors()); // Allow all preflight requests
