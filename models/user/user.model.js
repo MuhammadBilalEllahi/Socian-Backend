@@ -73,6 +73,7 @@ const userSchema = new mongoose.Schema({
     },
     savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
+    personalPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     connections: {
       friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "FriendRequest" }],
 

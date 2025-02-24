@@ -177,6 +177,47 @@ router.post('/create',
 
 
 
+router.get('/deletes',
+    async (req, res) => {
+        try {
+            const { userId, universityOrigin, campusOrigin } = getUserDetails(req);
+
+            let cafes = await Cafe.find({
+                'references.campusId': campusOrigin, deleted: true
+            })
+                .populate([
+                    { path: 'createdBy.user' },
+                    {
+                        path: 'lastChangesBy',
+                        populate: 'userId',
+
+                    }]
+                )
+                .sort({ createdAt: -1 })
+                .lean();
+            // console.log("DATA", cafes)
+
+
+            if (!cafes || cafes.length === 0) return res.status(204).json({ message: 'No Cafes Yet' });
+
+            cafes = cafes.map(cafe => ({
+                ...cafe,
+                createdAt: moment(cafe.createdAt).format('MMMM Do YYYY, h:mm:ss a'), // Example: "February 22nd 2025, 2:45:12 pm"
+                updatedAt: cafe.updatedAt ? moment(cafe.updatedAt).format('MMMM Do YYYY, h:mm:ss a') : null,
+                user: {
+                    _id: cafe.createdBy.user._id,
+                    name: cafe.createdBy.user.name,
+                    super_role: cafe.createdBy.user.super_role
+                }
+            }));
+            res.status(201).json({ message: 'Cafe created successfully', cafes: cafes });
+
+        } catch (error) {
+            console.error("Error getting Cafe:", error);
+            res.status(500).json({ message: "Internal Server Error" });
+        }
+    }
+);
 
 router.put('/update/:cafeId/all', async (req, res) => {
     try {
@@ -329,44 +370,6 @@ router.get('/:cafeId',
 
 
 
-router.get('/deletes',
-    async (req, res) => {
-        try {
-            const { userId, universityOrigin, campusOrigin } = getUserDetails(req);
-
-            let cafes = await Cafe.find({
-                'references.campusId': campusOrigin, deleted: true
-            }).populate([{ path: 'createdBy.user' },
-            {
-                path: 'lastChangesBy',
-                populate: 'userId',
-
-            }]
-            )
-                .sort({ createdAt: -1 })
-                .lean();
-
-
-            if (!cafes || cafes.length === 0) return res.status(204).json({ message: 'No Cafes Yet' });
-
-            cafes = cafes.map(cafe => ({
-                ...cafe,
-                createdAt: moment(cafe.createdAt).format('MMMM Do YYYY, h:mm:ss a'), // Example: "February 22nd 2025, 2:45:12 pm"
-                updatedAt: cafe.updatedAt ? moment(cafe.updatedAt).format('MMMM Do YYYY, h:mm:ss a') : null,
-                user: {
-                    _id: cafe.createdBy.user._id,
-                    name: cafe.createdBy.user.name,
-                    super_role: cafe.createdBy.user.super_role
-                }
-            }));
-            res.status(201).json({ message: 'Cafe created successfully', cafes: cafes });
-
-        } catch (error) {
-            console.error("Error getting Cafe:", error);
-            res.status(500).json({ message: "Internal Server Error" });
-        }
-    }
-);
 
 
 

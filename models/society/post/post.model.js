@@ -76,6 +76,51 @@ const postSchema = new Schema(
       byUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
     },
 
+    shareableLevel: {
+      type: String,
+      enum: ['campus', 'inter', 'all']
+    },
+
+    // Repost Option
+    isRepost: {
+      type: Boolean,
+      default: false
+    },
+    repostedPost: {
+      type: Schema.Types.ObjectId,
+      ref: 'Post'
+    },
+    isPersonalPost: {
+      type: Boolean,
+      default: false
+    },
+
+    // Poll Feature
+    isPoll: { type: Boolean, default: false },
+    pollOptions: [
+      {
+        option: { type: String, required: true },
+        votes: { type: Number, default: 0 },
+      },
+    ],
+    pollExpiresAt: { type: Date },
+    totalVotes: { type: Number, default: 0 },
+    votedUsers: [{ type: Schema.Types.ObjectId, ref: "User" }], // Users who voted
+
+    // Voice Thread Feature
+    isVoiceThread: { type: Boolean, default: false },
+    voiceThreadUrl: { type: String, default: "" }, // Stores voice note URL
+    transcodedVoiceUrls: [
+      {
+        bitrate: {
+          type: String,
+          enum: ["64kbps", "128kbps", "256kbps", "320kbps"],
+        },
+        url: { type: String, default: "" },
+      },
+    ],
+
+
     references: {
       isFromOtherUni: { type: Boolean, default: false },
       universityOrigin: {

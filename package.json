@@ -6,7 +6,7 @@
   "scripts": {
     "check-git": "node ./utils/git/checkGitStatus.mjs",
     "run": "node ./index.js",
-    "server": "npm run check-git && nodemon ./index.js",
+    "server": "nodemon ./index.js",
     "railway": "nodemon ./index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

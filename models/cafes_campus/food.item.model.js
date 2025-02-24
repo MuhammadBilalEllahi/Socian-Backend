@@ -2,6 +2,39 @@ const mongoose = require('mongoose');
 
 const Schema = mongoose.Schema;
 
+
+const LastChangesSchema = new Schema({
+    whatUpdated: {
+        type: String,
+        default: ''
+    },
+    cafeId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Cafe',
+        required: true
+    },
+    foodItemId: {
+        type: Schema.Types.ObjectId,
+        ref: 'FoodItem',
+        required: true
+    },
+    userId: {
+        type: Schema.Types.ObjectId,
+        required: true
+    },
+    userType: {
+        type: String,
+        enum: ['User', 'CafeUser'],
+        required: true
+    },
+    changedAt: {
+        type: Date,
+        default: Date.now
+    }
+}, { _id: false });
+
+
+
 const foodItemsSchema = new Schema({
     name: { // ? Snack bar, Fast food bar, desi bar, fries bar
         type: String,
@@ -26,9 +59,24 @@ const foodItemsSchema = new Schema({
     },
 
 
-    price: {
+    price: [{
         type: Number,
         default: 0
+    }],
+
+    takeAwayPrice: [{
+        type: Number,
+        default: 0
+    }],
+    takeAwayStatus: {
+        type: Boolean,
+        default: false
+    },
+
+    status: {
+        type: String,
+        enum: ['active', 'archived', 'deactive'],
+        default: 'deactive'
     },
 
     category: {
@@ -48,7 +96,7 @@ const foodItemsSchema = new Schema({
 
     volume: {
         type: String,
-        enum: ['liter', 'kilo', 'gram']
+        enum: ['liter', 'kilo', 'gram', 'half', 'full']
     },
 
 
