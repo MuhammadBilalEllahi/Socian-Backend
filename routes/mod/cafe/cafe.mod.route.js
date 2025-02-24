@@ -551,7 +551,7 @@ router.post('/:cafeId/category', async (req, res) => {
             name,
             description,
             imageUrl: imageUrl || '',
-            attachedCafe: cafeId,
+            cafeId: cafeId,
             categoryAddedBy: userId,
             categoryAddedByModel: 'User',
             references: {
@@ -576,8 +576,9 @@ router.post('/:cafeId/category', async (req, res) => {
         })
 
         await newCategory.save();
-        res.status(201).json(newCategory);
+        res.status(201).json({ category: newCategory });
     } catch (error) {
+        console.error("ERROR IN CREATIN G CATEGORY", error)
         res.status(500).json({ error: error.message });
     }
 });
@@ -589,8 +590,12 @@ router.post('/:cafeId/category', async (req, res) => {
 router.get('/:cafeId/categories', async (req, res) => {
     try {
         const cafeId = req.params.cafeId;
-        const categories = await FoodCategory.find({ attachedCafe: cafeId, deleted: false });
-        res.status(200).json(categories);
+        const categories = await FoodCategory.find({ cafeId: cafeId, deleted: false })
+            .populate([{ path: 'categoryAddedBy' },
+                , { path: 'itemsInIt', model: 'FoodItem' }
+                , { path: 'lastChangesBy.userId' }])
+
+        res.status(200).json({ categories: categories });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -600,7 +605,7 @@ router.get('/:cafeId/categories', async (req, res) => {
  * @route PUT /:cafeId/categories/:categoryId
  * @desc Update a food category
  */
-router.put('/:cafeId/categories/:categoryId', async (req, res) => {
+router.put('/update/:cafeId/categories/:categoryId', async (req, res) => {
     try {
         const { cafeId, categoryId } = req.params;
         const updateData = {};
@@ -611,7 +616,19 @@ router.put('/:cafeId/categories/:categoryId', async (req, res) => {
 
         const category = await FoodCategory.findOneAndUpdate(
             { _id: categoryId, attachedCafe: cafeId },
-            updateData,
+            {
+                updateData,
+
+                $push: {
+                    lastChangesBy: {
+                        whatUpdated: updateData,
+                        cafeId: cafeId,
+                        foodCategoryId: categoryId,
+                        userId: userId,
+                        userType: 'User',
+                    }
+                }
+            },
             { new: true }
         );
 
@@ -625,60 +642,128 @@ router.put('/:cafeId/categories/:categoryId', async (req, res) => {
 
 
 
-router.put('/:cafeId/categories/:categoryId/name', async (req, res) => {
+router.put('/update/:cafeId/categories/:categoryId/name', async (req, res) => {
     try {
         const { name } = req.body;
         const { cafeId, categoryId } = req.params;
 
+        const { userId } = getUserDetails(req)
+
         const category = await FoodCategory.findOneAndUpdate(
             { _id: categoryId, attachedCafe: cafeId },
-            { name },
+            {
+                name,
+                $push: {
+                    lastChangesBy: {
+                        whatUpdated: 'name',
+                        cafeId: cafeId,
+                        foodCategoryId: categoryId,
+                        userId: userId,
+                        userType: 'User',
+                    }
+                }
+            },
             { new: true }
         );
 
         if (!category) return res.status(404).json({ error: 'Category not found' });
 
-        res.status(200).json(category);
+        res.status(200).json({ category: category });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
 
-router.put('/:cafeId/categories/:categoryId/description', async (req, res) => {
+router.put('/update/:cafeId/categories/:categoryId/description', async (req, res) => {
     try {
         const { description } = req.body;
         const { cafeId, categoryId } = req.params;
+        const { userId } = getUserDetails(req)
 
         const category = await FoodCategory.findOneAndUpdate(
             { _id: categoryId, attachedCafe: cafeId },
-            { description },
+            {
+                description,
+                $push: {
+                    lastChangesBy: {
+                        whatUpdated: `description-${description}`,
+                        cafeId: cafeId,
+                        foodCategoryId: categoryId,
+                        userId: userId,
+                        userType: 'User',
+                    }
+                }
+            },
             { new: true }
         );
 
         if (!category) return res.status(404).json({ error: 'Category not found' });
 
-        res.status(200).json(category);
+        res.status(200).json({ category: category });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
 
-router.put('/:cafeId/categories/:categoryId/image', async (req, res) => {
+router.put('/update/:cafeId/categories/:categoryId/image', async (req, res) => {
     try {
         const { imageUrl } = req.body;
         const { cafeId, categoryId } = req.params;
+        const { userId } = getUserDetails(req)
 
         const category = await FoodCategory.findOneAndUpdate(
             { _id: categoryId, attachedCafe: cafeId },
-            { imageUrl },
+            {
+                imageUrl,
+                $push: {
+                    lastChangesBy: {
+                        whatUpdated: `imageUrl-${imageUrl}`,
+                        cafeId: cafeId,
+                        foodCategoryId: categoryId,
+                        userId: userId,
+                        userType: 'User',
+                    }
+                }
+            },
             { new: true }
         );
 
         if (!category) return res.status(404).json({ error: 'Category not found' });
 
-        res.status(200).json(category);
+        res.status(200).json({ category: category });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.put('/update/:cafeId/categories/:categoryId/status', async (req, res) => {
+    try {
+        const { status } = req.body;
+        const { cafeId, categoryId } = req.params;
+        const { userId } = getUserDetails(req)
+
+        const category = await FoodCategory.findOneAndUpdate(
+            { _id: categoryId, cafeId: cafeId },
+            {
+                status,
+                $push: {
+                    lastChangesBy: {
+                        whatUpdated: `status-${status}`,
+                        cafeId: cafeId,
+                        foodCategoryId: categoryId,
+                        userId: userId,
+                        userType: 'User',
+                    }
+                }
+            },
+            { new: true }
+        );
+
+        if (!category) return res.status(404).json({ error: 'Category not found' });
+
+        res.status(200).json({ category: category });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -689,11 +774,28 @@ router.put('/:cafeId/categories/:categoryId/image', async (req, res) => {
  * @route DELETE /:cafeId/categories/:categoryId
  * @desc Delete a food category
  */
-router.delete('/:cafeId/categories/:categoryId', async (req, res) => {
+router.delete('/:cafeId/categories/:categoryId/delete', async (req, res) => {
     try {
         const { cafeId, categoryId } = req.params;
 
-        const category = await FoodCategory.findOneAndDelete({ _id: categoryId, attachedCafe: cafeId });
+        const { userId } = getUserDetails(req);
+
+        const category = await FoodCategory.findOneAndUpdate({ _id: categoryId, cafeId: cafeId }, {
+            deleted: true,
+            $push: {
+                lastChangesBy: {
+                    whatUpdated: 'deleted',
+                    cafeId: cafeId,
+                    foodCategoryId: categoryId,
+                    userId: userId,
+                    userType: 'User',
+                }
+            }
+        });
+        // ? change status of items under the category
+        const changeFoodItemStatus = FoodItem.findOneAndUpdate({ category: categoryId }, {
+            status: 'deactive'
+        })
 
         if (!category) return res.status(404).json({ error: 'Category not found' });
 
@@ -707,12 +809,14 @@ router.delete('/:cafeId/categories/:categoryId', async (req, res) => {
  * @route POST /:cafeId/items
  * @desc Add a food item inside a specific cafe (Must be assigned to a category)
  */
-router.post('/:cafeId/items', async (req, res) => {
+router.post('/:cafeId/category/:categoryId/item/create', async (req, res) => {
     try {
-        const { name, description, imageUrl, price, category, flavours,
+        const { name, description, imageUrl, price, flavours,
+            takeAwayPrice,
+            takeAwayStatus,
             // bestSelling, 
             volume, discount, references } = req.body;
-        const cafeId = req.params.cafeId;
+        const { cafeId, categoryId } = req.params;
 
         const { userId, campusOrigin, universityOrigin } = getUserDetails(req);
 
@@ -723,6 +827,7 @@ router.post('/:cafeId/items', async (req, res) => {
             imageUrl,
             price,
             flavours: flavours || [],
+            cafeId: cafeId,
             // bestSelling,
             volume,
             discount,
@@ -734,12 +839,16 @@ router.post('/:cafeId/items', async (req, res) => {
                 campusId: campusOrigin
             }
         };
-        // Validate category existence
-        if (category) {
+        if (takeAwayStatus) {
+            foodItemData.takeAwayPrice = takeAwayPrice;
+            foodItemData.takeAwayStatus = true;
+        }
+        // Validate categoryId existence
+        if (categoryId) {
 
-            const categoryExists = await FoodCategory.findOne({ _id: category, attachedCafe: cafeId });
+            const categoryExists = await FoodCategory.findOne({ _id: categoryId, cafeId: cafeId });
             if (!categoryExists) return res.status(400).json({ error: 'Invalid category ID' });
-            foodItemData.category = category
+            foodItemData.category = categoryId
         }
 
         const newItem = new FoodItem(foodItemData);
@@ -753,7 +862,7 @@ router.post('/:cafeId/items', async (req, res) => {
                 lastChangesBy: {
                     whatUpdated: `FoodItem-${newItem._id}`,
                     cafeId,
-                    userId: cafeUserId,
+                    userId: userId,
                     userType: 'User',
                     updatedAt: new Date()
                 }
@@ -761,8 +870,9 @@ router.post('/:cafeId/items', async (req, res) => {
         })
 
         await newItem.save();
-        res.status(201).json(newItem);
+        res.status(201).json({ item: newItem });
     } catch (error) {
+        console.error("ERROR IN CREATE Food item", error)
         res.status(500).json({ error: error.message });
     }
 });
@@ -774,8 +884,8 @@ router.post('/:cafeId/items', async (req, res) => {
 router.get('/:cafeId/items', async (req, res) => {
     try {
         const cafeId = req.params.cafeId;
-        const items = await FoodItem.find({ attachedCafe: cafeId, deleted: false }).populate('category', 'name');
-        res.status(200).json(items);
+        const items = await FoodItem.find({ cafeId: cafeId, deleted: false }).populate('category', 'name');
+        res.status(200).json({ items: items });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -789,16 +899,29 @@ router.put('/:cafeId/items/:itemId/all', async (req, res) => {
     try {
         const { name, description, imageUrl, price, category, flavours, volume, discount } = req.body;
         const { cafeId, itemId } = req.params;
+        const { userId } = getUserDetails(req);
 
         const item = await FoodItem.findOneAndUpdate(
-            { _id: itemId, attachedCafe: cafeId, deleted: false },
-            { name, description, imageUrl, price, category, flavours, volume, discount },
+            { _id: itemId, cafeId: cafeId, deleted: false },
+            {
+                name, description, imageUrl, price, category, flavours, volume, discount,
+
+                $push: {
+                    lastChangesBy: {
+                        whatUpdated: `all-${name + "," + description + "," + imageUrl + "," + price + "," + category + "," + flavours + "," + volume + "," + discount}`,
+                        cafeId: cafeId,
+                        foodItemId: itemId,
+                        userId: userId,
+                        userType: 'User',
+                    }
+                }
+            },
             { new: true }
         );
 
         if (!item) return res.status(404).json({ error: 'Item not found' });
 
-        res.status(200).json(item);
+        res.status(200).json({ item: item });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -811,18 +934,29 @@ const updateFoodItemField = (field) => async (req, res) => {
     updateData[field] = req.body[field];
 
     try {
-        // const { campusOrigin } = getUserDetails(req);
+        const { userId, campusOrigin } = getUserDetails(req);
         const updatedFoodItem = await FoodItem.findByIdAndUpdate(
-            { _id: itemId, attachedCafe: cafeId, deleted: false },
-            { $set: updateData },
+            { _id: itemId, cafeId: cafeId, deleted: false },
+            {
+                $set: updateData,
+                $push: {
+                    lastChangesBy: {
+                        whatUpdated: `${field}-${updateData}`,
+                        cafeId: cafeId,
+                        foodItemId: itemId,
+                        userId: userId,
+                        userType: 'User',
+                    }
+                }
+            },
             { new: true });
 
         if (!updatedFoodItem) return res.status(404).json({ message: "Food Item not found" });
         if (updatedFoodItem.references.campusId !== campusOrigin) {
-            console.warn(`Unauthorized attempt to update cafe outside of campus`);
+            console.warn(`Unauthorized attempt to update cafe outside of campus: campusID ${campusOrigin} - food item id ${updatedFoodItem.references.campusId}`);
         }
 
-        res.json({ message: `FoodItem ${field} updated successfully`, foodITem: updatedFoodItem });
+        res.json({ message: `FoodItem ${field} updated successfully`, item: updatedFoodItem });
     } catch (error) {
         console.error(`Error updating cafe ${field}:`, error);
         res.status(500).json({ message: "Internal Server Error" });
@@ -831,16 +965,17 @@ const updateFoodItemField = (field) => async (req, res) => {
 
 
 
-router.patch('/update/:cafeId/items/:itemId/name', body('name').notEmpty(), handleValidationErrors, updateFoodItemField('name'));
-router.patch('/update/:cafeId/items/:itemId/description', body('description').isString(), handleValidationErrors, updateFoodItemField('description'));
-router.patch('/update/:cafeId/items/:itemId/imageUrl', body('imageUrl').isString(), handleValidationErrors, updateFoodItemField('imageUrl'));
-router.patch('/update/:cafeId/items/:itemId/price', body('price').isNumeric(), handleValidationErrors, updateFoodItemField('price'));
-router.patch('/update/:cafeId/items/:itemId/category', body('category'), handleValidationErrors, updateFoodItemField('category'));
+router.patch('/update/:cafeId/item/:itemId/name', body('name').notEmpty(), handleValidationErrors, updateFoodItemField('name'));
+router.patch('/update/:cafeId/item/:itemId/description', body('description').isString(), handleValidationErrors, updateFoodItemField('description'));
+router.patch('/update/:cafeId/item/:itemId/imageUrl', body('imageUrl').isString(), handleValidationErrors, updateFoodItemField('imageUrl'));
+router.patch('/update/:cafeId/item/:itemId/price', body('price').isNumeric(), handleValidationErrors, updateFoodItemField('price'));
+router.patch('/update/:cafeId/item/:itemId/category', body('category'), handleValidationErrors, updateFoodItemField('category'));
 
-router.patch('/update/:cafeId/items/:itemId/flavours', body('flavours').notEmpty().isString(), handleValidationErrors, updateFoodItemField('flavours'));
+router.patch('/update/:cafeId/item/:itemId/flavours', body('flavours').notEmpty().isString(), handleValidationErrors, updateFoodItemField('flavours'));
 
-router.patch('/update/:cafeId/items/:itemId/volume', body('volume'), handleValidationErrors, updateFoodItemField('volume'));
-router.patch('/update/:cafeId/items/:itemId/discount', body('discount').isNumeric, handleValidationErrors, updateFoodItemField('discount'));
+router.patch('/update/:cafeId/item/:itemId/volume', body('volume'), handleValidationErrors, updateFoodItemField('volume'));
+router.patch('/update/:cafeId/item/:itemId/discount', body('discount').isNumeric, handleValidationErrors, updateFoodItemField('discount'));
+router.patch('/update/:cafeId/item/:itemId/status', body('status').isIn(['active', 'archived', 'deactive']), handleValidationErrors, updateFoodItemField('status'));
 
 
 
@@ -850,13 +985,26 @@ router.patch('/update/:cafeId/items/:itemId/discount', body('discount').isNumeri
  * @route DELETE /:cafeId/items/:itemId
  * @desc Delete a food item
  */
-router.delete('/:cafeId/items/:itemId', async (req, res) => {
+router.delete('/:cafeId/item/:itemId', async (req, res) => {
     try {
         const { cafeId, itemId } = req.params;
+        const { userId } = getUserDetails(req);
 
-        const item = await FoodItem.findOneAndUpdate({ _id: itemId, attachedCafe: cafeId, deleted: false }, {
-            deleted: true
-        });
+        const item = await FoodItem.findOneAndUpdate({ _id: itemId, cafeId: cafeId, deleted: false }, {
+            deleted: true,
+
+            $push: {
+                lastChangesBy: {
+                    whatUpdated: `delete`,
+                    cafeId: cafeId,
+                    foodItemId: itemId,
+                    userId: userId,
+                    userType: 'User',
+                }
+            }
+
+        },
+        );
 
         if (!item) return res.status(404).json({ error: 'Item not found' });
 

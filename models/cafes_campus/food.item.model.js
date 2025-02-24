@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
 const Schema = mongoose.Schema;
-
+const slugify = require('slugify');
+const FoodCategory = require('./category.food.item.model');
 
 const LastChangesSchema = new Schema({
     whatUpdated: {
@@ -78,7 +79,16 @@ const foodItemsSchema = new Schema({
         enum: ['active', 'archived', 'deactive'],
         default: 'deactive'
     },
+    lastChangesBy: {
+        type: Array,
+        of: [LastChangesSchema],
+    },
 
+    cafeId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Cafe',
+        required: true
+    },
     category: {
         type: Schema.Types.ObjectId,
         ref: 'FoodCategory', // Reference to category
@@ -150,10 +160,10 @@ const foodItemsSchema = new Schema({
         type: Boolean,
         default: false
     },
-    attachedCafe: {
-        type: Schema.Types.ObjectId,
-        ref: 'Cafe',
-    },
+    // attachedCafe: {
+    //     type: Schema.Types.ObjectId,
+    //     ref: 'Cafe',
+    // },
 
 
 

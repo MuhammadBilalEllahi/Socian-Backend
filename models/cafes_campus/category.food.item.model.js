@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+const slugify = require('slugify');
+
 
 const LastChangesSchema = new Schema({
     whatUpdated: {
@@ -39,6 +41,11 @@ const foodCategorySchema = new Schema({
         required: true,
         trim: true
     },
+    cafeId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Cafe',
+        required: true
+    },
 
 
 
@@ -62,10 +69,16 @@ const foodCategorySchema = new Schema({
         default: 'deactive'
     },
 
+    itemsInIt: [{
+        type: Schema.Types.ObjectId,
+        ref: 'FoodItem'
+    }],
+
     categoryAddedBy: {
         type: Schema.Types.ObjectId,
         refPath: 'reportedByModel'
     },
+
 
     categoryAddedByModel: {
         type: String,
