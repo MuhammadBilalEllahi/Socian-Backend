@@ -129,10 +129,14 @@ const foodItemsSchema = new Schema({
 
 
 
-    discount: {
+    discount: [{
         type: Number,
         default: 0
-    },
+    }],
+    discountPercentage: [{
+        type: Number,
+        default: 0
+    }],
 
     discountDuration: {
         type: Date,

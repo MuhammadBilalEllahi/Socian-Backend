@@ -60,12 +60,12 @@ const userSchema = new mongoose.Schema({
     },
     graduationYear: {
       type: Date,
-      validate: {
-        validator: function (v) {
-          return this.role !== "student" || v; // Require graduationYear if role is student
-        },
-        message: "Graduation year is required for students",
-      },
+      // validate: {
+      //   validator: function (v) {
+      //     return this.role !== "student" || v; // Require graduationYear if role is student
+      //   },
+      //   message: "Graduation year is required for students",
+      // },
     },
 
     department: {
@@ -455,19 +455,20 @@ userSchema.methods.updateEmail = async function (emailType, email) {
 };
 
 // Methods for handling graduation checks and notifications
-userSchema.methods.checkGraduation = function () {
-  const today = new Date();
-  if (this.role === "student" && this.profile.graduationYear < today) {
-    if (!this.phoneNumber) {
-      this.restrictions.blocking.isBlocked = true; // Block account if phone number isn't present
-    } else {
-      // Send notification but don't block the account
-    }
-  }
-};
+// userSchema.methods.checkGraduation = function () {
+//   const today = new Date();
+//   if (this.role === "student" && this.profile.graduationYear < today) {
+//     if (!this.phoneNumber) {
+//       this.restrictions.blocking.isBlocked = true; // Block account if phone number isn't present
+//     } else {
+//       // Send notification but don't block the account
+//     }
+//   }
+// };
 
 // Applied > today , not >= to save user from incomplete work they have in student section
 userSchema.methods.convertToAlumni = function () {
+  const today = new Date();
   if (this.role === "student" && this.profile.graduationYear > today) {
     this.role = "alumni";
   }
@@ -475,8 +476,10 @@ userSchema.methods.convertToAlumni = function () {
 
 userSchema.pre("save", async function (next) {
   // For student or alumni: graduation year logic
-  if (this.role === "student" || this.role === "alumni") {
-    this.checkGraduation();
+  if (this.role === "student"
+    // || this.role === "alumni"
+  ) {
+    this.convertToAlumni();
   }
   // For teacher or ext_org: apply approval status check
   else if (this.role === "ext_org") {

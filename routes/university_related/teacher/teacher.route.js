@@ -501,13 +501,13 @@ router.post("/rate", async (req, res) => {
   const { teacherId, userId, rating, feedback, hideUser = false } = req.body;
 
   if (!teacherId || !userId || rating === undefined) {
-    return res.status(400).send("Missing required fields");
+    return res.status(400).json({ message: "Missing required fields" });
   }
 
   try {
     const teacher = await Teacher.findById(teacherId);
     if (!teacher) {
-      return res.status(404).send("Teacher not found");
+      return res.status(404).json({ message: "Teacher not found" });
     }
 
     let existingRating = await TeacherRating.findOne({ teacherId, userId });
@@ -551,7 +551,7 @@ router.post("/rate", async (req, res) => {
 
     await teacher.save();
 
-    res.status(200).send("Rating processed successfully");
+    res.status(200).json({ message: "Rating processed successfully" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ "Server error": err.message });
@@ -724,7 +724,7 @@ router.post("/reviews/feedbacks/vote", async (req, res) => {
   const { reviewId, userIdOther, voteType } = req.body;
 
   if (!reviewId || !userIdOther || !voteType) {
-    return res.status(400).send("Missing required fields");
+    return res.status(400).json({ message: "Missing required fields" });
   }
 
   const session = await mongoose.startSession();
@@ -739,7 +739,7 @@ router.post("/reviews/feedbacks/vote", async (req, res) => {
     if (!review) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(404).send("Review not found");
+      return res.status(404).json({ message: "Review not found" });
     }
 
 
@@ -839,14 +839,14 @@ router.delete("/reviews/feedbacks/delete", async (req, res) => {
   const { teacherId, userId } = req.body;
 
   if (!teacherId || !userId) {
-    return res.status(400).send("Missing required fields");
+    return res.status(400).json({ message: "Missing required fields" });
   }
 
   try {
     const review = await TeacherRating.findOneAndDelete({ teacherId, userId });
 
     if (!review) {
-      return res.status(404).send("Review not found");
+      return res.status(404).json({ message: "Review not found" });
     }
 
     const teacher = await Teacher.findById(teacherId);
@@ -869,7 +869,7 @@ router.delete("/reviews/feedbacks/delete", async (req, res) => {
       await teacher.save();
     }
 
-    res.status(200).send("Review deleted successfully");
+    res.status(200).json({ message: "Review deleted successfully" });
   } catch (error) {
     console.error("Error deleting review:", error);
     res.status(500).json({ error: "Server error" });

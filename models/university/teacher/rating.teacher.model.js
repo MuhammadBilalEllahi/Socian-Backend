@@ -29,7 +29,7 @@ const teacherRatingSchema = new Schema({
 
     // comment: { type: String },
     feedback: { type: String },
-    rating: { type: Number, required: true },
+    rating: { type: Number, required: true, min: 0, max: 5 },
 
 
     replies: [{ type: Schema.Types.ObjectId, ref: 'FeedBackCommentTeacher' }],
