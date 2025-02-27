@@ -10,7 +10,7 @@ const postSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Society",
       required: function () {
-        return !this.subSociety;
+        return !this.isPersonalPost && !this.subSociety;
       },
       index: true,
     },
@@ -18,7 +18,7 @@ const postSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "SubSociety",
       required: function () {
-        return !this.society;
+        return !this.isPersonalPost && !this.society;
       },
       index: true,
     },

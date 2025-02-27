@@ -9,41 +9,8 @@ const { uploadPostMedia } = require("../../../utils/aws.bucket.utils");
 const upload = require("../../../utils/multer.utils");
 const PostCommentCollection = require("../../../models/society/post/comment/post.comment.collect.model");
 const PostComment = require("../../../models/society/post/comment/post.comment.model");
+const PersonalPostsCollection = require("../../../models/society/post/collection/single.post.colletion.model");
 const router = express.Router();
-
-/**
- * Extracts user details based on the platform and session or user data.
- * @param {Object} req - The request object
- * @returns {Object} - The user details, including userId, role, universityId, and campusId
- */
-// const getUserDetails = (req) => {
-//     let userId, role, universityOrigin, campusOrigin;
-
-//     const platform = req.headers["x-platform"];
-
-//     if (platform === "web") {
-//         userId = req.session.user._id;
-//         role = req.session.user.role;
-//         if (role !== "ext_org") {
-//             universityOrigin = req.session.user.university.universityId._id;
-//             campusOrigin = req.session.user.university.campusId._id;
-//         }
-//     } else if (platform === "app") {
-//         userId = req.user._id;
-//         role = req.user.role;
-//         if (role !== "ext_org") {
-//             universityOrigin = req.user.university.universityId._id;
-//             campusOrigin = req.user.university.campusId._id;
-//         }
-//     }
-
-//     return { userId, role, universityOrigin, campusOrigin };
-// };
-
-
-
-
-
 
 
 /**
@@ -271,6 +238,105 @@ router.post("/create", upload.array('file'), async (req, res) => {
     }
 });
 
+
+
+
+//////////////////////////////////////////////////////////////
+
+router.post("/create-indiv", upload.array('file'), async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { userId, campusOrigin, universityOrigin, role } = getUserDetails(req);
+        const { title, body, } = req.body;
+        const files = req.files;
+
+        console.log("/create-indiv ", { title, body, files, });
+
+        if (!title) {
+            return res.status(400).json("Title are required");
+        }
+        if (!body && !files) {
+            return res.status(400).json({ message: 'Body or image/video is required' });
+        }
+
+        let postContent = {
+            title: title,
+            author: userId,
+            isPersonalPost: true,
+            "references.role": role,
+            "references.campusOrigin": campusOrigin,
+            "references.universityOrigin": universityOrigin,
+        };
+
+        if (body) {
+            postContent.body = body;
+        }
+        if (files && files.length > 0) {
+            let mediaArray = [];
+            for (let file of files) {
+                const { url, type } = await uploadPostMedia(userId, file, req);
+                mediaArray.push({ type, url });
+            }
+            postContent.media = mediaArray;
+        }
+
+        const post = new Post(postContent);
+        await post.save({ session });
+
+        const postCommentId = new SocietyPostAndCommentVote({
+            postId: post._id,
+        });
+        await postCommentId.save({ session });
+        post.voteId = postCommentId._id;
+
+        const postCommentCollection = new PostCommentCollection({
+            _id: post._id,
+        });
+        await postCommentCollection.save({ session });
+        post.comments = postCommentCollection._id;
+
+        await post.save({ session });
+
+        const user = await User.findByIdAndUpdate(
+            { _id: userId },
+            { $addToSet: { "profile.personalPosts": post._id } },
+            { new: true, session }
+        );
+        if (!user) return res.status(409).json({ error: "User not found" });
+
+
+        const societyPostCollection = await PersonalPostsCollection.findByIdAndUpdate(
+            { _id: userId },
+            {
+                $addToSet: {
+                    posts: { postId: post._id }, // Ensure the structure matches the schema
+                },
+                $setOnInsert: {
+                    "references.universityOrigin": universityOrigin,
+                    "references.campusOrigin": campusOrigin,
+                },
+            },
+            { new: true, upsert: true, session } // ToRemember: `upsert` ensures a new document is created if it doesn't exist
+        )
+
+        if (!societyPostCollection) return res.status(304).json({ error: "The Personal Post Collection could not be set or updated" })
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(200).json({ message: "Post Created", postId: post._id, postTitle: post.title });
+    } catch (error) {
+        console.error("Error in /create-indiv", error);
+        await session.abortTransaction();
+        session.endSession();
+        res.status(500).json("Internal Server Error");
+    }
+});
+
+
+
+//////////////////////////////////////////////////////////////
 
 /**
  * post in a sub society
