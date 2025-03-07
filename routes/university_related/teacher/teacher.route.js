@@ -494,6 +494,96 @@ router.get("/reviews/feedbacks", async (req, res) => {
   }
 });
 
+router.get("/mob/reviews/feedbacks", async (req, res) => {
+  const { id } = req.query;
+
+  try {
+    const teacher = await Teacher.findById(id).populate({
+      path: "ratingsByStudents",
+      populate: [{
+        path: "userId",
+        select: "_id name username profile.picture universityEmailVerified", // Reduced fields
+      },
+      {
+        path: 'replies',
+        populate: {
+          path: 'user mentions',
+          select: "_id name username" // Keeping only essential fields
+        }
+      }],
+    });
+
+    if (!teacher) {
+      return res.status(404).json({ message: "Teacher not found" });
+    }
+
+    const populatedRatings = teacher.ratingsByStudents.map((review) => {
+      // Standardize user data
+      const userData = review.userId ? {
+        _id: review.userId._id,
+        name: review.hideUser ? 'Anonymous' : review.userId.name,
+        username: review.hideUser ? null : review.userId.username,
+        profilePic: review.hideUser ? null : review.userId.profile?.picture,
+        isVerified: review.userId.universityEmailVerified,
+      } : {
+        _id: null,
+        name: "[deleted]",
+        username: null,
+        profilePic: null,
+        isVerified: false,
+      };
+
+      // Process replies to standardize their format
+      const processedReplies = review.replies.map(reply => ({
+        _id: reply._id,
+        text: reply.text,
+        createdAt: reply.createdAt,
+        updatedAt: reply.updatedAt,
+        user: reply.user ? {
+          _id: reply.user._id,
+          name: reply.hideUser ? 'Anonymous' : reply.user.name,
+          username: reply.hideUser ? null : reply.user.username,
+          isVerified: reply.user.universityEmailVerified
+        } : {
+          _id: null,
+          name: "[deleted]",
+          username: null,
+          isVerified: false
+        },
+        isAnonymous: reply.hideUser || false,
+        reactions: reply.reactions || {},
+        mentions: reply.mentions?.map(mention => ({
+          _id: mention._id,
+          name: mention.name,
+          username: mention.username
+        })) || []
+      }));
+
+      // Return standardized review object
+      return {
+        _id: review._id,
+        rating: review.rating,
+        feedback: review.feedback,
+        upvoteCount: review.upvoteCount || 0,
+        downvoteCount: Math.abs(review.downvoteCount || 0),
+        updatedAt: review.updatedAt,
+        createdAt: review.createdAt,
+        user: userData,
+        isAnonymous: review.hideUser,
+        replies: processedReplies
+      };
+    });
+
+    res.status(200).json(populatedRatings);
+  } catch (err) {
+    console.error("Error in reviews/feedbacks:", err.message);
+    res.status(500).json({
+      message: "Failed to fetch reviews",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
 
 
 

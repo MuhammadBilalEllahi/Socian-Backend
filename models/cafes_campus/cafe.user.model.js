@@ -11,10 +11,12 @@ const cafeUserSchema = new Schema({
     username: {
         type: String,
         required: true,
+        unique: true,
         lowercase: true
     },
     email: {
         type: String,
+        unique: true,
         lowercase: true
     }
     ,
@@ -22,6 +24,7 @@ const cafeUserSchema = new Schema({
         // ?No need to verify the phone number. Cafe workers know phone number more than email.
         // ? In case if we buy sms to number packge. will add otp to logn but very expensive
         type: String,
+        unique: true,
     },
     password: {
         type: String,
@@ -55,7 +58,7 @@ const cafeUserSchema = new Schema({
         },
         activationKey: {
             type: String,
-            default: () => bcrypt.randomInt(10000000, 99999999).toString()
+            default: () => Math.floor(Math.random() * (99999999 - 10000000 + 1) + 10000000).toString()
         }
     },
     createdBy: {
@@ -77,6 +80,44 @@ const cafeUserSchema = new Schema({
             required: true
         }
     },
+
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    deletedAt: {
+        type: Date,
+        default: null
+    },
+    deletedBy: {
+        user: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
+            default: null
+        }
+    },
+    // status: {
+    //     type: String,
+    //     enum: ['active', 'inactive'],
+    //     default: 'active'
+    // },
+
+
+    tokens: {
+        token: {
+            type: String,
+            default: "",
+        },
+        refresh_token: {
+            type: String,
+            default: "",
+        },
+        access_token: {
+            type: String,
+            default: "",
+        },
+    },
+
 
 
     createdAt: {

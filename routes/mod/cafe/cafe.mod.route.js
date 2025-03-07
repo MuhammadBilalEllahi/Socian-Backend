@@ -50,8 +50,36 @@ router.post('/create/admin', async (req, res) => {
             adminPassword,
             toAttachedCafeId } = req.body;
 
+        // First check if cafe exists
         const cafeExists = await Cafe.findById(toAttachedCafeId)
         if (!cafeExists) return res.status(204).json({ message: "This Cafe does not Exists" });
+
+        // Check if any admin exists for this cafe
+        const existingAdmin = await CafeUser.findOne({
+            attachedCafe: toAttachedCafeId,
+            role: 'c_admin'
+        });
+
+        if (existingAdmin) {
+            return res.status(400).json({ message: "This Cafe has an admin already" });
+        }
+
+        // Check for duplicate username, email or phone
+        const duplicateUser = await CafeUser.findOne({
+            $or: [
+                { username: adminUsername },
+                { email: adminEmail },
+                { phone: adminPhone }
+            ]
+        });
+
+        if (duplicateUser) {
+            let duplicateField = '';
+            if (duplicateUser.username === adminUsername) duplicateField = 'username';
+            if (duplicateUser.email === adminEmail) duplicateField = 'email';
+            if (duplicateUser.phone === adminPhone) duplicateField = 'phone number';
+            return res.status(400).json({ message: `This ${duplicateField} is already in use` });
+        }
 
         const adminCreated = await CafeUser.create({
             name: adminName,
@@ -68,6 +96,12 @@ router.post('/create/admin', async (req, res) => {
         console.log("HERE", adminCreated)
 
         if (!adminCreated) return res.status(204).json({ message: 'Cafe Admins Could Not Be Created', newAdmin: [] })
+
+        // Update the cafe with the new admin's ID
+        await Cafe.findByIdAndUpdate(toAttachedCafeId, {
+            attachedCafeAdmin: adminCreated._id
+        });
+
         res.status(200).json({ newAdmin: adminCreated })
     } catch (error) {
         console.error("error in /api/mod/cafe/admins", error)
@@ -91,7 +125,25 @@ router.post('/create/employee', async (req, res) => {
             _id: toAttachedCafeId,
             attachedCafeAdmin: { $exists: true }
         })
-        if (!doesAdminExists) return res.status(204).json({ message: "The Cafe to which you are adding an employee does not have an admin yet. Please Add an admin to create an Employee" })
+        if (!doesAdminExists) return res.status(304).json({ message: "The Cafe to which you are adding an employee does not have an admin yet. Please Add an admin to create an Employee" })
+
+        // Check for duplicate username, email or phone
+        const duplicateUser = await CafeUser.findOne({
+            $or: [
+                { username: employeeUsername },
+                { email: employeeEmail },
+                { phone: employeePhone }
+            ]
+        });
+
+        if (duplicateUser) {
+            let duplicateField = '';
+            if (duplicateUser.username === employeeUsername) duplicateField = 'username';
+            if (duplicateUser.email === employeeEmail) duplicateField = 'email';
+            if (duplicateUser.phone === employeePhone) duplicateField = 'phone number';
+            return res.status(400).json({ message: `This ${duplicateField} is already in use` });
+        }
+
         const employeeCreated = await CafeUser.create({
             name: employeeName,
             username: employeeUsername,
@@ -298,7 +350,7 @@ router.get('/all',
 
             let cafes = await Cafe.find({
                 'references.campusId': campusOrigin, deleted: false
-            }).populate([{ path: 'createdBy.user' },
+            }).populate([{ path: 'createdBy.user categories foodItems' },
             {
                 path: 'lastChangesBy',
                 populate: 'userId',
@@ -308,6 +360,7 @@ router.get('/all',
                 .sort({ createdAt: -1 })
                 .lean();
 
+            console.log("CAFE ALL DATA", cafes)
 
             if (!cafes || cafes.length === 0) return res.status(204).json({ message: 'No Cafes Yet' });
 

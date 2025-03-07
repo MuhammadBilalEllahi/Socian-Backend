@@ -143,6 +143,8 @@ const accessibleRoutes = require('./routes/accessibles/accessible.route.js');
 const userRouter = require('./routes/user/user.route.js');
 const cafeRouter = require('./routes/university_related/cafe/cafe.route.js');
 
+const aiRouter = require('./routes/aiRoutes/ai.routes.js');
+
 
 
 
@@ -172,6 +174,7 @@ app.use("/api/discussion", protectRoute, discussionRouter);
 app.use("/api/society", protectRoute, societyRouter);
 // app.use("/api/sub-society", protectRoute, subSocietyRouter);
 app.use("/api/posts", protectRoute, postsRouter);
+app.use("/api/ai", protectRoute, aiRouter);
 
 // cafe role doesnot exist
 
