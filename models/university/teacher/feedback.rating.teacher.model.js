@@ -12,6 +12,7 @@ const feedbackCommentSchema = new Schema({
     comment: { type: String, required: true },
     gifUrl: { type: String, default: '' },
     mentions: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    replyTo: { type: Schema.Types.ObjectId, ref: 'User' },
     replies: [{ type: Schema.Types.ObjectId, ref: 'FeedBackCommentTeacher' }],
     isDeleted: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },

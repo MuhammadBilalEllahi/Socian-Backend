@@ -574,6 +574,8 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
       };
     });
 
+    console.log("POPULATED RTINGS", populatedRatings.map(m => console.log(m)))
+
     res.status(200).json(populatedRatings);
   } catch (err) {
     console.error("Error in reviews/feedbacks:", err.message);
@@ -583,6 +585,7 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
     });
   }
 });
+
 
 
 
@@ -713,7 +716,7 @@ router.post('/reply/feedback', async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    res.status(201).json({ message: "Feedback reply added successfully", commentedOnaFeedback });
+    res.status(201).json({ message: "Feedback reply added successfully", commentedOnaFeedback, feedBackReplyId: commentedOnaFeedback[0]._id });
   } catch (error) {
     // Rollback transaction in case of error
     await session.abortTransaction();
@@ -729,8 +732,11 @@ router.post('/reply/reply/feedback', async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
+
   try {
-    const { feedbackComment, gifUrl, feedbackCommentId, teacherId, mentions } = req.body;
+    const { feedbackComment, gifUrl, feedbackCommentId, teacherId, replyTo, mentions } = req.body;
+
+    console.log("reply to ", replyTo)
     const { userId } = getUserDetails(req);
     console.log("HEREHERE_2", { userId, feedbackComment, feedbackCommentId, gifUrl, teacherId, mentions })
 
@@ -741,8 +747,11 @@ router.post('/reply/reply/feedback', async (req, res) => {
       user: userId,
       comment: feedbackComment,
       gifUrl: gifUrl || '',
-      mentions: mentions || []
+      mentions: mentions || [],
+      replyTo: replyTo
     }], { session });
+
+
 
     if (!userId || !feedbackComment) {
       console.error("ERROR: Missing required fields", { userId, feedbackComment });
@@ -761,7 +770,7 @@ router.post('/reply/reply/feedback', async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    res.status(201).json({ message: "Feedback reply added successfully", feedbackCommentId });
+    res.status(201).json({ message: "Feedback reply added successfully", feedbackCommentId, feedbackReplyId: feedBackOnAFeedback[0]._id });
   } catch (error) {
     // Rollback transaction in case of error
     await session.abortTransaction();
@@ -773,11 +782,11 @@ router.post('/reply/reply/feedback', async (req, res) => {
 });
 
 
-router.get('/reply/reply/feedback', async (req, res) => {
+router.get('/reply/feedback', async (req, res) => {
   try {
 
     const { feedbackCommentId } = req.query;
-    const getReplies = await FeedBackCommentTeacher.findById(feedbackCommentId).populate([{
+    const getReplies = await TeacherRating.findById(feedbackCommentId).populate([{
       path: 'replies',
       populate: {
         path: 'user',
@@ -787,6 +796,38 @@ router.get('/reply/reply/feedback', async (req, res) => {
     if (!getReplies) return res.status(404).json({ message: "No Reply yet" })// however this operation should never initiate from frontedn
 
     console.log("FEEDBACK LE", getReplies)
+    res.status(200).json({ replies: getReplies })
+
+  } catch (error) {
+    console.error("Error in /reply/reply/feedback ", error);
+    res.status(500).json({ message: "Internal Server Error" })
+  }
+})
+
+
+
+router.get('/reply/reply/feedback', async (req, res) => {
+  try {
+
+    const { feedbackCommentId } = req.query;
+
+    const getReplies = await FeedBackCommentTeacher.findById(feedbackCommentId).populate([{
+      path: 'replies',
+      populate: [{
+        path: 'user',
+        select: 'username name profile.picture'
+      },
+      {
+        path: 'replyTo',
+        select: 'username name profile.picture'
+      }]
+    }])
+    if (!getReplies) return res.status(404).json({ message: "No Reply yet" })// however this operation should never initiate from frontedn
+
+    console.log("FEEDBACK LE", getReplies)
+    getReplies.replies.forEach(reply => {
+      console.log("DATA ", reply);
+    });
     res.status(200).json({ replies: getReplies })
 
   } catch (error) {

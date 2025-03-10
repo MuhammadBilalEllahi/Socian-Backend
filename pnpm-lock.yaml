@@ -14,6 +14,9 @@ importers:
       '@fastify/csrf-protection':
         specifier: ^7.0.1
         version: 7.0.1
+      '@google/generative-ai':
+        specifier: ^0.23.0
+        version: 0.23.0
       aws-sdk:
         specifier: ^2.1692.0
         version: 2.1692.0
@@ -315,6 +318,10 @@ packages:
 
   '@fastify/error@4.0.0':
     resolution: {integrity: sha512-OO/SA8As24JtT1usTUTKgGH7uLvhfwZPwlptRi2Dp5P4KKmJI3gvsZ8MIHnNwDs4sLf/aai5LzTyl66xr7qMxA==}
+
+  '@google/generative-ai@0.23.0':
+    resolution: {integrity: sha512-8vGoguvLG22U3t9XpXvbxjxy/yfBhE27pqptz5QVKXwBSh9sUXXmZWS8ZdGMqifK7kiuZQCG2cjGJNUdBsgX+g==}
+    engines: {node: '>=18.0.0'}
 
   '@ioredis/commands@1.2.0':
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
@@ -2525,6 +2532,8 @@ snapshots:
   '@fastify/csrf@7.0.0': {}
 
   '@fastify/error@4.0.0': {}
+
+  '@google/generative-ai@0.23.0': {}
 
   '@ioredis/commands@1.2.0': {}
 
