@@ -19,6 +19,7 @@ const axios = require('axios');
 
 
 
+
 ////////////////////////////Teacher feedback updates////////////////////////////////////
 async function updateTeacherFeedbackSummary(teacherId) {
   try {
@@ -49,37 +50,6 @@ async function updateTeacherFeedbackSummary(teacherId) {
   }
 }
 
-////////////////////////////
-
-// router.get("/teachers-by-campus", async (req, res) => {
-//   try {
-//     const user = req.session.user;
-
-//     const campusLocation = user.university.campusId;
-//     if (!campusLocation) return;
-//     // console.log("campusLocation", campusLocation)
-//     const findCampus = await Campus.findOne({ _id: campusLocation });
-//     if (!findCampus)
-//       return res.status(404).json({ error: "Error finding campus" });
-//     // console.log("findCampus", findCampus)
-//     const userInfo = await findCampus.populate("teachers");
-//     // console.log("teachers", userInfo)
-//     const teachers = userInfo.teachers;
-
-//     // const teacherFullInfo = await teachers.populate([
-//     //     { path: 'department', select: 'name' },
-//     //     { path: 'campusOrigin', select: 'name' },
-//     //     { path: 'universityOrigin', select: 'name' },
-//     // ])
-//     res.status(200).json(teachers);
-//   } catch (error) {
-//     console.error("Error in teacher:", error);
-//     res.status(500).json({ message: error.message });
-//   }
-// });
-
-
-// GET all teachers by campus on student feedback page
 
 router.get("/campus/teachers", async (req, res) => {
   try {
@@ -165,97 +135,6 @@ router.get("/super-teachers-by-campus", async (req, res) => {
   }
 });
 
-
-
-
-
-
-// // CREATEBYTEACHER a TEACHER modal created by a teacher
-// router.post("/by/teacher/create", async (req, res) => {
-
-//   const { user, userId, role, universityOrigin, campusOrigin, departmentId } = getUserDetails(req)
-
-//   console.log(user, userId, role, universityOrigin, campusOrigin, departmentId)
-//   if (!role === UserRoles.teacher) return res.status(304).json({ error: "Your role is not Teacher" })
-//   try {
-//     const findUni = await University.findOne({ _id: universityOrigin });
-//     if (!findUni)
-//       return res.status(404).json({ error: "no such University found" });
-
-//     const findCampus = await Campus.findOne({
-//       _id: campusOrigin,
-//       universityOrigin: universityOrigin,
-//     });
-//     if (!findCampus)
-//       return res.status(404).json({ error: "no such Campus found" });
-
-//     const findDepartment = await Department.findOne({
-//       _id: departmentId,
-//       "references.campusOrigin": campusOrigin,
-//       "references.universityOrigin": universityOrigin,
-//     });
-//     if (!findDepartment)
-//       return res.status(404).json({ error: "no such Department found" });
-
-//     const userExists = await User.findById(userId);
-
-//     // addd gender also later
-//     const teacher = await Teacher.findOneAndUpdate(
-//       {
-//         userAttachedBool: true,
-//         userAttached: userId,
-//         'userAttachedBy.by': userId,
-//         'userAttachedBy.userType': 'teacher'
-//       },
-//       {
-//         name: user.name,
-//         email: user.universityEmail,
-//         imageUrl: user.profile.picture ?? 'https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg',
-//         "department.name": findDepartment.name,
-//         "department.departmentId": departmentId,
-//         universityOrigin: universityOrigin,
-//         campusOrigin: campusOrigin,
-//         userAttachedBool: true,
-//         userAttached: userId,
-//         'userAttachedBy.by': userId,
-//         'userAttachedBy.userType': 'teacher'
-//       }, {
-//       upsert: true
-//     });
-
-//     teacher.save();
-
-//     findDepartment.teachers.push(teacher);
-//     findCampus.teachers.push(teacher);
-
-//     findDepartment.save();
-//     findCampus.save();
-
-//     userExists.teacherConnectivities.teacherModal = teacher._id;
-//     userExists.teacherConnectivities.attached = true;
-
-//     userExists.save()
-
-
-//     console.log("\nuser", userExists, "\nteacher", teacher)
-
-//     if (!teacher)
-//       return res.status(502).json({ error: "Failed to create teacher" });
-
-//     // res.status(200).json(teacher);
-
-//     req.session.user.teacherConnectivities = {
-//       attached: user.teacherConnectivities.attached,
-//       teacherModal: user.teacherConnectivities.teacherModal
-//     }
-//     sessionSaveHandler()
-//   } catch (error) {
-//     console.error("Error in teacher:", error);
-//     res.status(500).json({ message: error.message });
-//   }
-// });
-
-
 // CREATEBYTEACHER a TEACHER modal created by a teacher
 router.post("/by/teacher/create", async (req, res) => {
   const { user, userId, role, universityOrigin, campusOrigin, departmentId } = getUserDetails(req);
@@ -266,29 +145,48 @@ router.post("/by/teacher/create", async (req, res) => {
     return res.status(403).json({ error: "Your role is not Teacher" });
   }
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     // Validate University
-    const findUni = await University.findById(universityOrigin);
-    if (!findUni) return res.status(404).json({ error: "No such University found" });
+    const findUni = await University.findById(universityOrigin).session(session);
+    if (!findUni) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ error: "No such University found" });
+    }
 
     // Validate Campus
     const findCampus = await Campus.findOne({
       _id: campusOrigin,
       universityOrigin: universityOrigin,
-    });
-    if (!findCampus) return res.status(404).json({ error: "No such Campus found" });
+    }).session(session);
+    if (!findCampus) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ error: "No such Campus found" });
+    }
 
     // Validate Department
     const findDepartment = await Department.findOne({
       _id: departmentId,
       "references.campusOrigin": campusOrigin,
       "references.universityOrigin": universityOrigin,
-    });
-    if (!findDepartment) return res.status(404).json({ error: "No such Department found" });
+    }).session(session);
+    if (!findDepartment) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ error: "No such Department found" });
+    }
 
     // Validate User
-    const userExists = await User.findById(userId);
-    if (!userExists) return res.status(404).json({ error: "User not found" });
+    const userExists = await User.findById(userId).session(session);
+    if (!userExists) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ error: "User not found" });
+    }
 
     // Upsert Teacher Record
     const teacher = await Teacher.findOneAndUpdate(
@@ -311,22 +209,37 @@ router.post("/by/teacher/create", async (req, res) => {
         "userAttachedBy.by": userId,
         "userAttachedBy.userType": "teacher",
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true, session }
     );
 
-    if (!teacher) return res.status(502).json({ error: "Failed to create teacher" });
+    if (!teacher) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(502).json({ error: "Failed to create teacher" });
+    }
 
     // Save Related Data
     await Promise.all([
-      teacher.save(),
-      Department.findByIdAndUpdate(departmentId, { $push: { teachers: teacher._id } }),
-      Campus.findByIdAndUpdate(campusOrigin, { $push: { teachers: teacher._id } }),
-      User.findByIdAndUpdate(userId, {
-        $set: {
-          "teacherConnectivities.teacherModal": teacher._id,
-          "teacherConnectivities.attached": true,
+      Department.findByIdAndUpdate(
+        departmentId,
+        { $push: { teachers: teacher._id } },
+        { session }
+      ),
+      Campus.findByIdAndUpdate(
+        campusOrigin,
+        { $push: { teachers: teacher._id } },
+        { session }
+      ),
+      User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            "teacherConnectivities.teacherModal": teacher._id,
+            "teacherConnectivities.attached": true,
+          },
         },
-      }),
+        { session }
+      ),
     ]);
 
     // Update Session
@@ -336,8 +249,20 @@ router.post("/by/teacher/create", async (req, res) => {
     };
 
     await sessionSaveHandler(req, res);
-    // res.status(201).json({ message: "Teacher created successfully", teacher });
+
+    // Invalidate relevant Redis caches
+    await Promise.all([
+      redisClient.del(`campus_teachers_${campusOrigin}`),
+      redisClient.del(`campus_teacher_${teacher._id}`)
+    ]);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(201).json({ message: "Teacher created successfully", teacher });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error in creating teacher:", error);
     res.status(500).json({ error: error.message || "Internal Server Error" });
   }
@@ -351,27 +276,40 @@ router.post("/by/teacher/create", async (req, res) => {
 // CREATE TEACHER
 router.post("/", async (req, res) => {
   const { name, email, picture, departmentId, universityOrigin, campusOrigin } = req.body;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const findUni = await University.findOne({ _id: universityOrigin });
-    if (!findUni)
+    const findUni = await University.findOne({ _id: universityOrigin }).session(session);
+    if (!findUni) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "no such University found" });
+    }
 
     const findCampus = await Campus.findOne({
       _id: campusOrigin,
       universityOrigin: universityOrigin,
-    });
-    if (!findCampus)
+    }).session(session);
+    if (!findCampus) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "no such Campus found" });
+    }
 
     const findDepartment = await Department.findOne({
       _id: departmentId,
       "references.campusOrigin": campusOrigin,
       "references.universityOrigin": universityOrigin,
-    });
-    if (!findDepartment)
+    }).session(session);
+    if (!findDepartment) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "no such Department found" });
+    }
 
-    const teacher = await Teacher.create({
+    const teacher = await Teacher.create([{
       name: name,
       email: email,
       imageUrl: picture,
@@ -379,42 +317,45 @@ router.post("/", async (req, res) => {
       "department.departmentId": departmentId,
       universityOrigin: universityOrigin,
       campusOrigin: campusOrigin,
-    });
+    }], { session });
 
-    teacher.save();
-
-    findDepartment.teachers.push(teacher);
-    findCampus.teachers.push(teacher);
-
-    findDepartment.save();
-    findCampus.save();
-
-    if (!teacher)
+    if (!teacher || !teacher[0]) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(502).json({ error: "Failed to create teacher" });
+    }
 
-    res.status(200).json(teacher);
+    // Update related collections within the transaction
+    await Promise.all([
+      Department.findByIdAndUpdate(
+        departmentId,
+        { $push: { teachers: teacher[0]._id } },
+        { session }
+      ),
+      Campus.findByIdAndUpdate(
+        campusOrigin,
+        { $push: { teachers: teacher[0]._id } },
+        { session }
+      )
+    ]);
+
+    // Invalidate relevant Redis caches
+    await Promise.all([
+      redisClient.del(`campus_teachers_${campusOrigin}`),
+      redisClient.del(`campus_teacher_${teacher[0]._id}`)
+    ]);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json(teacher[0]);
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error in teacher:", error);
     res.status(500).json({ message: error.message });
   }
 });
-
-// router.post("/add-teachers-to-teacher", async (req, res) => {
-//     try {
-
-//     } catch (error) {
-//         console.error('Error in teacher:', error);
-//         res.status(500).json({ message: error.message });
-//     }
-// })
-// router.post("/add-teachers", async (req, res) => {
-//     try {
-
-//     } catch (error) {
-//         console.error('Error in teacher:', error);
-//         res.status(500).json({ message: error.message });
-//     }
-// })
 
 router.get("/info", async (req, res) => {
   const { id } = req.query;
@@ -623,10 +564,6 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
   }
 });
 
-
-
-
-
 router.post("/rate", async (req, res) => {
   const { teacherId, userId, rating, feedback, hideUser = false } = req.body;
 
@@ -634,174 +571,68 @@ router.post("/rate", async (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const teacher = await Teacher.findById(teacherId);
+    const teacher = await Teacher.findById(teacherId).session(session);
     if (!teacher) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "Teacher not found" });
     }
 
-    let existingRating = await TeacherRating.findOne({ teacherId, userId });
-    console.log("existing?", existingRating);
-    if (existingRating) {
-      existingRating.rating = rating;
-      existingRating.feedback = feedback;
-      existingRating.__v += 1;
-      existingRating.hideUser = hideUser;
-      existingRating.upVotesCount = 0;
-      existingRating.downVotesCount = 0;
-      existingRating.replies = []
-      existingRating.userVotes = {}
-      existingRating.isFeedbackEdited.timestamp = Date.now()
-      existingRating.isFeedbackEdited.bool = true;
-      await existingRating.save();
-      teacher.ratingsByStudentsMap.clear()
-      // teacher.save()
-    } else {
-      existingRating = new TeacherRating({
-        teacherId,
-        userId,
+    let existingRating = await TeacherRating.findOneAndUpdate(
+      { teacherId, userId },
+      {
         rating,
         feedback,
         hideUser,
-        userVotes: { userId: 'upVote' }
-      });
-      existingRating.save();
+        upVotesCount: 0,
+        downVotesCount: 0,
+        replies: [],
+        userVotes: {},
+        isFeedbackEdited: {
+          timestamp: Date.now(),
+          bool: true,
+        },
+      },
+      { new: true, runValidators: true, upsert: true, session }
+    );
+
+    if (!teacher.ratingsByStudents.includes(existingRating._id)) {
       teacher.ratingsByStudents.push(existingRating._id);
-      teacher.ratingsByStudentsMap.set(userId, rating)
-      // await teacher.save();
     }
 
+    teacher.ratingsByStudentsMap.set(userId, rating);
+    console.log("HERE rating", teacher.ratingsByStudentsMap)
+
+    // Recalculate average rating
     const ratingsArray = Array.from(teacher.ratingsByStudentsMap.values());
-    const totalRatings = ratingsArray.reduce((acc, curr) => acc + curr, 0);
-    const averageRating = ratingsArray.length > 0 ? totalRatings / ratingsArray.length : 0;
+    teacher.rating =
+      ratingsArray.length > 0
+        ? parseFloat((ratingsArray.reduce((acc, curr) => acc + curr, 0) / ratingsArray.length).toFixed(2))
+        : 0;
 
-    teacher.rating = parseFloat(averageRating.toFixed(2));
+    await teacher.save({ session });
 
-    // console.log("This is Teacher rating:", teacher.rating, "and average: ", averageRating, "sum ", sumRatings)
+    await session.commitTransaction();
+    session.endSession();
 
-    await teacher.save();
-
-    updateTeacherFeedbackSummary(teacherId); //this will update the summary
+    // Invalidate relevant Redis caches
+    await Promise.all([
+      redisClient.del(`campus_teachers_${teacher.campusOrigin}`),
+      redisClient.del(`campus_teacher_${teacherId}`)
+    ]);
 
     res.status(200).json({ message: "Rating processed successfully" });
   } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
     console.error(err);
     res.status(500).json({ "Server error": err.message });
   }
 });
-
-
-// router.post('/reply/feedback', async (req, res) => {
-//   try {
-//     const { feedbackComment, gifUrl, feedbackId, teacherId, mentions } = req.body;
-//     const { userId } = getUserDetails(req)
-//     console.log("DAADAADA\n ", { feedbackComment, gifUrl, feedbackId, teacherId, mentions })
-
-//     const commentedOnaFeedback = await FeedBackCommentTeacher.create({
-//       teacherId: teacherId,
-//       parentTeacherRatingCommentId: feedbackId,
-//       user: userId,
-//       comment: feedbackComment,
-//       gifUrl: gifUrl || '',
-//       mentions: mentions || []
-
-//     })
-
-//     const teacher = await Teacher.findByIdAndUpdate({ teacherId }, {
-//       $push: {
-//         replies: [commentedOnaFeedback]
-//       }
-//     }, { upsert: true })
-
-//   } catch (error) {
-//     console.error("Error in /feedback/reply: ", error)
-//     res.status(500).json({ message: "Internal Server Error" })
-//   }
-// })
-
-
-
-// router.post("/rate", async (req, res) => {
-//   const { teacherId, userId, rating, feedback, hideUser = false } = req.body;
-
-//   // Check for missing required fields
-//   if (!teacherId || !userId || rating === undefined) {
-//     return res.status(400).json({ message: "Missing required fields" });
-//   }
-
-//   try {
-//     // Find the teacher
-//     const teacher = await Teacher.findById(teacherId);
-//     if (!teacher) {
-//       return res.status(404).json({ message: "Teacher not found" });
-//     }
-
-//     // Check if the user has already rated the teacher
-//     let existingRating = await TeacherRating.findOne({ teacherId, userId });
-//     console.log("existing?", existingRating);
-
-//     if (existingRating) {
-//       // Update existing rating
-//       existingRating.rating = rating;
-//       existingRating.feedback = feedback;
-//       existingRating.__v += 1;
-//       existingRating.hideUser = hideUser;
-//       existingRating.upVotesCount = 0;
-//       existingRating.downVotesCount = 0;
-//       existingRating.replies = [];
-//       existingRating.userVotes = {};
-//       existingRating.isFeedbackEdited.timestamp = Date.now();
-//       existingRating.isFeedbackEdited.bool = true;
-//       await existingRating.save();
-//       teacher.ratingsByStudentsMap.clear();
-//     } else {
-//       // Create a new rating
-//       existingRating = new TeacherRating({
-//         teacherId,
-//         userId,
-//         rating,
-//         feedback,
-//         hideUser,
-//         userVotes: { userId: 'upVote' }
-//       });
-//       await existingRating.save();
-//       teacher.ratingsByStudents.push(existingRating._id);
-//       teacher.ratingsByStudentsMap.set(userId, rating);
-//     }
-
-//     // Calculate the teacher's average rating
-//     const ratingsArray = Array.from(teacher.ratingsByStudentsMap.values());
-//     const totalRatings = ratingsArray.reduce((acc, curr) => acc + curr, 0);
-//     const averageRating = ratingsArray.length > 0 ? totalRatings / ratingsArray.length : 0;
-
-//     teacher.rating = parseFloat(averageRating.toFixed(2));
-//     await teacher.save();
-
-//     // Call the AI service directly for feedback analysis
-//     try {
-//       const aiAnalysis = await aiFeedback(feedback); // Use the imported aiFeedback service
-//       console.log("AI analysis response:", aiAnalysis);
-
-//       // Save the AI analysis in the database or process as needed
-//       existingRating.aiAnalysis = aiAnalysis;
-//       await existingRating.save();
-
-//       res.status(200).json({ 
-//         message: "Rating processed successfully", 
-//         aiAnalysis: aiAnalysis  // Send back AI analysis with response
-//       });
-//     } catch (aiError) {
-//       console.error("Error calling AI service:", aiError);
-//       res.status(500).json({ message: "Error analyzing feedback with AI" });
-//     }
-
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ "Server error": err.message });
-//   }
-// });
-
-
 
 router.post('/reply/feedback', async (req, res) => {
   const session = await mongoose.startSession();
@@ -815,7 +646,7 @@ router.post('/reply/feedback', async (req, res) => {
     // Create feedback comment
     const commentedOnaFeedback = await FeedBackCommentTeacher.create([{
       teacherId: teacherId,
-      parentTeacherRatingCommentId: feedbackReviewId, // this one is different OK?
+      parentTeacherRatingCommentId: feedbackReviewId,
       user: userId,
       comment: feedbackComment,
       gifUrl: gifUrl || '',
@@ -849,8 +680,6 @@ router.post('/reply/feedback', async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
-
-
 router.post('/reply/reply/feedback', async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -958,21 +787,6 @@ router.get('/reply/reply/feedback', async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" })
   }
 })
-
-
-
-// router.post('/reply/reply/feedback', async (req, res) => {
-//   try {
-//     const { feedbackComment, replyTo } = req.body;
-//     const { userId } = getUserDetails(req)
-
-//     const commentedOnaFeedback = await FeedBackCommentTeacher.create()
-//   } catch (error) {
-//     console.error("Error in /feedback/reply: ", error)
-//     res.status(500).json({ message: "Internal Server Error" })
-//   }
-// })
-
 
 router.post("/reviews/feedbacks/vote", async (req, res) => {
   const { reviewId, userIdOther, voteType } = req.body;
@@ -1096,14 +910,19 @@ router.delete("/reviews/feedbacks/delete", async (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const review = await TeacherRating.findOneAndDelete({ teacherId, userId });
+    const review = await TeacherRating.findOneAndDelete({ teacherId, userId }).session(session);
 
     if (!review) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "Review not found" });
     }
 
-    const teacher = await Teacher.findById(teacherId);
+    const teacher = await Teacher.findById(teacherId).session(session);
     if (teacher) {
       const reviewRating = review.rating;
       const totalRatings = teacher.ratingsByStudents.length;
@@ -1120,11 +939,22 @@ router.delete("/reviews/feedbacks/delete", async (req, res) => {
         teacher.ratingsByStudents = [];
       }
 
-      await teacher.save();
+      await teacher.save({ session });
+
+      // Invalidate relevant Redis caches
+      await Promise.all([
+        redisClient.del(`campus_teachers_${teacher.campusOrigin}`),
+        redisClient.del(`campus_teacher_${teacherId}`)
+      ]);
     }
+
+    await session.commitTransaction();
+    session.endSession();
 
     res.status(200).json({ message: "Review deleted successfully" });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error deleting review:", error);
     res.status(500).json({ error: "Server error" });
   }
@@ -1166,6 +996,7 @@ router.get('/account/feedbacks', async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 })
+
 const getTeacherReviews = async (req, res) => {
   const { id } = req.query;
 

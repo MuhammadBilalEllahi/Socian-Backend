@@ -5,8 +5,11 @@ const University = require("../../models/university/university.register.model");
 const Society = require("../../models/society/society.model");
 const Subject = require("../../models/university/department/subject/subject.department.model");
 const { PastPaper, PastpapersCollectionByYear } = require("../../models/university/papers/pastpaper.subject.model");
+const PastPaperItem = require("../../models/university/papers/pastpaper.item.model");
 const router = express.Router();
-const redisClient = require("../../db/reddis")
+const redisClient = require("../../db/reddis");
+const { getUserDetails } = require("../../utils/utils");
+const mongoose = require("mongoose");
 
 
 router.get("/all-users", async (req, res) => {
@@ -132,73 +135,119 @@ router.get("/:id", async (req, res) => {
 
 
 router.post("/pastpaper/upload/types", async (req, res) => {
-  const { year, type, term, termMode, paperName, pdfUrl, teachers, subjectId, departmentId } = req.body;
-
-  // console.log(year, "\n", type, "\n", term, "\n", termMode, "\n", paperName, "\n", pdfUrl, "\n", subjectId, "\n", departmentId);
-
+  const { year, type, term, termMode, paperName, pdfUrl, teachers, subjectId, departmentId, sessionType } = req.body;
   const { universityOrigin, campusOrigin } = getUserDetails(req);
 
-
   try {
-    // Find the subject and validate
-    const findSubject = await Subject.findOne({
-      _id: subjectId,
-      'references.departmentId': departmentId,
-      'references.universityOrigin': universityOrigin,
-      'references.campusOrigin': campusOrigin,
-    });
-    if (!findSubject) return res.status(404).json({ message: "No such subject found" });
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    // Update or create the collection directly
-    const update = {
-      $setOnInsert: { year, references: { subjectId, universityOrigin, campusOrigin } },
-      $push: {},
-    };
-
-    if (type === 'quiz') {
-      update.$push.quizzes = { name: paperName, teachers, 'file.pdf': pdfUrl };
-    } else if (type === 'assignment') {
-      update.$push.assignments = { name: paperName, teachers, 'file.pdf': pdfUrl };
-    } else if (type === 'mid' || type === 'final') {
-      const termField = `${term}.${type}.${termMode}`;
-      // console.log("TERM FIELD", termField
-      update.$push[`${termField}`] = { name: paperName, teachers, 'file.pdf': pdfUrl };
-    } else if (type === 'sessional') {
-      update.$push.sessional = { name: paperName, teachers, 'file.pdf': pdfUrl };
-    }
-
-    const updatedPastPaper = await PastPaper.findOneAndUpdate(
-      { year, 'references.subjectId': subjectId, 'references.universityOrigin': universityOrigin, 'references.campusOrigin': campusOrigin },
-      update,
-      { upsert: true, new: true }
-    );
-
-    // Save to the collection
-    const pastpapersCollectionUpdate = {
-      $addToSet: { pastpapers: updatedPastPaper._id },
-    };
-
-    const updatedCollection = await PastpapersCollectionByYear.findOneAndUpdate(
-      {
-        _id: findSubject.pastpapersCollectionByYear._id,
-        'references.subjectId': subjectId,
+    try {
+      // Find the subject and validate
+      const findSubject = await Subject.findOne({
+        _id: subjectId,
+        'references.departmentId': departmentId,
         'references.universityOrigin': universityOrigin,
         'references.campusOrigin': campusOrigin,
-      },
-      pastpapersCollectionUpdate,
-      { new: true }
-    );
+      }).session(session);
 
-    if (!updatedCollection) return res.status(404).json({ message: "No past papers collection found" });
+      if (!findSubject) {
+        throw new Error("No such subject found");
+      }
 
-    const cacheKey = `pastpapers_${subjectId}`;
-    await redisClient.del(cacheKey);
+      // First, create or find the PastPaper document to get its ID
+      let pastPaper = await PastPaper.findOne({
+        'references.subjectId': subjectId,
+        academicYear: parseInt(year)
+      }).session(session);
 
-    res.status(200).json({
-      message: `${type} added successfully`,
-      createdPastPaper: updatedPastPaper,
-      updatedSubject: findSubject,
-    });
+      if (!pastPaper) {
+        pastPaper = new PastPaper({
+          academicYear: parseInt(year),
+          references: {
+            subjectId,
+            universityOrigin,
+            campusOrigin
+          },
+          papers: []
+        });
+        await pastPaper.save({ session });
+      }
+
+      console.log("Past Paper ID:", pastPaper);
+
+      // Create new PastPaperItem with paperId
+      const pastPaperItem = new PastPaperItem({
+        sessionType: sessionType ? sessionType : undefined,
+        paperId: pastPaper._id, // Set the paperId to reference the PastPaper document
+        subjectId,
+        name: paperName,
+        type: type.toUpperCase(),
+        category: termMode ? termMode.toUpperCase() : undefined,
+        term: term ? term.toUpperCase() : undefined,
+        academicYear: parseInt(year),
+        teachers: teachers || [],
+        file: {
+          url: pdfUrl,
+          uploadedAt: new Date()
+        },
+        references: {
+          universityOrigin,
+          campusOrigin,
+          departmentId
+        }
+      });
+
+      // Save the PastPaperItem
+      await pastPaperItem.save({ session });
+
+      // Add paper reference to pastpaper document
+      pastPaper.papers.push(pastPaperItem._id);
+      await pastPaper.save({ session });
+
+      // Update or create collection reference
+      let collection = await PastpapersCollectionByYear.findById(subjectId).session(session);
+      if (!collection) {
+        collection = new PastpapersCollectionByYear({
+          _id: subjectId,
+          references: {
+            subjectId,
+            universityOrigin,
+            campusOrigin
+          },
+          pastpapers: [pastPaper._id]
+        });
+      } else if (!collection.pastpapers.includes(pastPaper._id)) {
+        collection.pastpapers.push(pastPaper._id);
+      }
+
+      // Update collection stats
+      collection.stats.totalPapers = collection.pastpapers.length;
+      collection.stats.lastUpdated = new Date();
+      await collection.save({ session });
+
+      // Invalidate cache
+      const cacheKeys = [
+        `pastpapers_${subjectId}`,
+        `paper_${type.toLowerCase()}_${subjectId}`,
+        `all_papers_${subjectId}`
+      ];
+      await Promise.all(cacheKeys.map(key => redisClient.del(key)));
+
+      await session.commitTransaction();
+
+      res.status(200).json({
+        message: `${type} added successfully`,
+        pastPaperItem,
+        pastPaper,
+        collection
+      });
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   } catch (error) {
     console.error('Error adding paper:', error);
     res.status(500).json({ message: error.message });

@@ -112,7 +112,7 @@ router.get('/:universityOrigin/:campusOrigin/student/pastpapers/:year/:departmen
 
 
 router.post('/upload/pastpaper/aws', superProtect, upload.single('file'), async (req, res) => {
-    const { departmentId, subjectId, year, type, term, termMode } = req.body;
+    const { departmentId, subjectId, year, type, term, termMode, sessionType } = req.body;
     const file = req.file;
 
     const { role, universityOrigin, campusOrigin } = getUserDetails(req)
@@ -127,11 +127,17 @@ router.post('/upload/pastpaper/aws', superProtect, upload.single('file'), async 
     if (type === "assignment" || type === "quiz") {
         console.log("IN MID OR FINAL", type, type === "assignment", type === "quiz")
         concat = `/${type}`;
-    } else if (type === 'mid' || type === 'final') {
-        console.log("IN MID OR FINAL", type, type === 'mid', type === 'final')
+    } else if (type === 'midterm' || type === 'final') {
+        console.log("IN MID OR FINAL", type, type === 'midterm', type === 'final')
         concat = `/${term}/${type}/${termMode}`;
+    } else if (type === 'sessional') {
+        console.log("IN SESSIONAL", type, type === 'sessional' && (sessionType === '1' || sessionType === '2'))
+        concat = `/${type}/${sessionType}`;
     }
-    console.log("IN MID OR FINAL2", type, type === 'mid', type === 'final')
+    else {
+
+    }
+    console.log("IN MID OR FINAL2", type, type === 'midterm', type === 'final')
     const pathNameDefined = `${universityOrigin}/${campusOrigin}/${role}/pastpapers/${year}/${departmentId}/${subjectId}${concat}/${file.originalname}-${Date.now()}`
 
     console.log("Path Name", pathNameDefined)
