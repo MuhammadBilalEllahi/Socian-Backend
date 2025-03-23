@@ -90,7 +90,7 @@ app.use(compression());
 
 
 const server = http.createServer(app)
-attachSocketToApp(app, server)
+const io = attachSocketToApp(app, server);
 
 app.use((req, res, next) => {
   const io = req.app.get('io');
@@ -147,6 +147,10 @@ const cafeRouter = require('./routes/university_related/cafe/cafe.route.js');
 
 const aiRouter = require('./routes/aiRoutes/ai.routes.js');
 
+const eventRouter = require('./routes/GPS/event.attendance.route.js')(io);
+
+const locationRouter= require('./routes/GPS/location.sharing.route.js')
+
 
 
 
@@ -177,6 +181,10 @@ app.use("/api/society", protectRoute, societyRouter);
 // app.use("/api/sub-society", protectRoute, subSocietyRouter);
 app.use("/api/posts", protectRoute, postsRouter);
 app.use("/api/ai", protectRoute, aiRouter);
+
+
+app.use("/api/location", protectRoute, locationRouter);
+app.use("/api/event", protectRoute, eventRouter);
 
 // cafe role doesnot exist
 
