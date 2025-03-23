@@ -9,6 +9,7 @@ const { uploadPostMedia } = require("../../../utils/aws.bucket.utils");
 const upload = require("../../../utils/multer.utils");
 const PostCommentCollection = require("../../../models/society/post/comment/post.comment.collect.model");
 const PostComment = require("../../../models/society/post/comment/post.comment.model");
+const Society = require("../../../models/society/society.model");
 const router = express.Router();
 
 /**
@@ -854,6 +855,266 @@ router.post("/post/comment/vote", async (req, res) => {
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
+
+
+router.delete("/post/comment", async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { commentId } = req.query;
+        const { userId } = getUserDetails(req);
+
+        const comment = await PostComment.findByIdAndUpdate(
+            commentId,
+            { $set: { isDeleted: true } },
+            { session, new: true }
+        );
+
+        if (!comment) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        await Post.findByIdAndUpdate(
+            comment.postId,
+            { $inc: { commentsCount: -1 } },
+            { session }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(200).json({ message: "Comment deleted successfully" });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+
+        console.error("Error in post('/comment')", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+router.delete("/post/reply/comment", async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { replyId } = req.query;
+        const { userId } = getUserDetails(req);
+
+        const reply = await PostComment.findByIdAndUpdate(
+            replyId,
+            { $set: { isDeleted: true } },
+            { session, new: true }
+        );
+
+        if (!reply) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: "Reply not found" });
+        }
+
+        await Post.findByIdAndUpdate(
+            reply.postId,
+            { $inc: { commentsCount: -1 } },
+            { session }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(200).json({ message: "Reply deleted successfully" });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+
+        console.error("Error in post('/reply/comment')", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+router.patch("/post/comment", async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { commentId, comment } = req.body;
+        const { userId } = getUserDetails(req);
+
+        // First find the comment to check authorization
+        const existingComment = await PostComment.findById(commentId).session(session);
+        if (!existingComment) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: "Comment not found" });
+        }
+
+        // Check if user is authorized to update this comment
+        if (existingComment.author.toString() !== userId) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json({ message: "You are not authorized to update this comment" });
+        }
+
+        // Update the comment
+        const updatedComment = await PostComment.findByIdAndUpdate(
+            commentId,
+            {
+                $set: {
+                    comment: comment,
+                    isEdited: true,
+                    editedAt: new Date()
+                }
+            },
+            { new: true, session }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(200).json({ comment: updatedComment });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+
+        console.error("Error in patch('/post/comment')", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
+router.post('/post/repost/personal', async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { title, body, postId, repostWithoutTitleAndBody } = req.body;
+        const { userId, role, universityOrigin, campusOrigin } = getUserDetails(req);
+
+        if (!repostWithoutTitleAndBody && (!title?.trim() || !body?.trim())) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: "Title and body are required" });
+        }
+        // Check if the post exists
+        const post = await Post.findById(postId).populate("author", "profile");
+        if (!post) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        if (!post.author.profile.preferences.allowRepost && post.author._id.toString() !== userId) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json({ message: "You are not allowed to repost this post" });
+        }
+
+        const d = {
+            author: userId,
+            isRepost: true,
+            isPersonalPost: true,
+            repostedPost: postId,
+            references: {
+                universityOrigin: universityOrigin,
+                campusOrigin: campusOrigin,
+                role: role
+            }
+        };
+        if (!repostWithoutTitleAndBody) {
+            d.title = title;
+            d.body = body;
+        }
+        const newPost = new Post(d);
+        await newPost.save({ session, validateBeforeSave: false });
+        await PostsCollection.findByIdAndUpdate(post.postsCollectionRef, { $addToSet: { posts: newPost._id } }, { session });
+
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(200).json({ message: "Post reposted successfully" });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+
+        console.error("Error in post('/post/repost')", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
+router.post('/post/repost/society', async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { title, body, societyId, postId, postInSameSociety, repostWithoutTitleAndBody } = req.body;
+        const { userId, role, universityOrigin, campusOrigin } = getUserDetails(req);
+
+        if (!repostWithoutTitleAndBody && (!title?.trim() || !body?.trim())) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: "Title and body are required" });
+        }
+        // Check if the post exists
+        const post = await Post.findById(postId);
+        if (!post) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        const society = await Society.findById(societyId).populate("societyType members");
+        if (!society) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: "Society not found" });
+        }
+        if (society.societyType.societyType !== "public") {
+            if (!society.members.includes(userId)) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(403).json({ message: "You are not a member of this society" });
+            }
+        }
+
+        const d = {
+            author: userId,
+            isRepost: true,
+            society: postInSameSociety ? post.society._id : societyId,
+            references: {
+                universityOrigin: universityOrigin,
+                campusOrigin: campusOrigin,
+                role: role
+            }
+        };
+        if (!repostWithoutTitleAndBody) {
+            d.title = title;
+            d.body = body;
+        }
+
+        const newPost = new Post(d);
+        await newPost.save({ session, validateBeforeSave: false });
+
+        await PostsCollection.findByIdAndUpdate(post.postsCollectionRef, { $addToSet: { posts: newPost._id } }, { session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(200).json({ message: "Post reposted successfully" });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+
+        console.error("Error in post('/post/repost/society')", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
 
 
 

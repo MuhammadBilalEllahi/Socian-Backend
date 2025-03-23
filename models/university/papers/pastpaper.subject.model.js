@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const Campus = require("../campus.university.model");
 const { Schema } = mongoose;
+const PastPaperItem = require("./pastpaper.item.model");
+
 
 // Main PastPaper Schema
 const pastpaperSchema = new Schema({
@@ -9,6 +11,9 @@ const pastpaperSchema = new Schema({
         required: true,
         index: true
     },
+    // This is the id of the paper collection that this pastpaper belongs to
+    paperCollectionId: { type: Schema.Types.ObjectId, ref: 'PastpapersCollectionByYear' },
+
     papers: [{ type: Schema.Types.ObjectId, ref: 'PastPaperItem' }],
     references: {
         universityOrigin: {
@@ -51,26 +56,26 @@ pastpaperSchema.pre('save', async function (next) {
         this.stats.totalPapers = this.papers.length;
         this.stats.lastUpdated = new Date();
 
-        // Validate academic format
-        const campus = await Campus.findById(this.references.campusOrigin)
-            .populate('academic.FormatId')
-            .select('academic.FormatId');
+        // // Validate academic format
+        // const campus = await Campus.findById(this.references.campusOrigin)
+        //     .populate('academic.FormatId')
+        //     .select('academic.FormatId');
 
-        if (!campus || !campus.academic.FormatId) {
-            throw new Error('Campus academic format not found');
-        }
+        // if (!campus || !campus.academic.FormatId) {
+        //     throw new Error('Campus academic format not found');
+        // }
 
-        // Validate paper types based on campus format
-        const allowedType = campus.academic.FormatId.formatType;
-        const hasInvalidPapers = this.papers.some(paper => {
-            if (allowedType === 'MIDTERM' && paper.type === 'SESSIONAL') return true;
-            if (allowedType === '2_SESSIONAL' && paper.type === 'MIDTERM') return true;
-            return false;
-        });
+        // // Validate paper types based on campus format
+        // const allowedType = campus.academic.FormatId.formatType;
+        // const hasInvalidPapers = this.papers.some(paper => {
+        //     if (allowedType === 'MIDTERM' && paper.type === 'SESSIONAL') return true;
+        //     if (allowedType === '2_SESSIONAL' && paper.type === 'MIDTERM') return true;
+        //     return false;
+        // });
 
-        if (hasInvalidPapers) {
-            throw new Error(`Only ${allowedType} papers are allowed for this campus`);
-        }
+        // if (hasInvalidPapers) {
+        //     throw new Error(`Only ${allowedType} papers are allowed for this campus`);
+        // }
 
         next();
     } catch (error) {
@@ -81,7 +86,8 @@ pastpaperSchema.pre('save', async function (next) {
 // Methods for common operations
 pastpaperSchema.methods = {
     async addPaper(paperData) {
-        this.papers.push(paperData);
+        const newPaper = new PastPaperItem(paperData);
+        this.papers.push(newPaper);
         this.stats.lastUpdated = new Date();
         return this.save();
     },
@@ -111,65 +117,10 @@ pastpaperSchema.statics = {
     }
 };
 
-// Collection by Year Schema
-const pastpapersCollectionByYearSchema = new Schema({
-    _id: {
-        type: Schema.Types.ObjectId,
-        required: true,
-        ref: "Subject",
-        index: true
-    },
-    references: {
-        universityOrigin: {
-            type: Schema.Types.ObjectId,
-            ref: 'University',
-            required: true,
-            index: true
-        },
-        campusOrigin: {
-            type: Schema.Types.ObjectId,
-            ref: 'Campus',
-            required: true,
-            index: true
-        },
-        subjectId: {
-            type: Schema.Types.ObjectId,
-            ref: "Subject",
-            required: true,
-            index: true
-        }
-    },
-    pastpapers: [{
-        type: Schema.Types.ObjectId,
-        ref: 'PastPaper'
-    }],
-    stats: {
-        totalPapers: { type: Number, default: 0 },
-        lastUpdated: { type: Date, default: Date.now }
-    }
-}, {
-    timestamps: true,
-    indexes: [
-        { 'references.subjectId': 1 },
-        { 'references.campusOrigin': 1, 'references.subjectId': 1 }
-    ]
-});
 
-// Pre-save middleware to update stats and set _id
-pastpapersCollectionByYearSchema.pre('save', function (next) {
-    if (!this._id) {
-        this._id = this.references.subjectId;
-    }
-    this.stats.totalPapers = this.pastpapers.length;
-    this.stats.lastUpdated = new Date();
-    next();
-});
 
 const PastPaper = mongoose.model("PastPaper", pastpaperSchema);
-
-const PastpapersCollectionByYear = mongoose.model("PastpapersCollectionByYear", pastpapersCollectionByYearSchema);
-
-module.exports = { PastPaper, PastpapersCollectionByYear };
+module.exports = { PastPaper };
 
 
 

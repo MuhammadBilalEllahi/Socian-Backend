@@ -1,11 +1,13 @@
 const express = require('express');
 const Subject = require('../../../models/university/department/subject/subject.department.model');
 const { PastPaper, PastpapersCollectionByYear } = require('../../../models/university/papers/pastpaper.subject.model');
-const PastPaperItem = require('../../../models/university/papers/pastpaper.item.model');
+const { PastPaperItem } = require('../../../models/university/papers/pastpaper.item.model');
 const { getUserDetails } = require('../../../utils/utils');
 const router = express.Router();
 const redisClient = require("../../../db/reddis.js");
 const mongoose = require('mongoose');
+const { DiscussionComment, PastPaperQuestion } = require('../../../models/university/papers/discussion/discussion.comment');
+
 
 // Cache configuration
 const CACHE_TTL = 3600; // 1 hour in seconds

@@ -36,7 +36,8 @@ const postCommentSchema = new Schema({
       enum: ['alumni', 'student', 'teacher', 'ext_org']
     }
   },
-
+  isDeleted: { type: Boolean, default: false },
+  isEdited: { type: Boolean, default: false },
 
 });
 

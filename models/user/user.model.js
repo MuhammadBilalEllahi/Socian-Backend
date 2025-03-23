@@ -28,7 +28,11 @@ const userSchema = new mongoose.Schema({
     enum: ["super", "admin", "mod", "none"],
   },
 
+
   profile: {
+    preferences: {
+      allowRepost: { type: Boolean, default: true },
+    },
     // name: {
     //     type: String,
     // },
