@@ -99,8 +99,8 @@ importers:
         specifier: ^6.12.0
         version: 6.12.0(socks@2.8.3)
       mongoose:
-        specifier: ^8.9.5
-        version: 8.9.5(socks@2.8.3)
+        specifier: ^8.12.1
+        version: 8.13.1(socks@2.8.3)
       morgan:
         specifier: ^1.10.0
         version: 1.10.0
@@ -716,6 +716,10 @@ packages:
 
   bson@6.10.1:
     resolution: {integrity: sha512-P92xmHDQjSKPLHqFxefqMxASNq/aWJMEZugpCjf+AF/pgcUpMMQCg7t7+ewko0/u8AapvF3luf/FoehddEK+sA==}
+    engines: {node: '>=16.20.1'}
+
+  bson@6.10.3:
+    resolution: {integrity: sha512-MTxGsqgYTwfshYWTRdmZRC+M7FnG1b4y7RO7p2k3X24Wq0yv1m77Wsj0BzlPzd/IowgESfsruQCUToa7vbOpPQ==}
     engines: {node: '>=16.20.1'}
 
   buffer-equal-constant-time@1.0.1:
@@ -1464,8 +1468,35 @@ packages:
       socks:
         optional: true
 
-  mongoose@8.9.5:
-    resolution: {integrity: sha512-SPhOrgBm0nKV3b+IIHGqpUTOmgVL5Z3OO9AwkFEmvOZznXTvplbomstCnPOGAyungtRXE5pJTgKpKcZTdjeESg==}
+  mongodb@6.15.0:
+    resolution: {integrity: sha512-ifBhQ0rRzHDzqp9jAQP6OwHSH7dbYIQjD3SbJs9YYk9AikKEettW/9s/tbSFDTpXcRbF+u1aLrhHxDFaYtZpFQ==}
+    engines: {node: '>=16.20.1'}
+    peerDependencies:
+      '@aws-sdk/credential-providers': ^3.188.0
+      '@mongodb-js/zstd': ^1.1.0 || ^2.0.0
+      gcp-metadata: ^5.2.0
+      kerberos: ^2.0.1
+      mongodb-client-encryption: '>=6.0.0 <7'
+      snappy: ^7.2.2
+      socks: ^2.7.1
+    peerDependenciesMeta:
+      '@aws-sdk/credential-providers':
+        optional: true
+      '@mongodb-js/zstd':
+        optional: true
+      gcp-metadata:
+        optional: true
+      kerberos:
+        optional: true
+      mongodb-client-encryption:
+        optional: true
+      snappy:
+        optional: true
+      socks:
+        optional: true
+
+  mongoose@8.13.1:
+    resolution: {integrity: sha512-sRqlXI+6jhr9/KicCOjet1VVPONFsOxTrh14tfueX5y3GJ2ihswc5ewUUojuwdSS/5koGXLIPmGivDSApVXflA==}
     engines: {node: '>=16.20.1'}
 
   morgan@1.10.0:
@@ -3071,6 +3102,8 @@ snapshots:
 
   bson@6.10.1: {}
 
+  bson@6.10.3: {}
+
   buffer-equal-constant-time@1.0.1: {}
 
   buffer-from@1.1.2: {}
@@ -3862,11 +3895,19 @@ snapshots:
     optionalDependencies:
       socks: 2.8.3
 
-  mongoose@8.9.5(socks@2.8.3):
+  mongodb@6.15.0(socks@2.8.3):
     dependencies:
-      bson: 6.10.1
+      '@mongodb-js/saslprep': 1.1.9
+      bson: 6.10.3
+      mongodb-connection-string-url: 3.0.1
+    optionalDependencies:
+      socks: 2.8.3
+
+  mongoose@8.13.1(socks@2.8.3):
+    dependencies:
+      bson: 6.10.3
       kareem: 2.6.3
-      mongodb: 6.12.0(socks@2.8.3)
+      mongodb: 6.15.0(socks@2.8.3)
       mpath: 0.9.0
       mquery: 5.0.0
       ms: 2.1.3
