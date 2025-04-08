@@ -6,7 +6,8 @@
   "scripts": {
     "check-git": "node ./utils/git/checkGitStatus.mjs",
     "run": "node ./index.js",
-    "server": "nodemon ./index.js",
+    "redis": "cd ./container/Redis && .\\redis-server.exe",
+    "server": "nodemon ./index.js ",
     "railway": "nodemon ./index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
