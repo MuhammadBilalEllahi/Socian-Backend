@@ -246,4 +246,25 @@ router.get("/campus", async (req, res) => {
   }
 });
 
+
+
+router.get("/subjects", async (req, res) => {
+  const { departmentId } = req.query;
+  try {
+    const department = await Department.findById(departmentId)
+      .select("subjects")
+      .populate("subjects", "name _id") 
+
+    if (!department) {
+      return res.status(404).json({ message: "Department not found" });
+    }
+
+    res.status(200).json(department); 
+  } catch (error) {
+    console.error("Error in department:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
 module.exports = router;
