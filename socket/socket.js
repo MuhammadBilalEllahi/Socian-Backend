@@ -1,5 +1,5 @@
 const { Server } = require("socket.io");
-const UserLocation=require("../../backend/")
+// const UserLocation=require("../../backend/")
 
 let io;
 
@@ -55,11 +55,11 @@ const initSocketIO = (app, server) => {
       eventAttendees[socket.id] = { userId, name, latitude, longitude, radius };
 
       // Save or update location in the database
-      await UserLocation.findOneAndUpdate(
-        { userId },
-        { latitude, longitude, timestamp: new Date() },
-        { upsert: true }
-      );
+      // await UserLocation.findOneAndUpdate(
+      //   { userId },
+      //   { latitude, longitude, timestamp: new Date() },
+      //   { upsert: true }
+      // );
 
       // Broadcast updated location to all clients
       io.emit("attendeeLocationUpdate", {
