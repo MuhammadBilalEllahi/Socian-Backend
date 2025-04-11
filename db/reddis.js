@@ -11,7 +11,9 @@ if (process.env.NODE_ENV === 'development') {
         port: process.env.REDISPORT || 6379, // Default port 6379
         host: process.env.REDISHOST || '127.0.0.1', // Default to localhost
         password: process.env.REDISPASSWORD || '', // Default to no password
-        db: 0, // Default DB
+        // db: 0, // Default DB, 
+        tls:{
+        }
     });
 } else {
     console.log("Initializing Redis in production mode...");
