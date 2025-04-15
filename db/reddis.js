@@ -15,7 +15,17 @@ if (process.env.NODE_ENV === 'development') {
         tls:{
         }
     });
-} else {
+} 
+else if(process.env.NODE_ENV === 'testing'){
+    console.log("Initializing Redis in testing mode...");
+    redis = new Redis({
+        port: process.env.REDISPORT || 6379, // Default port 6379
+        host: process.env.REDISHOST || '127.0.0.1', // Default to localhost
+        password: process.env.REDISPASSWORD || '', // Default to no password
+        db: 0, // Default DB, 
+    });
+} 
+else {
     console.log("Initializing Redis in production mode...");
     if (!process.env.REDIS_URL) {
         throw new Error('REDIS_URL is not defined in the production environment.');
