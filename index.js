@@ -1,5 +1,9 @@
 // const cluster = require('cluster');
 // const os = require('os');
+
+console.log('\x1b[35m%s\x1b[0m', '💡 Always remember to \x1b[1m\x1b[36mpnpm install\x1b[0m');
+
+
 const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -29,13 +33,15 @@ const path = require("path");
 
 dotenv.config();
 
-const redisClient = require("./db/reddis.js")
+const redisClient = require("./db/reddis.js");
+const valkeyClient = require("./db/valkey.js");
 
-// const redis = new Redis(process.env.REDIS_URL);
-// redis.on('error', (err) => {
-//     console.error('Redis error:', err);
-// });
-console.log("Always remember to pnpm install");
+const v = new valkeyClient();
+const r = new redisClient();
+
+
+
+
 // Will be using session for now
 app.set("trust proxy", 1);
 const sessionData = session({
@@ -259,7 +265,7 @@ app.all('*', (req, res) => {
 const startServer = () => {
   server.listen(PORT, () => {
     mongoDB(app);
-    console.log(`Server Running on ${PORT}`);
+    console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Server Running on', PORT);
   });
 };
 

@@ -24,9 +24,9 @@ const connectToMongoDB = async (app) => {
         //     key: { "postId": 1 }  // Shard key: postId
         // });
 
-        console.log("Mongo Database:- Connected");
+        console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Mongo Database', 'Connected');
     } catch (error) {
-        console.error("Mongo Database Error Catch Messgae: ", error.message)
+        console.error('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Mongo Database Error Catch Messgae: ', error.message)
         // throw new Error(error)
     }
 }

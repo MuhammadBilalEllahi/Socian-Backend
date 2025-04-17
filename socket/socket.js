@@ -1,5 +1,5 @@
 const { Server } = require("socket.io");
-// const UserLocation=require("../../backend/")
+const UserLocation=require("../../backend/models/gps/user.location.model")
 
 let io;
 
@@ -21,6 +21,7 @@ const initSocketIO = (app, server) => {
 
     /** ---------------- DISCUSSION EVENTS ---------------- **/
     socket.on("joinDiscussion", (discussionId) => {
+      console.log(`User joined discussion: ${discussionId}`);
       socket.join(discussionId);
 
       if (!discussionUsers[discussionId]) {
@@ -28,8 +29,18 @@ const initSocketIO = (app, server) => {
       }
 
       discussionUsers[discussionId].add(socket.id);
+      console.log("discussionUsers", discussionUsers);
       io.to(discussionId).emit("users", discussionUsers);
       io.to(discussionId).emit("usersCount", discussionUsers[discussionId].size);
+      
+    });
+
+    socket.on("removeUserFromDiscussion", (discussionId) => {
+      console.log(`User removed from discussion: ${discussionId}`);
+      socket.leave(discussionId);
+      discussionUsers[discussionId]?.delete(socket.id);
+      io.to(discussionId).emit("users", discussionUsers);
+      io.to(discussionId).emit("usersCount", discussionUsers[discussionId]?.size?? 0);
     });
 
     socket.on("message", (discussionId, message, user) => {

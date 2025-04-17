@@ -85,7 +85,8 @@ router.post("/create-get", asyncHandler(async (req, res) => {
 
         // Create new discussion if it doesn't exist
         discussion = await Discussion.create({
-            discussion_of: toBeDisccusedId
+            discussion_of: toBeDisccusedId,
+            _id: toBeDisccusedId
         });
 
         res.status(201).json({ discussion });

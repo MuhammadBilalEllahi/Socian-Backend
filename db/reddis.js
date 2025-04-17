@@ -1,46 +1,49 @@
 const Redis = require('ioredis');
 
-// Determine Redis configuration based on the environment
-let redis;
-
-console.log('Environment:', process.env.NODE_ENV);
-
-if (process.env.NODE_ENV === 'development') {
-    console.log("Initializing Redis in development mode...");
-    redis = new Redis({
-        port: process.env.REDISPORT || 6379, // Default port 6379
-        host: process.env.REDISHOST || '127.0.0.1', // Default to localhost
-        password: process.env.REDISPASSWORD || '', // Default to no password
-        // db: 0, // Default DB, 
-        tls:{
-        }
-    });
-} 
-else if(process.env.NODE_ENV === 'testing'){
-    console.log("Initializing Redis in testing mode...");
-    redis = new Redis({
-        port: process.env.REDISPORT || 6379, // Default port 6379
-        host: process.env.REDISHOST || '127.0.0.1', // Default to localhost
-        password: process.env.REDISPASSWORD || '', // Default to no password
-        db: 0, // Default DB, 
-    });
-} 
-else {
-    console.log("Initializing Redis in production mode...");
-    if (!process.env.REDIS_URL) {
-        throw new Error('REDIS_URL is not defined in the production environment.');
+class RedisClient {
+    constructor() {
+        console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Environment', process.env.NODE_ENV);
+        this.client = this.initializeRedis();
+        this.attachEventListeners();
     }
-    redis = new Redis(`${process.env.REDIS_URL}?family=0`);
+
+    initializeRedis() {
+        if (process.env.NODE_ENV === 'development') {
+            console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Initializing Redis', 'in development mode...');
+            return new Redis({
+                port: process.env.REDISPORT || 6379,
+                host: process.env.REDISHOST || '127.0.0.1',
+                password: process.env.REDISPASSWORD || '',
+                tls: {}
+            });
+        } 
+        else if(process.env.NODE_ENV === 'testing') {
+            console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Initializing Redis', 'in testing mode...');
+            return new Redis({
+                port: process.env.REDISPORT || 6379,
+                host: process.env.REDISHOST || '127.0.0.1',
+                password: process.env.REDISPASSWORD || '',
+                db: 0,
+            });
+        }
+        else {
+            console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Initializing Redis', 'in production mode...');
+            if (!process.env.REDIS_URL) {
+                throw new Error('REDIS_URL is not defined in the production environment.');
+            }
+            return new Redis(`${process.env.REDIS_URL}?family=0`);
+        }
+    }
+
+    attachEventListeners() {
+        this.client.on('connect', () => {
+            console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Redis', 'Connected successfully');
+        });
+
+        this.client.on('error', (err) => {
+            console.error("Redis error:", err);
+        });
+    }
 }
 
-// Attach event listeners to Redis
-redis.on('connect', () => {
-    console.log("Redis: Connected successfully");
-});
-
-redis.on('error', (err) => {
-    console.error("Redis error:", err);
-});
-
-// Export the Redis instance
-module.exports = redis;
+module.exports = RedisClient;
