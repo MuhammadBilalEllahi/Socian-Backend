@@ -1,11 +1,11 @@
 const Redis = require("ioredis");
 
 class Valkey {
-    constructor() {
+    constructor(type) {
         this.client = new Redis({
             url: process.env.VALKEY,
         });
-        console.log('║ \x1b[33mValkey client\x1b[0m: \x1b[32mconnected\x1b[0m                      ║');
+        console.log(`║ \x1b[33mValkey client\x1b[0m: \x1b[32m${type}\x1b[0m connected\x1b[0m           ║`);
     }
 
     // async connect() {

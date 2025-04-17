@@ -41,10 +41,9 @@ const path = require("path");
 dotenv.config();
 
 const redisClient = require("./db/reddis.js");
-const valkeyClient = require("./db/valkey.js");
 
-const v = new valkeyClient();
-const r = new redisClient();
+
+
 
 
 

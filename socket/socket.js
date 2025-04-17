@@ -1,46 +1,60 @@
 const { Server } = require("socket.io");
-const UserLocation=require("../../backend/models/gps/user.location.model")
+const UserLocation = require("../../backend/models/gps/user.location.model");
+const valkeyClient = require("../db/valkey");
 
-let io;
+class SocketServer {
+  constructor() {
+    this.io = null;
+    this.discussionUsers = {};
+    this.discussionUserCount = {};
+    this.eventAttendees = {};
+    this.subscriber = new valkeyClient('subscriber');
+    this.publisher = new valkeyClient('publisher ');
+  }
 
-const initSocketIO = (app, server) => {
-  io = new Server(server, {
-    transports: ["websocket"],
-    cors: {
-      origin: [process.env.FRONTEND_URL, process.env.APP_ID, process.env.LOCALHOST],
-      methods: ["GET", "POST"],
-    },
-  });
+  initSocketIO(app, server) {
+    this.io = new Server(server, {
+      transports: ["websocket"],
+      cors: {
+        origin: [process.env.FRONTEND_URL, process.env.APP_ID, process.env.LOCALHOST],
+        methods: ["GET", "POST"],
+      },
+    });
 
-  const discussionUsers = {};
-  const discussionUserCount = {};
-  const eventAttendees = {}; // Stores attendee locations by socket ID
+    this.setupEventHandlers();
+  }
 
-  io.on("connection", (socket) => {
-    console.log(`User connected: ${socket.id}`);
+  setupEventHandlers() {
+    this.io.on("connection", (socket) => {
+      console.log(`User connected: ${socket.id}`);
 
-    /** ---------------- DISCUSSION EVENTS ---------------- **/
+      this.setupDiscussionEvents(socket);
+      this.setupLocationEvents(socket);
+      this.handleDisconnect(socket);
+    });
+  }
+
+  setupDiscussionEvents(socket) {
     socket.on("joinDiscussion", (discussionId) => {
       console.log(`User joined discussion: ${discussionId}`);
       socket.join(discussionId);
 
-      if (!discussionUsers[discussionId]) {
-        discussionUsers[discussionId] = new Set();
+      if (!this.discussionUsers[discussionId]) {
+        this.discussionUsers[discussionId] = new Set();
       }
 
-      discussionUsers[discussionId].add(socket.id);
-      console.log("discussionUsers", discussionUsers);
-      io.to(discussionId).emit("users", discussionUsers);
-      io.to(discussionId).emit("usersCount", discussionUsers[discussionId].size);
-      
+      this.discussionUsers[discussionId].add(socket.id);
+      console.log("discussionUsers", this.discussionUsers);
+      this.io.to(discussionId).emit("users", this.discussionUsers);
+      this.io.to(discussionId).emit("usersCount", this.discussionUsers[discussionId].size);
     });
 
     socket.on("removeUserFromDiscussion", (discussionId) => {
       console.log(`User removed from discussion: ${discussionId}`);
       socket.leave(discussionId);
-      discussionUsers[discussionId]?.delete(socket.id);
-      io.to(discussionId).emit("users", discussionUsers);
-      io.to(discussionId).emit("usersCount", discussionUsers[discussionId]?.size?? 0);
+      this.discussionUsers[discussionId]?.delete(socket.id);
+      this.io.to(discussionId).emit("users", this.discussionUsers);
+      this.io.to(discussionId).emit("usersCount", this.discussionUsers[discussionId]?.size ?? 0);
     });
 
     socket.on("message", (discussionId, message, user) => {
@@ -54,16 +68,15 @@ const initSocketIO = (app, server) => {
         timestamp: new Date(),
       };
 
-      io.to(discussionId).emit("message", chatMessage);
+      this.io.to(discussionId).emit("message", chatMessage);
     });
+  }
 
-    /** ---------------- LOCATION UPDATES ---------------- **/
-
-    // Listen for location updates from attendees
+  setupLocationEvents(socket) {
     socket.on("updateLocation", async (data) => {
       const { userId, name, latitude, longitude, radius } = data;
 
-      eventAttendees[socket.id] = { userId, name, latitude, longitude, radius };
+      this.eventAttendees[socket.id] = { userId, name, latitude, longitude, radius };
 
       // Save or update location in the database
       // await UserLocation.findOneAndUpdate(
@@ -72,8 +85,7 @@ const initSocketIO = (app, server) => {
       //   { upsert: true }
       // );
 
-      // Broadcast updated location to all clients
-      io.emit("attendeeLocationUpdate", {
+      this.io.emit("attendeeLocationUpdate", {
         id: userId,
         name,
         latitude,
@@ -83,39 +95,41 @@ const initSocketIO = (app, server) => {
       console.log(`Location update from ${name} (${userId}): ${latitude}, ${longitude}`);
     });
 
-    // Send all attendee locations to a newly connected client
     socket.on("requestAttendees", () => {
-      socket.emit("attendeesList", Object.values(eventAttendees));
+      socket.emit("attendeesList", Object.values(this.eventAttendees));
     });
+  }
 
-    /** ---------------- DISCONNECT HANDLING ---------------- **/
+  handleDisconnect(socket) {
     socket.on("disconnect", () => {
       console.log(`User disconnected: ${socket.id}`);
 
-      // Remove user from discussion rooms
-      Object.keys(discussionUsers).forEach((discussionId) => {
-        if (discussionUsers[discussionId].has(socket.id)) {
-          discussionUsers[discussionId].delete(socket.id);
-          discussionUserCount[discussionId] = discussionUsers[discussionId].size;
+      Object.keys(this.discussionUsers).forEach((discussionId) => {
+        if (this.discussionUsers[discussionId].has(socket.id)) {
+          this.discussionUsers[discussionId].delete(socket.id);
+          this.discussionUserCount[discussionId] = this.discussionUsers[discussionId].size;
 
-          io.to(discussionId).emit("users", discussionUsers);
-          io.to(discussionId).emit("usersCount", discussionUsers[discussionId].size);
+          this.io.to(discussionId).emit("users", this.discussionUsers);
+          this.io.to(discussionId).emit("usersCount", this.discussionUsers[discussionId].size);
         }
       });
 
-      // Remove attendee from the location tracking
-      if (eventAttendees[socket.id]) {
-        io.emit("attendeeDisconnected", { userId: eventAttendees[socket.id].userId });
-        delete eventAttendees[socket.id];
+      if (this.eventAttendees[socket.id]) {
+        this.io.emit("attendeeDisconnected", { userId: this.eventAttendees[socket.id].userId });
+        delete this.eventAttendees[socket.id];
       }
     });
-  });
-};
+  }
 
-// Attach io to the app object for global access
-const attachSocketToApp = (app, server) => {
-  initSocketIO(app, server);
-  app.set("io", io); // Store io instance in app
-};
+  attachToApp(app, server) {
+    this.initSocketIO(app, server);
+    app.set("io", this.io);
+    return this.io;
+  }
+}
 
-module.exports = { initSocketIO, attachSocketToApp };
+const socketServer = new SocketServer();
+module.exports = {
+  initSocketIO: (app, server) => socketServer.initSocketIO(app, server),
+  attachSocketToApp: (app, server) => socketServer.attachToApp(app, server)
+};

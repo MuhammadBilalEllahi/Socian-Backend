@@ -1,10 +1,54 @@
 const Redis = require('ioredis');
 
 class RedisClient {
-    constructor() {
+    static instance = null;
+
+    constructor(multiInstance = false) {
+        if (!multiInstance && RedisClient.instance) {
+            return RedisClient.instance;
+        }
+
         console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Environment', process.env.NODE_ENV, '                         ║');
         this.client = this.initializeRedis();
         this.attachEventListeners();
+
+        if (!multiInstance) {
+            RedisClient.instance = this;
+        }
+    }
+
+    get(key) {
+        console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Getting Redis', key);
+        return this.client.get(key);
+    }
+
+    set(key, value) {
+        // console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Setting Redis', key);
+        return this.client.set(key, value);
+    }
+
+    setex(key, seconds, value) {
+        // console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Setting Redis', key);
+        return this.client.setex(key, seconds, value);
+    }
+
+    del(key) {
+        // console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Deleting Redis', key);
+        return this.client.del(key);
+    }
+
+    expire(key, seconds) {
+        // console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Expiring Redis', key);
+        return this.client.expire(key, seconds);
+    }
+
+    close() {
+        // console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Closing Redis');
+        return this.client.quit();
+    }
+
+    getClient() {
+        return this.client;
     }
 
     initializeRedis() {
@@ -46,4 +90,7 @@ class RedisClient {
     }
 }
 
-module.exports = RedisClient;
+// Create singleton instance
+const redisClient = new RedisClient();
+
+module.exports = redisClient;

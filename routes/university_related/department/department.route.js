@@ -5,7 +5,8 @@ const Campus = require("../../../models/university/campus.university.model");
 const { getUserDetails } = require("../../../utils/utils");
 const router = express.Router();
 
-const redisClient = require('../../../db/reddis')
+const redisClient = require('../../../db/reddis');
+
 
 
 router.get("/by-university", async (req, res) => {
