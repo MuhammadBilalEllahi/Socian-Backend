@@ -1,7 +1,14 @@
 // const cluster = require('cluster');
 // const os = require('os');
 
-console.log('\x1b[35m%s\x1b[0m', '💡 Always remember to \x1b[1m\x1b[36mpnpm install\x1b[0m');
+
+console.log('\n\x1b[1m💡 \x1b[33mAlways remember to pnpm install\x1b[0m\n');
+
+
+
+console.log('\x1b[36m╔═══════════════════════════════════════════════╗\x1b[0m');
+
+
 
 
 const express = require("express");
@@ -265,29 +272,20 @@ app.all('*', (req, res) => {
 const startServer = () => {
   server.listen(PORT, () => {
     mongoDB(app);
-    console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Server Running on', PORT);
+    console.log(`\x1b[35m║\x1b[0m \x1b[33mServer Running on\x1b[0m: \x1b[32m${PORT}\x1b[0m`);
+
   });
+  console.log('\x1b[36m╚═══════════════════════════════════════════════╝\x1b[0m');
+
 };
 
 // Error report
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send("Something broke!");
+  res.status(500).send("\x1b[31mSomething broke!\x1b[0m");
 });
 
 startServer();
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

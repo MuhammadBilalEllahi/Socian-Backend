@@ -2,14 +2,14 @@ const Redis = require('ioredis');
 
 class RedisClient {
     constructor() {
-        console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Environment', process.env.NODE_ENV);
+        console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Environment', process.env.NODE_ENV, '                         ║');
         this.client = this.initializeRedis();
         this.attachEventListeners();
     }
 
     initializeRedis() {
         if (process.env.NODE_ENV === 'development') {
-            console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Initializing Redis', 'in development mode...');
+                console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Initializing Redis', 'in development mode...');
             return new Redis({
                 port: process.env.REDISPORT || 6379,
                 host: process.env.REDISHOST || '127.0.0.1',
@@ -18,7 +18,7 @@ class RedisClient {
             });
         } 
         else if(process.env.NODE_ENV === 'testing') {
-            console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Initializing Redis', 'in testing mode...');
+            console.log('\x1b[36m║\x1b[0m \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Initializing Redis', 'in testing mode...\x1b[0m        ║');
             return new Redis({
                 port: process.env.REDISPORT || 6379,
                 host: process.env.REDISHOST || '127.0.0.1',
@@ -27,7 +27,7 @@ class RedisClient {
             });
         }
         else {
-            console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Initializing Redis', 'in production mode...');
+            console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Initializing Redis', 'in production mode...');
             if (!process.env.REDIS_URL) {
                 throw new Error('REDIS_URL is not defined in the production environment.');
             }
@@ -37,11 +37,11 @@ class RedisClient {
 
     attachEventListeners() {
         this.client.on('connect', () => {
-            console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Redis', 'Connected successfully');
+            console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Redis', 'Connected successfully');
         });
 
         this.client.on('error', (err) => {
-            console.error("Redis error:", err);
+            console.error('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Redis', 'Error:', err);
         });
     }
 }

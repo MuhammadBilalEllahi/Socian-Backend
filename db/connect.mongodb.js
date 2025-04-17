@@ -24,9 +24,12 @@ const connectToMongoDB = async (app) => {
         //     key: { "postId": 1 }  // Shard key: postId
         // });
 
-        console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Mongo Database', 'Connected');
+        // Style 6: ASCII box
+        
+        console.log('\x1b[36m║\x1b[0m \x1b[33mMongo Database\x1b[0m: \x1b[32mConnected\x1b[0m');
+        
     } catch (error) {
-        console.error('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Mongo Database Error Catch Messgae: ', error.message)
+        console.error('\x1b[31m║\x1b[0m \x1b[33mMongo Database Error Catch Messgae: \x1b[0m\x1b[36m%s\x1b[0m', error.message)
         // throw new Error(error)
     }
 }

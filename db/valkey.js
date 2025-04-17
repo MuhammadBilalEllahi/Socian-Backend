@@ -5,7 +5,7 @@ class Valkey {
         this.client = new Redis({
             url: process.env.VALKEY,
         });
-        console.log('\x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Valkey client', 'connected');
+        console.log('║ \x1b[33mValkey client\x1b[0m: \x1b[32mconnected\x1b[0m                      ║');
     }
 
     // async connect() {
