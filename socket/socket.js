@@ -9,7 +9,20 @@ class SocketServer {
     this.discussionUserCount = {};
     this.eventAttendees = {};
     this.subscriber = new valkeyClient('subscriber');
-    this.publisher = new valkeyClient('publisher ');
+    this.publisher = new valkeyClient('publisher');
+    
+    // Initialize Redis connections
+    this.initializeRedisConnections();
+  }
+
+  async initializeRedisConnections() {
+    try {
+      await this.subscriber.connect();
+      await this.publisher.connect();
+      console.log("║ \x1b[33mRedis connections\x1b[0m: \x1b[32minitialized\x1b[0m           ║");
+    } catch (error) {
+      console.error("║ \x1b[31mRedis connection error\x1b[0m:", error.message, "║");
+    }
   }
 
   initSocketIO(app, server) {
@@ -21,6 +34,9 @@ class SocketServer {
       },
     });
 
+    if(this.io) {
+      console.log("║ \x1b[33mSocket server\x1b[0m: \x1b[32minitialized\x1b[0m                    ║");
+    }
     this.setupEventHandlers();
   }
 
@@ -32,10 +48,35 @@ class SocketServer {
       this.setupLocationEvents(socket);
       this.handleDisconnect(socket);
     });
+
+    // Enhanced subscriber event handling
+    this.subscriber.on("message", (channel, message) => {
+      try {
+        console.log('║ \x1b[33mReceived message\x1b[0m:');
+        console.log('║ Channel:', channel);
+        console.log('║ Message:', message);
+        
+        // Parse the message if it's a string
+        const parsedMessage = typeof message === 'string' ? JSON.parse(message) : message;
+        
+        // Emit to the specific channel
+        this.io.to(channel).emit("message", parsedMessage);
+        console.log('║ \x1b[32mMessage emitted successfully to channel\x1b[0m:', channel);
+      } catch (error) {
+        console.error('║ \x1b[31mError processing message\x1b[0m:', error.message);
+      }
+    });
+
+    // Add error handling for subscriber
+    this.subscriber.client.on('error', (error) => {
+      console.error('║ \x1b[31mSubscriber error\x1b[0m:', error.message);
+    });
   }
 
   setupDiscussionEvents(socket) {
     socket.on("joinDiscussion", (discussionId) => {
+      this.subscriber.subscribe(discussionId);
+      
       console.log(`User joined discussion: ${discussionId}`);
       socket.join(discussionId);
 
@@ -57,18 +98,35 @@ class SocketServer {
       this.io.to(discussionId).emit("usersCount", this.discussionUsers[discussionId]?.size ?? 0);
     });
 
-    socket.on("message", (discussionId, message, user) => {
-      const chatMessage = {
-        _id: user._id,
-        user: user.name,
-        username: user.username,
-        picture: user.picture,
-        socketId: socket.id,
-        message: message,
-        timestamp: new Date(),
-      };
+    socket.on("message", async (data) => {
+      try {
+        console.log('║ \x1b[33mReceived message event\x1b[0m:', data);
+        
+        const { discussionId, message, user } = data;
+        
+        if (!discussionId || !message || !user) {
+          console.error('║ \x1b[31mInvalid message data\x1b[0m:', { discussionId, message, user });
+          return;
+        }
 
-      this.io.to(discussionId).emit("message", chatMessage);
+        const chatMessage = {
+          _id: user._id,
+          user: user.name,
+          username: user.username,
+          picture: user.picture,
+          socketId: socket.id,
+          message: message,
+          timestamp: new Date(),
+        };
+        
+        console.log('║ \x1b[33mPublishing message to discussion\x1b[0m:', discussionId);
+        console.log('║ Message content:', chatMessage);
+        
+        const result = await this.publisher.publish(discussionId, JSON.stringify(chatMessage));
+        console.log('║ \x1b[32mPublish result\x1b[0m:', result);
+      } catch (error) {
+        console.error('║ \x1b[31mError processing message\x1b[0m:', error.message);
+      }
     });
   }
 

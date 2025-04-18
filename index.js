@@ -15,7 +15,9 @@ const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+
 const dotenv = require("dotenv");
+dotenv.config();
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -38,7 +40,7 @@ const path = require("path");
 
 // const Redis = require('ioredis');
 
-dotenv.config();
+
 
 const redisClient = require("./db/reddis.js");
 
