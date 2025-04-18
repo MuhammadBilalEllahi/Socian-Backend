@@ -273,11 +273,8 @@ app.all('*', (req, res) => {
 const startServer = () => {
   server.listen(PORT, () => {
     mongoDB(app);
-    console.log(`\x1b[35m║\x1b[0m \x1b[33mServer Running on\x1b[0m: \x1b[32m${PORT}\x1b[0m`);
-
+    console.log(`\x1b[35m║\x1b[0m \x1b[33mServer Running on\x1b[0m: \x1b[32m${PORT}\x1b[0m                       ║`);
   });
-  console.log('\x1b[36m╚═══════════════════════════════════════════════╝\x1b[0m');
-
 };
 
 // Error report
@@ -287,6 +284,7 @@ app.use((err, req, res, next) => {
 });
 
 startServer();
+
 
 
 

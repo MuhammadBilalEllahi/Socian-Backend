@@ -9,21 +9,21 @@ class SocketServer {
     this.discussionUserCount = {};
     this.eventAttendees = {};
     this.subscriber = new valkeyClient('subscriber');
-    this.publisher = new valkeyClient('publisher');
+    this.publisher = new valkeyClient('publisher ');
     
     // Initialize Redis connections
-    this.initializeRedisConnections();
+    // this.initializeRedisConnections();
   }
 
-  async initializeRedisConnections() {
-    try {
-      await this.subscriber.connect();
-      await this.publisher.connect();
-      console.log("║ \x1b[33mRedis connections\x1b[0m: \x1b[32minitialized\x1b[0m           ║");
-    } catch (error) {
-      console.error("║ \x1b[31mRedis connection error\x1b[0m:", error.message, "║");
-    }
-  }
+  // async initializeRedisConnections() {
+  //   try {
+  //     await this.subscriber.connect();
+  //     await this.publisher.connect();
+  //     console.log("║ \x1b[33mRedis connections\x1b[0m: \x1b[32minitialized\x1b[0m                ║");
+  //   } catch (error) {
+  //     console.error("║ \x1b[31mRedis connection error\x1b[0m:", error.message, "║");
+  //   }
+  // }
 
   initSocketIO(app, server) {
     this.io = new Server(server, {

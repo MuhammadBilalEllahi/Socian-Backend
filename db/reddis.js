@@ -81,7 +81,7 @@ class RedisClient {
 
     attachEventListeners() {
         this.client.on('connect', () => {
-            console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Redis', 'Connected successfully');
+            console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Redis', 'Connected successfully                 ║');
         });
 
         this.client.on('error', (err) => {
