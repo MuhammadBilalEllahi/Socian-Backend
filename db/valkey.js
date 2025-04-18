@@ -6,9 +6,10 @@ class Valkey {
         this.type = type;
         const isDevelopment = process.env.NODE_ENV === 'development';
         this.client = new Redis(
-            isDevelopment ? {
-                url: process.env.VALKEY,
-            }:
+            isDevelopment ? 
+             process.env.VALKEY
+            
+            :
             {
             host: process.env.VALKEY_HOST,
             port: process.env.VALKEY_PORT,
@@ -19,7 +20,8 @@ class Valkey {
                 const delay = Math.min(times * 50, 2000);
                 return delay;
             }
-        });
+        }
+    );
 
         this.client.on('error', (error) => {
             console.error(`║ \x1b[31mValkey ${this.type} error\x1b[0m:`, error.message);
