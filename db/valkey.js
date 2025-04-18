@@ -4,13 +4,12 @@ class Valkey {
     constructor(type) {
         console.log("Valkey is Present->",process.env.VALKEY.toString().includes('beyondtheclass'));
         this.type = type;
-        this.client = new Redis( 
-            process.env.NODE_ENV === 'development' ? {
-                host: process.env.VALKEY,
-                tls: {},
+        const isDevelopment = process.env.NODE_ENV === 'development';
+        this.client = new Redis(
+            isDevelopment ? {
+                url: process.env.VALKEY,
             }:
             {
-            
             host: process.env.VALKEY_HOST,
             port: process.env.VALKEY_PORT,
             username: process.env.VALKEY_USERNAME,
@@ -27,7 +26,7 @@ class Valkey {
         });
 
         this.client.on('connect', () => {
-            console.log(`║ \x1b[33mValkey client\x1b[0m: \x1b[32m${type}\x1b[0m connected\x1b[0m           ║`);
+            console.log(`║ \x1b[33mValkey client\x1b[0m: \x1b[32m${type}\x1b[0m connected\x1b[0m ${isDevelopment ? 'Development' : 'Testing'}   ║`);
         });
     }
 
