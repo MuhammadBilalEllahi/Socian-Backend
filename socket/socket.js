@@ -1,5 +1,4 @@
 const { Server } = require("socket.io");
-const UserLocation = require("../../backend/models/gps/user.location.model");
 const valkeyClient = require("../db/valkey");
 
 class SocketServer {
@@ -42,7 +41,7 @@ class SocketServer {
 
   setupEventHandlers() {
     this.io.on("connection", (socket) => {
-      console.log(`User connected: ${socket.id}`);
+      console.log(`\x1b[31m║\x1b[0m  \x1b[36m•\x1b[0m \x1b[33mUser connected\x1b[0m: \x1b[4m\x1b[32m${socket.id}\x1b[0m       \x1b[31m║\x1b[0m`);
 
       this.setupDiscussionEvents(socket);
       this.setupLocationEvents(socket);
