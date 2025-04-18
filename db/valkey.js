@@ -2,8 +2,15 @@ const Redis = require("ioredis");
 
 class Valkey {
     constructor(type) {
+        console.log("Valkey is Present->",process.env.VALKEY.toString().includes('beyondtheclass'));
         this.type = type;
-        this.client = new Redis({
+        this.client = new Redis( 
+            process.env.NODE_ENV === 'development' ? {
+                host: process.env.VALKEY,
+                tls: {},
+            }:
+            {
+            
             host: process.env.VALKEY_HOST,
             port: process.env.VALKEY_PORT,
             username: process.env.VALKEY_USERNAME,
