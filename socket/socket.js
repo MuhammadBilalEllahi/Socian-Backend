@@ -1,6 +1,6 @@
 const { Server } = require("socket.io");
 const valkeyClient = require("../db/valkey");
-
+// const {produceMessage, startConsumer} = require("../db/kafka/kafka");
 class SocketServer {
   constructor() {
     this.io = null;
@@ -11,18 +11,20 @@ class SocketServer {
     this.publisher = new valkeyClient('publisher ');
     
     // Initialize Redis connections
-    // this.initializeRedisConnections();
+    this.initializeRedisConnections();
+
+    // startConsumer('discussion-chat');
   }
 
-  // async initializeRedisConnections() {
-  //   try {
-  //     await this.subscriber.connect();
-  //     await this.publisher.connect();
-  //     console.log("║ \x1b[33mRedis connections\x1b[0m: \x1b[32minitialized\x1b[0m                ║");
-  //   } catch (error) {
-  //     console.error("║ \x1b[31mRedis connection error\x1b[0m:", error.message, "║");
-  //   }
-  // }
+  async initializeRedisConnections() {
+    try {
+      await this.subscriber.connect();
+      await this.publisher.connect();
+      console.log("║ \x1b[33mRedis connections\x1b[0m: \x1b[32minitialized\x1b[0m                ║");
+    } catch (error) {
+      console.error("║ \x1b[31mRedis connection error\x1b[0m:", error.message, "║");
+    }
+  }
 
   initSocketIO(app, server) {
     this.io = new Server(server, {
@@ -49,7 +51,7 @@ class SocketServer {
     });
 
     // Enhanced subscriber event handling
-    this.subscriber.on("message", (channel, message) => {
+    this.subscriber.on("message", async (channel, message) => {
       try {
         console.log('║ \x1b[33mReceived message\x1b[0m:');
         console.log('║ Channel:', channel);
@@ -60,6 +62,7 @@ class SocketServer {
         
         // Emit to the specific channel
         this.io.to(channel).emit("message", parsedMessage);
+        // await produceMessage(channel, channel,parsedMessage);
         console.log('║ \x1b[32mMessage emitted successfully to channel\x1b[0m:', channel);
       } catch (error) {
         console.error('║ \x1b[31mError processing message\x1b[0m:', error.message);
