@@ -283,6 +283,13 @@ app.use((err, req, res, next) => {
   res.status(500).send("\x1b[31mSomething broke!\x1b[0m");
 });
 
+const chatBackupService = require('./services/chat-backup.service');
+
+// Start chat backup service
+chatBackupService.start().catch(error => {
+  console.error('║ \x1b[31mFailed to start chat backup service\x1b[0m:', error.message);
+});
+
 startServer();
 
 

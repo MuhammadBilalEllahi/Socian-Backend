@@ -6,6 +6,7 @@ const { DiscussionComment } = require("../../../models/university/papers/discuss
 const DiscussionCommentVote = require("../../../models/university/papers/discussion/vote.comment.discussion");
 const { PastPaperItem } = require("../../../models/university/papers/pastpaper.item.model");
 const { default: mongoose } = require("mongoose");
+const DiscussionChat = require("../../../models/university/papers/discussion/chat/discussion.chat");
 const router = express.Router();
 
 // Error handler middleware
@@ -47,6 +48,17 @@ router.post("/create-get", asyncHandler(async (req, res) => {
             return res.status(404).json({ error: "Past paper item not found" });
         }
 
+        const chat = await DiscussionChat.findByIdAndUpdate(
+            toBeDisccusedId,
+            {}, // no update
+            {
+              upsert: true,
+              new: true,
+              setDefaultsOnInsert: true
+            }
+          );
+          
+
         let discussion = await Discussion.findOne({ discussion_of: toBeDisccusedId })
             .populate({
                 path: 'discussioncomments',
@@ -79,6 +91,8 @@ router.post("/create-get", asyncHandler(async (req, res) => {
                 }
             });
 
+        
+
         if (discussion) {
             return res.status(200).json({ discussion });
         }
@@ -89,6 +103,7 @@ router.post("/create-get", asyncHandler(async (req, res) => {
             _id: toBeDisccusedId
         });
 
+      
         res.status(201).json({ discussion });
 
     } catch (error) {
