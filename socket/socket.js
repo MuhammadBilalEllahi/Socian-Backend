@@ -11,6 +11,13 @@ class SocketServer {
     this.eventAttendees = {};
     this.subscriber = new valkeyClient('subscriber');
     this.publisher = new valkeyClient('publisher');
+
+    //fyi this will help centralize the socket communitcation. 
+    // e.g server running on 2 machine with different port have different socket map.
+    //  thus only users in that map can communicate while others can not.
+    // this.gpsSubscriber = new valkeyClient('gpsSubscriber');
+    // this.gpsPublisher = new valkeyClient('gpsPublisher');
+
     this.streamConsumers = {};
     
     // Initialize Redis connections
@@ -18,7 +25,7 @@ class SocketServer {
     // startConsumer('discussion-chat');
   }
 
-  async startDiscussionStreamConsumer(discussionId) {
+  async startDiscussionStreamConsumer(discussionId, blockTime = 1000) {
     if (this.streamConsumers[discussionId]) return;
 
     const streamKey = `stream:${discussionId}`;
@@ -26,7 +33,6 @@ class SocketServer {
     const consumer = `consumer-${discussionId}`;
 
     try {
-      // Create stream group if it doesn't exist
       await this.publisher.xGroupCreate(streamKey, group, '0', { MKSTREAM: true });
       
       const loop = async () => {
@@ -36,72 +42,27 @@ class SocketServer {
             group,
             consumer,
             { key: streamKey, id: '>' },
-            { COUNT: 10, BLOCK: 5000 }
+            { COUNT: 10, BLOCK: blockTime }
           );
 
-          console.log("RESPONSE", JSON.stringify(response, null, 2))
-          const [streamData2] = response;
-          const [streamName2, messages2] = streamData2;
-
-          console.log("DATA RESPONSE",streamData2, streamName2, messages2 )
-
-          if (response && response != null && response.length > 0) {
+          if (response && response.length > 0) {
             const [streamData] = response;
             const [streamName, messages] = streamData;
 
-            console.log("DATA RESPONSE", streamData, streamName, messages)
-
             if (messages && messages.length > 0) {
-              console.log("LENGHT", messages.length)
               for (const [messageId, fields] of messages) {
-                // Convert array of fields to object
                 const messageData = {};
                 for (let i = 0; i < fields.length; i += 2) {
                   const key = fields[i];
                   const value = fields[i + 1];
                   try {
                     messageData[key] = JSON.parse(value);
-                    console.log("KEY", key, messageData[key], value)
                   } catch {
                     messageData[key] = value;
-                    console.log("KEY else", key, messageData[key], value)
                   }
                 }
-                console.log("MESSAGE DATa", messageData)
 
-                const {type,message,user,timestamp,discussionId, socketId} = messageData;
-                const {name,username,picture,_id} = user;
-                // Emit the parsed message
-                this.io.to(discussionId).emit("message", {
-                  type: type,
-                  message: message,
-                  socketId: socketId,
-                  // user: user,
-                  name: name,
-                  username: username,
-                  picture: picture,
-                  _id: _id,
-
-                  timestamp: timestamp,
-                  discussionId: discussionId,
-                  id: messageId
-                });
-
-                console.log("\n\n\n SENDING THIS", {
-                  type: type,
-                  message: message,
-                  user: user,
-                  name: name,
-                  username: username,
-                  picture: picture,
-                  _id: _id,
-
-                  timestamp: timestamp,
-                  discussionId: discussionId,
-                  id: messageId
-                })
-
-                // Acknowledge message
+                // Acknowledge message immediately
                 await this.subscriber.xAck(streamKey, group, messageId);
               }
             }
@@ -113,7 +74,7 @@ class SocketServer {
             console.error(`Stream read error for ${streamKey}:`, err.message);
           }
         } finally {
-          setTimeout(loop, 1000);
+          setTimeout(loop, 100);
         }
       };
 
@@ -169,6 +130,8 @@ class SocketServer {
       this.handleDisconnect(socket);
     });
 
+    // this.gpsSubscriber.on('')
+
     // Enhanced subscriber event handling
     // this.subscriber.on("message", async (channel, message) => {
     //   try {
@@ -196,25 +159,54 @@ class SocketServer {
 
   setupDiscussionEvents(socket) {
     socket.on("joinDiscussion", async (discussionId) => {
-      // this.subscriber.subscribe(discussionId);
-      this.startDiscussionStreamConsumer(discussionId)
+      // Start stream consumer with reduced block time
+      this.startDiscussionStreamConsumer(discussionId, 1000); // Reduced from 5000 to 1000ms
 
       console.log(`User joined discussion: ${discussionId}`);
       socket.join(discussionId);
+
+      // Fetch last 50 messages from Redis Stream in reverse order
+      const recentMessages = await this.publisher.xRevRange(
+        `stream:${discussionId}`,
+        '+',
+        '-',
+        { COUNT: 50 }
+      );
+
+      // Send them to the user in correct (old to new) order
+      if (recentMessages && recentMessages.length > 0) {
+        const parsedMessages = recentMessages.reverse().map(([id, fields]) => {
+          const messageData = {};
+          for (let i = 0; i < fields.length; i += 2) {
+            const key = fields[i];
+            const value = fields[i + 1];
+            try {
+              messageData[key] = JSON.parse(value);
+            } catch {
+              messageData[key] = value;
+            }
+          }
+          return messageData;
+        });
+
+        socket.emit("prevMessages", parsedMessages);
+      }
 
       if (!this.discussionUsers.has(discussionId)) {
         this.discussionUsers.set(discussionId, new Set());
       }
 
       this.discussionUsers.get(discussionId).add(socket.id);
-      console.log("discussionUsers", this.discussionUsers);
-      this.io.to(discussionId).emit("users", this.discussionUsers);
       this.io.to(discussionId).emit("usersCount", this.discussionUsers.get(discussionId)?.size ?? 0);
     });
 
     socket.on("removeUserFromDiscussion", (discussionId) => {
       console.log(`User removed from discussion: ${discussionId}`);
       socket.leave(discussionId);
+
+      // if(this.discussionUserCount.get(discussionId)?.size === 0){
+      //   this.streamConsumers[discussionId]=false;
+      // }
 
       this.discussionUsers.get(discussionId)?.delete(socket.id);
       this.io.to(discussionId).emit("usersCount", this.discussionUsers.get(discussionId)?.size ?? 0);
@@ -223,46 +215,53 @@ class SocketServer {
 
     socket.on("message", async (data) => {
       try {
-        console.log('║ \x1b[33mReceived message event\x1b[0m:', data);
-
         const { discussionId, message, user, timestamp = new Date() } = data;
 
         if (!discussionId || !message || !user) {
-          console.error('║ \x1b[31mInvalid message data\x1b[0m:', { discussionId, message, user });
+          console.error('Invalid message data:', { discussionId, message, user });
           return;
         }
-        
 
+        // Optimize message structure
         const streamMessage = {
-          discussionId: discussionId,
+          discussionId,
           type: 'message',
-          message: message,
+          message,
           socketId: socket.id,
-          user: {
+          
             _id: user._id,
             name: user.name,
             username: user.username,
-            picture: user.picture
-          },
+            picture: user.picture,
+          
           timestamp: timestamp.toISOString(),
         };
 
-        // Add to Redis stream
-        try {
-          const messageId = await this.publisher.xAdd(`stream:${discussionId}`, '*', streamMessage);
-          console.log('║ \x1b[32mMessage added to stream\x1b[0m:', discussionId, 'with ID:', messageId);
-        } catch (e) {
-          console.error("║ \x1b[31mError writing to stream\x1b[0m:", e.message);
-        }
+        // Add to Redis stream and emit immediately
+        const messageId = await this.publisher.xAdd(`stream:${discussionId}`, '*', streamMessage);
+        
+        // Emit message directly to room without waiting for stream processing
+        this.io.to(discussionId).emit("message", {
+          ...streamMessage,
+          id: messageId
+        });
+
       } catch (error) {
-        console.error('║ \x1b[31mError processing message\x1b[0m:', error.message);
+        console.error('Error processing message:', error.message);
       }
     });
   }
 
+  
+
   setupLocationEvents(socket) {
     socket.on("updateLocation", async (data) => {
-      const { userId, name, latitude, longitude, radius } = data;
+      const { userId, name, latitude, longitude, radius, campusId } = data;
+      // this.gpsSubscriber(campusId);  //? will apply this after discussion and refactoring with you.
+
+      // Why is there 2 different .on ? 
+      // why attendeneeLocationUpdate within updateLocation?
+      // Changing this would optimize the code as right now 2 kinds of functions are being done when only one funcion is required
 
       this.eventAttendees[socket.id] = { userId, name, latitude, longitude, radius };
 

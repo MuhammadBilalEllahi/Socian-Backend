@@ -202,63 +202,6 @@ pastPaperItemSchema.methods = {
         this.answerId = answer._id;
         return this.save();
     },
-
-    // async addStructuredQuestion(level, type, content, parentId = null) {
-
-
-    //     const depth = parentId ? await this.getQuestionDepth(parentId) + 1 : 0;
-    //     const orderIndex = await this.getNextOrderIndex(parentId);
-
-    //     const question = new StructuredQuestion({
-    //         level,
-    //         type,
-    //         content,
-    //         parent: parentId,
-    //         depth,
-    //         orderIndex
-    //     });
-    //     await question.save();
-
-    //     if (parentId) {
-    //         await StructuredQuestion.findByIdAndUpdate(parentId, {
-    //             $push: { subQuestions: question._id }
-    //         });
-    //     } else {
-    //         this.structuredQuestions.push(question._id);
-    //         await this.save();
-    //     }
-
-    //     this.metadata.totalQuestions++;
-    //     await this.save();
-
-    //     return question;
-    // },
-
-    // async getQuestionDepth(questionId) {
-
-    //     const question = await StructuredQuestion.findById(questionId);
-    //     return question ? question.depth : -1;
-    // },
-
-    // async getNextOrderIndex(parentId) {
-
-    //     if (parentId) {
-    //         const parent = await StructuredQuestion.findById(parentId);
-    //         return parent.subQuestions.length;
-    //     }
-    //     return this.structuredQuestions.length;
-    // },
-
-    // async linkAnswerToQuestion(questionId, answerId) {
-
-    //     await StructuredQuestion.findByIdAndUpdate(questionId, { answerId });
-
-    //     if (!this.metadata.answeredQuestions) {
-    //         this.metadata.answeredQuestions = 0;
-    //     }
-    //     this.metadata.answeredQuestions++;
-    //     await this.save();
-    // }
 };
 
 

@@ -12,6 +12,9 @@ const structuredQuestionAnswerSchema = new Schema({
     isCorrect: { type: Boolean, default: false },
     upVotes: { type: Number, default: 0 },
     downVotes: { type: Number, default: 0 },
+    answeredByUser: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    answeredAt: { type: Date, default: Date.now },
+    isDeleted: { type: Boolean, default: false },
 }, { timestamps: true });
 
 const StructuredQuestionAnswer = mongoose.model('StructuredQuestionAnswer', structuredQuestionAnswerSchema);

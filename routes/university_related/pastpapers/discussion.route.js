@@ -4,9 +4,10 @@ const User = require("../../../models/user/user.model");
 const { getUserDetails } = require("../../../utils/utils");
 const { DiscussionComment } = require("../../../models/university/papers/discussion/discussion.comment");
 const DiscussionCommentVote = require("../../../models/university/papers/discussion/vote.comment.discussion");
-const { PastPaperItem } = require("../../../models/university/papers/pastpaper.item.model");
+const { PastPaperItem, StructuredQuestion } = require("../../../models/university/papers/pastpaper.item.model");
 const { default: mongoose } = require("mongoose");
 const DiscussionChat = require("../../../models/university/papers/discussion/chat/discussion.chat");
+const StructuredQuestionCollection = require("../../../models/university/papers/structured/structured.collec.file.model");
 const router = express.Router();
 
 // Error handler middleware
@@ -115,40 +116,107 @@ router.post("/create-get", asyncHandler(async (req, res) => {
     }
 }));
 
+
+router.post('/create/question', async (req, res) => {
+    const { 
+        toBeDiscussedId, questionLevel, questionNumberOrAlphabet, questionContent
+        , parentId 
+    } = req.body;
+
+    const { userId } = getUserDetails(req);
+
+    try {
+        const pastPaperItem = await PastPaperItem.findById(toBeDiscussedId);
+        if (!pastPaperItem) {
+            return res.status(404).json({ message: "Past paper not found" });   
+        }
+
+        const data ={
+            questionLevel,
+            questionNumberOrAlphabet,
+            questionContent,
+            createdBy: userId
+        }
+        if(parentId){
+            data.parent = parentId;
+        }
+
+
+        const createQuestion = await StructuredQuestion.create(data);
+
+        await createQuestion.save();
+
+        if(parentId){
+            const parentQuestion = await StructuredQuestion.findByIdAndUpdate(parentId, {subQuestions: createQuestion._id}, { new: true });
+        }
+        let addToCollection = await StructuredQuestionCollection.findByIdAndUpdate(
+            toBeDiscussedId,
+            { $addToSet: { structuredQuestions: createQuestion._id } }, // or $push
+            { new: true }
+          );
+
+          if(!addToCollection){
+            addToCollection=  await StructuredQuestionCollection.create( {_id:toBeDiscussedId, structuredQuestions: [createQuestion._id] } );
+            addToCollection.save()
+        }
+
+        return res.status(201).json({
+            message: "Question created successfully",
+            data: createQuestion
+        });
+        }
+        catch (error) {
+            console.error("Error in create question in  discussion:", error);
+            return res.status(500).json({
+                message: "Error creating question in  discussion",
+                error: error.message
+            });
+        }
+});
+
+router.post('/questions/all', async (req, res) => {
+    const { 
+        toBeDiscussedId
+    } = req.body;
+    console.log("DISUSSION ID ", )
+
+    try {
+       
+        const questions = await StructuredQuestionCollection.findById( toBeDiscussedId ).populate("structuredQuestions")
+        if( !questions) {
+            return res.status(404).json({ message: "Questions not found", data:[] });
+        }
+
+        return res.status(200).json({
+            message: "Questions fetched successfully",
+            data: questions.structuredQuestions 
+        });
+        
+        }
+        catch (error) {
+            console.error("Error in create-get discussion:", error);
+            return res.status(500).json({
+                message: "Error creating/getting discussion",
+                error: error.message
+            });
+        }
+});
+
 // Add comment to discussion
 router.post('/comment/add-comment', async (req, res) => {
-    const { toBeDiscussedId, commentContent, type } = req.body;
+    const { toBeDiscussedId, commentContent } = req.body;
     const { userId } = getUserDetails(req);
 
     try {
 
-        // // Find discussion and validate structured question if provided
-        // const discussion = await Discussion.findOne({ discussion_of: toBeDiscussedId });
-        // if (!discussion) {
-        //     return res.status(404).json({ message: "Discussion not found" });
-        // }
+        const discussion = await Discussion.findOne({ discussion_of: toBeDiscussedId });
+        if (!discussion) {
+            return res.status(404).json({ message: "Discussion not found" });
+        }
 
         const pastPaperItem = await PastPaperItem.findById(toBeDiscussedId);
         if (!pastPaperItem) {
             return res.status(404).json({ message: "Past paper not found" });
-        }
-
-
-        let structuredQuestionId = null;
-        if (type === 'answer') {
-            const paper = await PastPaperItem.findById(toBeDiscussedId);
-            if (!paper) {
-                return res.status(404).json({ message: "Past paper not found" });
-            }
-
-            // Find or create structured question
-            const question = await paper.addStructuredQuestion(
-                questionTag.level,
-                questionTag.type,
-                questionTag.content,
-                questionTag.parentId
-            );
-            structuredQuestionId = question._id;
         }
 
         // Start transaction
@@ -166,15 +234,8 @@ router.post('/comment/add-comment', async (req, res) => {
             const comment = new DiscussionComment({
                 content: commentContent,
                 user: userId,
-                type: questionTag?.isAnswer ? 'answer' : 'discussionComment',
+                type:  'discussionComment',
                 paperId: toBeDiscussedId,
-                structuredQuestionId,
-                questionTag: questionTag ? {
-                    level: questionTag.level,
-                    type: questionTag.type,
-                    content: questionTag.content,
-                    isAnswer: questionTag.isAnswer
-                } : null,
                 voteId: voteDoc[0]._id
             });
 
@@ -184,12 +245,6 @@ router.post('/comment/add-comment', async (req, res) => {
             // Update discussion
             discussion.discussioncomments.push(savedComment._id);
             await discussion.save({ session });
-
-            // If this is an answer, link it to the structured question
-            if (questionTag?.isAnswer && structuredQuestionId) {
-                const paper = await PastPaperItem.findById(toBeDiscussedId);
-                await paper.linkAnswerToQuestion(structuredQuestionId, savedComment._id);
-            }
 
             // Populate comment
             await savedComment.populate([
@@ -222,7 +277,7 @@ router.post('/comment/add-comment', async (req, res) => {
 
 // Reply to a comment
 router.post('/comment/reply-to-comment', asyncHandler(async (req, res) => {
-    const { commentId, replyContent, questionTag } = req.body;
+    const { commentId, replyContent } = req.body;
     const { userId } = getUserDetails(req);
 
     const user = await User.findById(userId);
@@ -237,10 +292,7 @@ router.post('/comment/reply-to-comment', asyncHandler(async (req, res) => {
         const reply = new DiscussionComment({
             content: replyContent,
             user: user._id,
-            questionTag: questionTag && {
-                ...questionTag,
-                isAnswer: true
-            }
+            type: 'discussionComment',
         });
         await reply.save({ session });
 
@@ -286,6 +338,107 @@ router.post('/comment/reply-to-comment', asyncHandler(async (req, res) => {
         session.endSession();
     }
 }));
+// Vote on a comment
+router.post("/comment/vote", asyncHandler(async (req, res) => {
+    const { commentId, voteType } = req.body;
+
+    try {
+        const { userId } = getUserDetails(req);
+        const session = await mongoose.startSession();
+
+        await session.withTransaction(async () => {
+            const voteDoc = await DiscussionCommentVote.findById(commentId).session(session);
+            if (!voteDoc) {
+                throw new Error("Comment vote not found");
+            }
+
+            const currentVote = voteDoc.userVotes.get(userId) || null;
+
+            if (currentVote !== null && currentVote !== voteType) {
+                const updateOps = {
+                    $set: { [`userVotes.${userId}`]: voteType }
+                };
+
+                if (currentVote === 'upvote') {
+                    updateOps.$inc = { upVotesCount: -1 };
+                } else if (currentVote === 'downvote') {
+                    updateOps.$inc = { downVotesCount: -1 };
+                }
+
+                if (voteType === 'upvote') {
+                    updateOps.$inc = { ...updateOps.$inc, upVotesCount: 1 };
+                } else if (voteType === 'downvote') {
+                    updateOps.$inc = { ...updateOps.$inc, downVotesCount: 1 };
+                }
+
+                const voteDocUpdated = await DiscussionCommentVote.findByIdAndUpdate(
+                    commentId,
+                    updateOps,
+                    { session, new: true }
+                );
+
+                return res.status(200).json({
+                    message: "Vote reprocessed successfully",
+                    upVotesCount: voteDocUpdated.upVotesCount,
+                    downVotesCount: voteDocUpdated.downVotesCount
+                });
+            }
+
+            if (currentVote === voteType) {
+                const updateOps = {
+                    $set: { [`userVotes.${userId}`]: null }
+                };
+
+                if (voteType === 'upvote') {
+                    updateOps.$inc = { upVotesCount: -1 };
+                } else if (voteType === 'downvote') {
+                    updateOps.$inc = { downVotesCount: -1 };
+                }
+
+                const voteDocUpdated = await DiscussionCommentVote.findByIdAndUpdate(
+                    commentId,
+                    updateOps,
+                    { session, new: true }
+                );
+
+                return res.status(200).json({
+                    message: "Vote removed successfully",
+                    upVotesCount: voteDocUpdated.upVotesCount,
+                    downVotesCount: voteDocUpdated.downVotesCount,
+                    noneSelected: true
+                });
+            }
+
+            const updateOps = {
+                $set: { [`userVotes.${userId}`]: voteType }
+            };
+
+            if (voteType === 'upvote') {
+                updateOps.$inc = { upVotesCount: 1 };
+            } else if (voteType === 'downvote') {
+                updateOps.$inc = { downVotesCount: 1 };
+            }
+
+            const voteDocUpdated = await DiscussionCommentVote.findByIdAndUpdate(
+                commentId,
+                updateOps,
+                { session, new: true }
+            );
+
+            return res.status(200).json({
+                message: "Vote processed successfully",
+                upVotesCount: voteDocUpdated.upVotesCount,
+                downVotesCount: voteDocUpdated.downVotesCount
+            });
+        });
+
+        session.endSession();
+    } catch (error) {
+        console.error("Error processing vote:", error.message);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+}));
+
 
 // Update comment tag
 router.post("/comment/update-tag/:commentId", asyncHandler(async (req, res) => {
@@ -463,106 +616,7 @@ router.delete("/comment/:commentId", asyncHandler(async (req, res) => {
     }
 }));
 
-// Vote on a comment
-router.post("/comment/vote", asyncHandler(async (req, res) => {
-    const { commentId, voteType } = req.body;
 
-    try {
-        const { userId } = getUserDetails(req);
-        const session = await mongoose.startSession();
-
-        await session.withTransaction(async () => {
-            const voteDoc = await DiscussionCommentVote.findById(commentId).session(session);
-            if (!voteDoc) {
-                throw new Error("Comment vote not found");
-            }
-
-            const currentVote = voteDoc.userVotes.get(userId) || null;
-
-            if (currentVote !== null && currentVote !== voteType) {
-                const updateOps = {
-                    $set: { [`userVotes.${userId}`]: voteType }
-                };
-
-                if (currentVote === 'upvote') {
-                    updateOps.$inc = { upVotesCount: -1 };
-                } else if (currentVote === 'downvote') {
-                    updateOps.$inc = { downVotesCount: -1 };
-                }
-
-                if (voteType === 'upvote') {
-                    updateOps.$inc = { ...updateOps.$inc, upVotesCount: 1 };
-                } else if (voteType === 'downvote') {
-                    updateOps.$inc = { ...updateOps.$inc, downVotesCount: 1 };
-                }
-
-                const voteDocUpdated = await DiscussionCommentVote.findByIdAndUpdate(
-                    commentId,
-                    updateOps,
-                    { session, new: true }
-                );
-
-                return res.status(200).json({
-                    message: "Vote reprocessed successfully",
-                    upVotesCount: voteDocUpdated.upVotesCount,
-                    downVotesCount: voteDocUpdated.downVotesCount
-                });
-            }
-
-            if (currentVote === voteType) {
-                const updateOps = {
-                    $set: { [`userVotes.${userId}`]: null }
-                };
-
-                if (voteType === 'upvote') {
-                    updateOps.$inc = { upVotesCount: -1 };
-                } else if (voteType === 'downvote') {
-                    updateOps.$inc = { downVotesCount: -1 };
-                }
-
-                const voteDocUpdated = await DiscussionCommentVote.findByIdAndUpdate(
-                    commentId,
-                    updateOps,
-                    { session, new: true }
-                );
-
-                return res.status(200).json({
-                    message: "Vote removed successfully",
-                    upVotesCount: voteDocUpdated.upVotesCount,
-                    downVotesCount: voteDocUpdated.downVotesCount,
-                    noneSelected: true
-                });
-            }
-
-            const updateOps = {
-                $set: { [`userVotes.${userId}`]: voteType }
-            };
-
-            if (voteType === 'upvote') {
-                updateOps.$inc = { upVotesCount: 1 };
-            } else if (voteType === 'downvote') {
-                updateOps.$inc = { downVotesCount: 1 };
-            }
-
-            const voteDocUpdated = await DiscussionCommentVote.findByIdAndUpdate(
-                commentId,
-                updateOps,
-                { session, new: true }
-            );
-
-            return res.status(200).json({
-                message: "Vote processed successfully",
-                upVotesCount: voteDocUpdated.upVotesCount,
-                downVotesCount: voteDocUpdated.downVotesCount
-            });
-        });
-
-        session.endSession();
-    } catch (error) {
-        console.error("Error processing vote:", error.message);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-}));
 
 // Get structured questions for a past paper
 router.get('/structured-questions/:paperId', async (req, res) => {

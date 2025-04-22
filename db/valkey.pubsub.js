@@ -102,6 +102,23 @@ class Valkey {
         }
     }
 
+    async xRevRange(streamKey, start = '+', end = '-', options = {}) {
+        try {
+            const args = [streamKey, start, end];
+            
+            if (options.COUNT) {
+                args.push('COUNT', options.COUNT);
+            }
+            
+            const result = await this.client.xrevrange(...args);
+            console.log('║ \x1b[32mStream reverse range read successful\x1b[0m:', streamKey);
+            return result;
+        } catch (error) {
+            console.error('║ \x1b[31mError reading from stream reverse range\x1b[0m:', error.message);
+            throw error;
+        }
+    }
+
     async xGroupCreate(streamKey, groupName, id, options = {}) {
         try {
             const args = ['CREATE', streamKey, groupName, id];
@@ -133,7 +150,7 @@ class Valkey {
             args.push(streams.id);
             
             const result = await this.client.xreadgroup(...args);
-            console.log('║ \x1b[32mStream read successful\x1b[0m:', streams.key);
+            // console.log('║ \x1b[32mStream read successful\x1b[0m:', streams.key);
             return result;
         } catch (error) {
             console.error('║ \x1b[31mError reading from stream\x1b[0m:', error.message);

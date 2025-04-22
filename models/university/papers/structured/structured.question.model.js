@@ -8,19 +8,14 @@ const structuredQuestionSchema = new Schema({
     // structred collection id is asame as the ?!!! pastpaper item id ??!!!
     structuredQuestionCollectionId: { type: Schema.Types.ObjectId, ref: 'StructuredQuestionCollection' },
 
-    // For backward compatibility and easier querying
-    questionNumber: { type: String, required: true }, // The full hierarchical path (e.g., "1.a.i")
-
-    // Using a more flexible approach with an array to handle question hierarchy
-    // This allows for unlimited nesting levels without predefined fields
-    questionHierarchy: [{
-        level: { type: Number, required: true }, // Position in the hierarchy (0 for main question, 1 for sub, etc.)
-        value: { type: String, required: true }  // The actual number or letter at this level
-    }],
-
-    fullPath: { type: String }, // The full hierarchical path (e.g., "1.a.i")
 
     questionContent: { type: String },
+
+    // For backward compatibility and easier querying
+    questionNumberOrAlphabet: { type: String, required: true,default: '1' }, // e.g., "1", "2", "3", "A", "B", "C"
+    level: { type: Number, required: true, default: 0 },
+    fullPath: { type: String }, // The full hierarchical path (e.g., "1.a.i")
+
 
     // Reference to answers instead of embedding them
     answers: [{ type: Schema.Types.ObjectId, ref: 'StructuredQuestionAnswer' }],
@@ -29,9 +24,12 @@ const structuredQuestionSchema = new Schema({
 
     subQuestions: [{ type: Schema.Types.ObjectId, ref: 'StructuredQuestion' }],
 
-    // has depth 3 but is at index 2
-    depth: { type: Number, required: true }, // 0 for main questions, increases for sub-levels
-    orderIndex: { type: Number, required: true }, // To maintain order within same level
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+    isDeleted: { type: Boolean, default: false },
+    isApproved: { type: Boolean, default: true },
+
 
     metadata: {
         totalAnswers: { type: Number, default: 0 },
