@@ -8,6 +8,8 @@ const { PastPaperItem, StructuredQuestion } = require("../../../models/universit
 const { default: mongoose } = require("mongoose");
 const DiscussionChat = require("../../../models/university/papers/discussion/chat/discussion.chat");
 const StructuredQuestionCollection = require("../../../models/university/papers/structured/structured.collec.file.model");
+const StructuredAnswer = require("../../../models/university/papers/structured/answers.structured.model");
+const StructuredVote = require("../../../models/university/papers/structured/vote.answers.model");
 const router = express.Router();
 
 // Error handler middleware
@@ -53,12 +55,12 @@ router.post("/create-get", asyncHandler(async (req, res) => {
             toBeDisccusedId,
             {}, // no update
             {
-              upsert: true,
-              new: true,
-              setDefaultsOnInsert: true
+                upsert: true,
+                new: true,
+                setDefaultsOnInsert: true
             }
-          );
-          
+        );
+
 
         let discussion = await Discussion.findOne({ discussion_of: toBeDisccusedId })
             .populate({
@@ -92,7 +94,7 @@ router.post("/create-get", asyncHandler(async (req, res) => {
                 }
             });
 
-        
+
 
         if (discussion) {
             return res.status(200).json({ discussion });
@@ -104,7 +106,7 @@ router.post("/create-get", asyncHandler(async (req, res) => {
             _id: toBeDisccusedId
         });
 
-      
+
         res.status(201).json({ discussion });
 
     } catch (error) {
@@ -118,9 +120,9 @@ router.post("/create-get", asyncHandler(async (req, res) => {
 
 
 router.post('/create/question', async (req, res) => {
-    const { 
+    const {
         toBeDiscussedId, questionLevel, questionNumberOrAlphabet, questionContent
-        , parentId 
+        , parentId
     } = req.body;
 
     const { userId } = getUserDetails(req);
@@ -128,16 +130,17 @@ router.post('/create/question', async (req, res) => {
     try {
         const pastPaperItem = await PastPaperItem.findById(toBeDiscussedId);
         if (!pastPaperItem) {
-            return res.status(404).json({ message: "Past paper not found" });   
+            return res.status(404).json({ message: "Past paper not found" });
         }
 
-        const data ={
-            questionLevel,
+        const data = {
+            structuredQuestionCollectionId: toBeDiscussedId,
+            level: questionLevel,
             questionNumberOrAlphabet,
             questionContent,
             createdBy: userId
         }
-        if(parentId){
+        if (parentId) {
             data.parent = parentId;
         }
 
@@ -146,17 +149,17 @@ router.post('/create/question', async (req, res) => {
 
         await createQuestion.save();
 
-        if(parentId){
-            const parentQuestion = await StructuredQuestion.findByIdAndUpdate(parentId, {subQuestions: createQuestion._id}, { new: true });
+        if (parentId) {
+            const parentQuestion = await StructuredQuestion.findByIdAndUpdate(parentId, { subQuestions: createQuestion._id }, { new: true });
         }
         let addToCollection = await StructuredQuestionCollection.findByIdAndUpdate(
             toBeDiscussedId,
             { $addToSet: { structuredQuestions: createQuestion._id } }, // or $push
             { new: true }
-          );
+        );
 
-          if(!addToCollection){
-            addToCollection=  await StructuredQuestionCollection.create( {_id:toBeDiscussedId, structuredQuestions: [createQuestion._id] } );
+        if (!addToCollection) {
+            addToCollection = await StructuredQuestionCollection.create({ _id: toBeDiscussedId, structuredQuestions: [createQuestion._id] });
             addToCollection.save()
         }
 
@@ -164,43 +167,197 @@ router.post('/create/question', async (req, res) => {
             message: "Question created successfully",
             data: createQuestion
         });
-        }
-        catch (error) {
-            console.error("Error in create question in  discussion:", error);
-            return res.status(500).json({
-                message: "Error creating question in  discussion",
-                error: error.message
-            });
-        }
+    }
+    catch (error) {
+        console.error("Error in create question in  discussion:", error);
+        return res.status(500).json({
+            message: "Error creating question in  discussion",
+            error: error.message
+        });
+    }
 });
 
 router.post('/questions/all', async (req, res) => {
-    const { 
+    const {
         toBeDiscussedId
     } = req.body;
-    console.log("DISUSSION ID ", )
+    console.log("DISUSSION ID ",)
 
     try {
-       
-        const questions = await StructuredQuestionCollection.findById( toBeDiscussedId ).populate("structuredQuestions")
-        if( !questions) {
-            return res.status(404).json({ message: "Questions not found", data:[] });
+
+        const questions = await StructuredQuestionCollection.findById(toBeDiscussedId).populate("structuredQuestions")
+        if (!questions) {
+            return res.status(404).json({ message: "Questions not found", data: [] });
         }
 
         return res.status(200).json({
             message: "Questions fetched successfully",
-            data: questions.structuredQuestions 
+            data: questions.structuredQuestions
         });
-        
-        }
-        catch (error) {
-            console.error("Error in create-get discussion:", error);
-            return res.status(500).json({
-                message: "Error creating/getting discussion",
-                error: error.message
-            });
-        }
+
+    }
+    catch (error) {
+        console.error("Error in create-get discussion:", error);
+        return res.status(500).json({
+            message: "Error creating/getting discussion",
+            error: error.message
+        });
+    }
 });
+
+async function populateSubQuestions(question, parentPrefix = '') {
+    const populated = await StructuredQuestion.findById(question._id).populate('subQuestions');
+
+    if (!populated) return question;
+
+    const currentPrefix = parentPrefix
+        ? `${parentPrefix}.${populated.questionNumberOrAlphabet}`
+        : populated.questionNumberOrAlphabet;
+
+    // Assign the full hierarchical prefix
+    populated.fullQuestionNumberOrAlphabet = currentPrefix;
+
+    populated.subQuestions = await Promise.all(
+        populated.subQuestions.map(subQ => populateSubQuestions(subQ, currentPrefix))
+    );
+
+    return populated;
+}
+
+
+router.post('/parent-questions/populated/all', async (req, res) => {
+    const { toBeDiscussedId } = req.body;
+
+    try {
+        const parentQuestions = await StructuredQuestion.find({
+            structuredQuestionCollectionId: toBeDiscussedId,
+            parent: { $exists: false }
+        });
+
+        if (!parentQuestions || parentQuestions.length === 0) {
+            return res.status(404).json({ message: "Questions not found", data: [] });
+        }
+
+        const fullyPopulated = await Promise.all(
+            parentQuestions.map(question => populateSubQuestions(question))
+        );
+        // console.log("FULLY POPULATED ", JSON.stringify(fullyPopulated, null, 2))
+
+        return res.status(200).json({
+            message: "Questions fetched successfully",
+            data: fullyPopulated
+        });
+
+    } catch (error) {
+        console.error("Error in create-get discussion:", error);
+        return res.status(500).json({
+            message: "Error creating/getting discussion",
+            error: error.message
+        });
+    }
+});
+
+
+
+router.post('/parent-questions/all', async (req, res) => {
+    const {
+        toBeDiscussedId
+    } = req.body;
+    console.log("DISUSSION ID ",)
+
+    try {
+
+        const questions = await StructuredQuestion.find({ structuredQuestionCollectionId: toBeDiscussedId, parent: { $exists: false } });
+        console.log("QUESTIONS ", questions)
+        if (!questions) {
+            return res.status(404).json({ message: "Questions not found", data: [] });
+        }
+
+        return res.status(200).json({
+            message: "Questions fetched successfully",
+            data: questions
+        });
+
+    }
+    catch (error) {
+        console.error("Error in create-get discussion:", error);
+        return res.status(500).json({
+            message: "Error creating/getting discussion",
+            error: error.message
+        });
+    }
+});
+
+router.post('/sub-questions/all', async (req, res) => {
+    const {
+        toBeDiscussedId,
+        parentId
+    } = req.body;
+    console.log("DISUSSION ID ",)
+
+    try {
+
+        const questions = await StructuredQuestion.find({ parent: parentId })
+        if (!questions) {
+            return res.status(404).json({ message: "Questions not found", data: [] });
+        }
+
+        return res.status(200).json({
+            message: "Questions fetched successfully",
+            data: questions
+        });
+
+    }
+    catch (error) {
+        console.error("Error in create-get discussion:", error);
+        return res.status(500).json({
+            message: "Error creating/getting discussion",
+            error: error.message
+        });
+    }
+});
+
+router.post('/create/answer', async (req, res) => {
+    const { toBeDiscussedId, questionId, answer } = req.body;
+    const { userId } = getUserDetails(req);
+
+    console.log("TO BE DISCUSSED ID ", toBeDiscussedId, "QUESTION ID ", questionId, "ANSWER ", answer)
+    try {
+
+        const answerData = {
+            questionId: questionId,
+            paperId: toBeDiscussedId,
+            content: answer,
+            answeredByUser: userId
+        }
+        const createAnswer = await StructuredAnswer.create(answerData);
+        await createAnswer.save();
+
+        if (createAnswer) {
+            const createStructuredCommentVote = await StructuredVote.create({ answerId: createAnswer._id });
+            await createStructuredCommentVote.save();
+        }
+
+        const question = await StructuredQuestion.findByIdAndUpdate(questionId, { $push: { answers: createAnswer._id } }, { new: true });
+        if (!question) {
+            return res.status(404).json({ message: "Question not found" });
+        }
+
+
+
+
+        return res.status(200).json({
+            message: "Answer added successfully",
+            data: createAnswer
+        });
+    } catch (error) {
+        console.error("Error in adding answer to question:", error);
+        return res.status(500).json({
+            message: "Error adding answer to question",
+            error: error.message
+        });
+    }
+})
 
 // Add comment to discussion
 router.post('/comment/add-comment', async (req, res) => {
@@ -234,7 +391,7 @@ router.post('/comment/add-comment', async (req, res) => {
             const comment = new DiscussionComment({
                 content: commentContent,
                 user: userId,
-                type:  'discussionComment',
+                type: 'discussionComment',
                 paperId: toBeDiscussedId,
                 voteId: voteDoc[0]._id
             });

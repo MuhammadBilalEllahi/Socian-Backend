@@ -11,19 +11,10 @@ const discussionCommentSchema = new mongoose.Schema({
         ref: "DiscussionCommentVote",
     },
     type: { type: String, enum: ['discussionComment', 'answer'], default: 'discussionComment' },
-    paperId: { type: mongoose.Schema.Types.ObjectId, ref: 'PastPaperItem' },
-    structuredQuestionId: { type: mongoose.Schema.Types.ObjectId, ref: 'StructuredQuestion' },
-
-
     replies: [{ type: mongoose.Schema.Types.ObjectId, ref: 'DiscussionComment' }],
 
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
-    isVotedAnswer: { type: Boolean, default: false },
-    isCorrectAnswer: { type: Boolean, default: false },
-
-    isNotAnAnswer: { type: Boolean, default: this.type === 'discussionComment' },
-    reportedAsNotAnAnswer: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 }, { timestamps: true });
 
 
