@@ -10,6 +10,7 @@ const DiscussionChat = require("../../../models/university/papers/discussion/cha
 const StructuredQuestionCollection = require("../../../models/university/papers/structured/structured.collec.file.model");
 const StructuredAnswer = require("../../../models/university/papers/structured/answers.structured.model");
 const StructuredVote = require("../../../models/university/papers/structured/vote.answers.model");
+const path = require("path");
 const router = express.Router();
 
 // Error handler middleware
@@ -122,7 +123,7 @@ router.post("/create-get", asyncHandler(async (req, res) => {
 router.post('/create/question', async (req, res) => {
     const {
         toBeDiscussedId, questionLevel, questionNumberOrAlphabet, questionContent
-        , parentId
+        , parentId, fullPath
     } = req.body;
 
     const { userId } = getUserDetails(req);
@@ -138,6 +139,7 @@ router.post('/create/question', async (req, res) => {
             level: questionLevel,
             questionNumberOrAlphabet,
             questionContent,
+            fullPath: fullPath,
             createdBy: userId
         }
         if (parentId) {
@@ -205,6 +207,48 @@ router.post('/questions/all', async (req, res) => {
     }
 });
 
+
+router.post('/questions/populated/all', async (req, res) => {
+    const {
+        toBeDiscussedId
+    } = req.body;
+    console.log("DISUSSION ID ",toBeDiscussedId)
+
+    try {
+
+        const questions = await StructuredQuestionCollection.findById(toBeDiscussedId).populate(
+            [
+                {
+                    path: "structuredQuestions",
+                    populate: [{
+                        path: "answers",
+                        populate: [{path:"voteId"}, {path: "answeredByUser", select: "name profile username"}]
+                    },
+                    { path: "createdBy", select: "name profile username" },
+                    ]
+                }
+            ]
+        )
+        console.log("QUESTIONS ", JSON.stringify(questions, null, 2))
+        if (!questions) {
+            return res.status(404).json({ message: "Questions not found", data: [] });
+        }
+
+        return res.status(200).json({
+            message: "Questions fetched successfully",
+            answers: questions.structuredQuestions
+        });
+
+    }
+    catch (error) {
+        console.error("Error in create-get discussion:", error);
+        return res.status(500).json({
+            message: "Error creating/getting discussion",
+            error: error.message
+        });
+    }
+});
+
 async function populateSubQuestions(question, parentPrefix = '') {
     const populated = await StructuredQuestion.findById(question._id).populate('subQuestions');
 
@@ -215,7 +259,7 @@ async function populateSubQuestions(question, parentPrefix = '') {
         : populated.questionNumberOrAlphabet;
 
     // Assign the full hierarchical prefix
-    populated.fullQuestionNumberOrAlphabet = currentPrefix;
+    populated.fullPath = currentPrefix;
 
     populated.subQuestions = await Promise.all(
         populated.subQuestions.map(subQ => populateSubQuestions(subQ, currentPrefix))

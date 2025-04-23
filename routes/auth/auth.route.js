@@ -73,6 +73,13 @@ router.post("/login", async (req, res) => {
     // console.log("login log", universityId, campusId, email, password);
     const platform = req.headers["x-platform"];
 
+    
+    if (!email) return res.status(400).json({ error: "Email is required" });
+    email.trim();
+    if (!password) return res.status(400).json({ error: "Password is required" });
+    password.trim();
+    
+    
     let query = {
       $or: [
         { universityEmail: email },

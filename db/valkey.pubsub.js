@@ -2,7 +2,14 @@ const Redis = require("ioredis");
 
 class Valkey {
     constructor(type) {
-        console.log("║ \x1bValkey is Present->",process.env.VALKEY.toString().includes('beyondtheclass'));
+        const valkeyEnv = process.env.VALKEY;
+
+if (valkeyEnv) {
+    console.log("║ \x1bValkey is Present->", valkeyEnv.toString().includes('beyondtheclass'));
+} else {
+    console.warn("║ \x1b[33mVALKEY environment variable is not defined\x1b[0m");
+}
+        // console.log("║ \x1bValkey is Present->",process.env.VALKEY.toString().includes('beyondtheclass'));
         this.type = type;
         const isDevelopment = process.env.NODE_ENV === 'development';
         this.client = new Redis(

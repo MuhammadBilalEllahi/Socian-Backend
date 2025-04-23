@@ -164,6 +164,7 @@ const aiRouter = require('./routes/aiRoutes/ai.routes.js');
 const eventRouter = require('./routes/GPS/event.attendance.route.js')(io);
 
 const locationRouter= require('./routes/GPS/location.sharing.route.js')
+const gatheringRouter= require('./routes/GPS/gathering.route.js')
 
 
 
@@ -198,6 +199,8 @@ app.use("/api/ai", protectRoute, aiRouter);
 
 
 app.use("/api/location", protectRoute, locationRouter);
+// app.use("/api/gatherings", protectRoute, gatheringRouter);
+app.use("/api/gatherings", gatheringRouter);
 app.use("/api/event", protectRoute, eventRouter);
 
 // cafe role doesnot exist
