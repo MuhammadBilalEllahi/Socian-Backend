@@ -75,7 +75,7 @@ class RedisClient {
             if (!process.env.VALKEY) {
                 throw new Error('REDIS_URL is not defined in the production environment.');
             }
-            return new Redis(process.env.VALKEY);
+            return new Redis(process.env.VALKEY2);
         // }
     }
 
