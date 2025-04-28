@@ -15,6 +15,9 @@ class RedisClient {
         if (!multiInstance) {
             RedisClient.instance = this;
         }
+        this.client.on('connect', () => {
+            console.log(`║ \x1b[33mREDIS client\x1b[0m: \x1b[32m\x1b[0m connected  ║`);
+        });
     }
 
     get(key) {

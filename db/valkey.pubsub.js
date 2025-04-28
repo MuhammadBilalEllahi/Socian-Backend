@@ -13,21 +13,21 @@ if (valkeyEnv) {
         this.type = type;
         const isDevelopment = process.env.NODE_ENV === 'development';
         this.client = new Redis(
-            isDevelopment ? 
+            // isDevelopment ? 
              process.env.VALKEY
             
-            :
-            {
-            host: process.env.VALKEY_HOST,
-            port: process.env.VALKEY_PORT,
-            username: process.env.VALKEY_USERNAME,
-            password: process.env.VALKEY_PASSWORD,
-            tls: {},
-            retryStrategy: (times) => {
-                const delay = Math.min(times * 50, 2000);
-                return delay;
-            }
-        }
+        //     :
+        //     {
+        //     host: process.env.VALKEY_HOST,
+        //     port: process.env.VALKEY_PORT,
+        //     username: process.env.VALKEY_USERNAME,
+        //     password: process.env.VALKEY_PASSWORD,
+        //     tls: {},
+        //     retryStrategy: (times) => {
+        //         const delay = Math.min(times * 50, 2000);
+        //         return delay;
+        //     }
+        // }
     );
 
         this.client.on('error', (error) => {
