@@ -1,9 +1,11 @@
+
+
 const mongoose = require("mongoose");
 
 const gatheringSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
-  creatorId: { type: String, ref: "User", required: true },
+  creatorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   location: {
     latitude: { type: Number, required: true },
     longitude: { type: Number, required: true },
@@ -12,12 +14,13 @@ const gatheringSchema = new mongoose.Schema({
   startTime: { type: Date, required: true },
   endTime: { type: Date, required: true },
   attendees: [{
-    userId: { type: String, ref: "User" },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    name: { type: String, required: true }, // Added name field
     location: {
-      latitude: Number,
-      longitude: Number,
+      latitude: { type: Number, required: true },
+      longitude: { type: Number, required: true },
     },
-    timestamp: { type: Date, default: Date.now }
+    timestamp: { type: Date, required: true, default: Date.now }
   }],
   createdAt: { type: Date, default: Date.now }
 });

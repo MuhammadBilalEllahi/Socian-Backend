@@ -199,8 +199,8 @@ app.use("/api/ai", protectRoute, aiRouter);
 
 
 app.use("/api/location", protectRoute, locationRouter);
-// app.use("/api/gatherings", protectRoute, gatheringRouter);
-app.use("/api/gatherings", gatheringRouter);
+app.use("/api/gatherings", protectRoute, gatheringRouter);
+// app.use("/api/gatherings", gatheringRouter);
 app.use("/api/event", protectRoute, eventRouter);
 
 // cafe role doesnot exist

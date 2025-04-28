@@ -11,6 +11,7 @@ const StructuredQuestionCollection = require("../../../models/university/papers/
 const StructuredAnswer = require("../../../models/university/papers/structured/answers.structured.model");
 const StructuredVote = require("../../../models/university/papers/structured/vote.answers.model");
 const path = require("path");
+const { StructuredComment } = require("../../../models/university/papers/structured/comment.answers.structure.model");
 const router = express.Router();
 
 // Error handler middleware
@@ -183,7 +184,7 @@ router.post('/questions/all', async (req, res) => {
     const {
         toBeDiscussedId
     } = req.body;
-    console.log("DISUSSION ID ",)
+    // console.log("DISUSSION ID ",)
 
     try {
 
@@ -212,24 +213,26 @@ router.post('/questions/populated/all', async (req, res) => {
     const {
         toBeDiscussedId
     } = req.body;
-    console.log("DISUSSION ID ",toBeDiscussedId)
+    // console.log("DISUSSION ID ", toBeDiscussedId)
 
     try {
 
-        const questions = await StructuredQuestionCollection.findById(toBeDiscussedId).populate(
+        const questions = await StructuredQuestionCollection.findById(toBeDiscussedId, {isDeleted: false}).populate(
             [
                 {
                     path: "structuredQuestions",
+                    match: { isDeleted: false },
                     populate: [{
                         path: "answers",
-                        populate: [{path:"voteId"}, {path: "answeredByUser", select: "name profile username"}]
+                        match: { isDeleted: false },
+                        populate: [{ path: "voteId" }, { path: "answeredByUser", select: "name profile username" }]
                     },
                     { path: "createdBy", select: "name profile username" },
                     ]
                 }
             ]
         )
-        console.log("QUESTIONS ", JSON.stringify(questions, null, 2))
+        // console.log("QUESTIONS ", JSON.stringify(questions, null, 2))
         if (!questions) {
             return res.status(404).json({ message: "Questions not found", data: [] });
         }
@@ -249,24 +252,24 @@ router.post('/questions/populated/all', async (req, res) => {
     }
 });
 
-async function populateSubQuestions(question, parentPrefix = '') {
-    const populated = await StructuredQuestion.findById(question._id).populate('subQuestions');
+// async function populateSubQuestions(question, parentPrefix = '') {
+//     const populated = await StructuredQuestion.findById(question._id).populate('subQuestions');
 
-    if (!populated) return question;
+//     if (!populated) return question;
 
-    const currentPrefix = parentPrefix
-        ? `${parentPrefix}.${populated.questionNumberOrAlphabet}`
-        : populated.questionNumberOrAlphabet;
+//     const currentPrefix = parentPrefix
+//         ? `${parentPrefix}.${populated.questionNumberOrAlphabet}`
+//         : populated.questionNumberOrAlphabet;
 
-    // Assign the full hierarchical prefix
-    populated.fullPath = currentPrefix;
+//     // Assign the full hierarchical prefix
+//     populated.fullPath = currentPrefix;
 
-    populated.subQuestions = await Promise.all(
-        populated.subQuestions.map(subQ => populateSubQuestions(subQ, currentPrefix))
-    );
+//     populated.subQuestions = await Promise.all(
+//         populated.subQuestions.map(subQ => populateSubQuestions(subQ, currentPrefix))
+//     );
 
-    return populated;
-}
+//     return populated;
+// }
 
 
 router.post('/parent-questions/populated/all', async (req, res) => {
@@ -275,21 +278,21 @@ router.post('/parent-questions/populated/all', async (req, res) => {
     try {
         const parentQuestions = await StructuredQuestion.find({
             structuredQuestionCollectionId: toBeDiscussedId,
-            parent: { $exists: false }
-        });
+            parent: { $exists: false }, isDeleted: false
+        }).populate({path:'subQuestions', match:{isDeleted:false}});
 
         if (!parentQuestions || parentQuestions.length === 0) {
             return res.status(404).json({ message: "Questions not found", data: [] });
         }
 
-        const fullyPopulated = await Promise.all(
-            parentQuestions.map(question => populateSubQuestions(question))
-        );
+        // const fullyPopulated = await Promise.all(
+        //     parentQuestions.map(question => populateSubQuestions(question))
+        // );
         // console.log("FULLY POPULATED ", JSON.stringify(fullyPopulated, null, 2))
 
         return res.status(200).json({
             message: "Questions fetched successfully",
-            data: fullyPopulated
+            data: parentQuestions
         });
 
     } catch (error) {
@@ -307,12 +310,12 @@ router.post('/parent-questions/all', async (req, res) => {
     const {
         toBeDiscussedId
     } = req.body;
-    console.log("DISUSSION ID ",)
+    // console.log("DISUSSION ID ",)
 
     try {
 
-        const questions = await StructuredQuestion.find({ structuredQuestionCollectionId: toBeDiscussedId, parent: { $exists: false } });
-        console.log("QUESTIONS ", questions)
+        const questions = await StructuredQuestion.find({ structuredQuestionCollectionId: toBeDiscussedId, parent: { $exists: false }, isDeleted: false });
+        // console.log("QUESTIONS ", questions)
         if (!questions) {
             return res.status(404).json({ message: "Questions not found", data: [] });
         }
@@ -341,7 +344,7 @@ router.post('/sub-questions/all', async (req, res) => {
 
     try {
 
-        const questions = await StructuredQuestion.find({ parent: parentId })
+        const questions = await StructuredQuestion.find({ parent: parentId, isDeleted: false });
         if (!questions) {
             return res.status(404).json({ message: "Questions not found", data: [] });
         }
@@ -402,6 +405,62 @@ router.post('/create/answer', async (req, res) => {
         });
     }
 })
+
+router.post('/answer/edit', async (req, res) => {
+    const {  answerId, editedContent, userIdRef } = req.body;
+    const { userId } = getUserDetails(req);
+
+    try {
+        if(userIdRef !== userId) {
+            return res.status(403).json({ message: "You are not authorized to edit this answer" });
+        }
+        const answer = await StructuredAnswer.findByIdAndUpdate(answerId, { content: editedContent, isEdited: true }, { new: true });
+        if (!answer) {
+            return res.status(404).json({ message: "Answer not found or could't edit" });
+        }
+
+
+        return res.status(200).json({
+            message: "Answer added successfully",
+            data: answer
+        });
+    } catch (error) {
+        console.error("Error in adding answer to question:", error);
+        return res.status(500).json({
+            message: "Error adding answer to question",
+            error: error.message
+        });
+    }
+})
+
+
+router.post('/answer/delete', async (req, res) => {
+    const {  answerId, editedContent, userIdRef } = req.body;
+    const { userId } = getUserDetails(req);
+
+    try {
+        if(userIdRef !== userId) {
+            return res.status(403).json({ message: "You are not authorized to edit this answer" });
+        }
+        const answer = await StructuredAnswer.findByIdAndUpdate(answerId, { isDeleted: true }, { new: true });
+        
+        if (!answer) {
+            return res.status(404).json({ message: "Answer not found or could't delete" });
+        }
+
+        return res.status(200).json({
+            message: "Answer deleted successfully",
+        });
+    } catch (error) {
+        console.error("Error in adding answer to question:", error);
+        return res.status(500).json({
+            message: "Error adding answer to question",
+            error: error.message
+        });
+    }
+})
+
+
 
 // Add comment to discussion
 router.post('/comment/add-comment', async (req, res) => {
@@ -640,131 +699,6 @@ router.post("/comment/vote", asyncHandler(async (req, res) => {
     }
 }));
 
-
-// Update comment tag
-router.post("/comment/update-tag/:commentId", asyncHandler(async (req, res) => {
-    const { commentId } = req.params;
-    const { questionTag } = req.body;
-
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-        const comment = await DiscussionComment.findById(commentId).session(session);
-        if (!comment) {
-            return res.status(404).json({ error: "Comment not found" });
-        }
-
-        const wasAnswer = comment.questionTag?.isAnswer;
-        comment.questionTag = questionTag;
-        await comment.save({ session });
-        await comment.updateAnswerStatus();
-
-        // Update pastpaper item's answer count if needed
-        if (!wasAnswer && questionTag.isAnswer) {
-            const discussion = await Discussion.findOne({ discussioncomments: commentId }).session(session);
-            if (discussion) {
-                await PastPaperItem.findByIdAndUpdate(
-                    discussion.discussion_of,
-                    { $inc: { 'metadata.answers': 1 } },
-                    { session }
-                );
-            }
-        }
-
-        await session.commitTransaction();
-        res.status(200).json({ message: "Comment tag updated successfully", comment });
-    } catch (error) {
-        await session.abortTransaction();
-        throw error;
-    } finally {
-        session.endSession();
-    }
-}));
-
-// Get answers for a specific question
-router.get("/answers/:commentId", asyncHandler(async (req, res) => {
-    const { commentId } = req.params;
-    const { questionNumber, part } = req.query;
-
-    const comment = await DiscussionComment.findById(commentId)
-        .populate({
-            path: 'replies',
-            match: {
-                'questionTag.questionNumber': questionNumber,
-                ...(part && { 'questionTag.part': part }),
-                'questionTag.isAnswer': true
-            },
-            populate: [
-                {
-                    path: 'user',
-                    select: 'name profile username'
-                },
-                {
-                    path: 'voteId',
-                    select: '_id upVotesCount downVotesCount userVotes'
-                }
-            ]
-        });
-
-    if (!comment) {
-        return res.status(404).json({ error: "Comment not found" });
-    }
-
-    // Sort answers by votes (approved answers first, then by vote count)
-    const sortedAnswers = comment.replies.sort((a, b) => {
-        if (a.isApprovedAnswer !== b.isApprovedAnswer) {
-            return b.isApprovedAnswer ? 1 : -1;
-        }
-        return (b.voteId.upVotesCount - b.voteId.downVotesCount) -
-            (a.voteId.upVotesCount - a.voteId.downVotesCount);
-    });
-
-    res.status(200).json({ answers: sortedAnswers });
-}));
-
-// Get existing question tags for a discussion
-router.get("/tags/:discussionId", asyncHandler(async (req, res) => {
-    const { discussionId } = req.params;
-
-    const discussion = await Discussion.findById(discussionId)
-        .populate({
-            path: 'discussioncomments',
-            match: {
-                'questionTag.isAnswer': true
-            },
-            select: 'questionTag'
-        });
-
-    if (!discussion) {
-        return res.status(404).json({ error: "Discussion not found" });
-    }
-
-    // Extract unique question tags
-    const tags = discussion.discussioncomments.reduce((acc, comment) => {
-        if (comment.questionTag) {
-            const tagKey = `${comment.questionTag.questionNumber}-${comment.questionTag.part || ''}`;
-            if (!acc.some(tag =>
-                tag.questionNumber === comment.questionTag.questionNumber &&
-                tag.part === comment.questionTag.part
-            )) {
-                acc.push(comment.questionTag);
-            }
-        }
-        return acc;
-    }, []);
-
-    // Sort tags by question number and part
-    const sortedTags = tags.sort((a, b) => {
-        if (a.questionNumber !== b.questionNumber) {
-            return a.questionNumber - b.questionNumber;
-        }
-        return (a.part || '').localeCompare(b.part || '');
-    });
-
-    res.status(200).json({ tags: sortedTags });
-}));
-
 // Delete a comment
 router.delete("/comment/:commentId", asyncHandler(async (req, res) => {
     const { commentId } = req.params;
@@ -819,203 +753,383 @@ router.delete("/comment/:commentId", asyncHandler(async (req, res) => {
 
 
 
-// Get structured questions for a past paper
-router.get('/structured-questions/:paperId', async (req, res) => {
-    try {
-        const paper = await PastPaperItem.findById(req.params.paperId)
-            .populate({
-                path: 'structuredQuestions',
-                populate: {
-                    path: 'answerId',
-                    populate: [
-                        { path: 'user', select: 'name email profilePicture' },
-                        { path: 'voteId' }
-                    ]
-                }
-            });
-
-        if (!paper) {
-            return res.status(404).json({ message: "Past paper not found" });
-        }
-
-        return res.json({
-            questions: paper.structuredQuestions
-        });
-
-    } catch (error) {
-        console.error("Error fetching structured questions:", error);
-        return res.status(500).json({
-            message: "Error fetching structured questions",
-            error: error.message
-        });
-    }
-});
-
-// Create a structured question
-router.post('/structured-question/create', asyncHandler(async (req, res) => {
-    const { paperId, level, type, content, parentId } = req.body;
+// Add comment to discussion
+router.post('/answer/comment/add-comment', async (req, res) => {
+    const { answerId, commentContent } = req.body;
+    const { userId } = getUserDetails(req);
 
     try {
-        const paper = await PastPaperItem.findById(paperId);
-        if (!paper) {
-            return res.status(404).json({ message: "Past paper not found" });
-        }
 
-        const question = await paper.addStructuredQuestion(level, type, content, parentId);
-        await question.populate({
-            path: 'answerId',
-            populate: [
-                { path: 'user', select: 'name email profilePicture' },
-                { path: 'voteId' }
-            ]
+        const answer = await StructuredAnswer.findById(answerId);
+        if (!answer) {
+            return res.status(404).json({ message: "Answer not found" });
+        }
+        const createComment = await StructuredComment.create({
+            content: commentContent,
+            user: userId,
         });
 
+        createComment.save();
+        answer.replies.push(createComment._id);
+        answer.save();
+
+
+        // Return populated comment
         return res.status(201).json({
-            message: "Structured question created successfully",
-            question
+            message: "Comment added successfully",
+            comment: createComment
         });
+
     } catch (error) {
-        console.error("Error creating structured question:", error);
+        console.error("Error adding comment:", error);
         return res.status(500).json({
-            message: "Error creating structured question",
+            message: "Error adding comment",
             error: error.message
         });
     }
-}));
+});
+// Add comment to answer
+router.post('/answer/comment/add-reply', async (req, res) => {
+    const { commentId, commentContent, mentions =[] } = req.body;
+    const { userId } = getUserDetails(req);
 
-// Get question hierarchy
-router.get('/structured-questions/:paperId/hierarchy', async (req, res) => {
     try {
-        const paper = await PastPaperItem.findById(req.params.paperId)
-            .populate({
-                path: 'structuredQuestions',
-                populate: [
-                    {
-                        path: 'subQuestions',
-                        populate: {
-                            path: 'subQuestions'
-                        }
-                    },
-                    {
-                        path: 'answerId',
-                        populate: [
-                            { path: 'user', select: 'name email profilePicture' },
-                            { path: 'voteId' }
-                        ]
-                    }
-                ]
-            });
 
-        if (!paper) {
-            return res.status(404).json({ message: "Past paper not found" });
+        const answer = await StructuredComment.findById(commentId);
+        if (!answer) {
+            return res.status(404).json({ message: "Answer not found" });
         }
+        const createComment = await StructuredComment.create({
+            content: commentContent,
+            user: userId,
+            mentions: mentions,
+            replyToUser: answer.user,
+        });
 
-        // Build hierarchy
-        const buildHierarchy = (questions) => {
-            const questionMap = new Map();
-            const rootQuestions = [];
+        createComment.save();
+        answer.replies.push(createComment._id);
+        answer.save();
 
-            questions.forEach(q => {
-                questionMap.set(q._id.toString(), {
-                    ...q.toObject(),
-                    children: []
-                });
-            });
 
-            questions.forEach(q => {
-                const questionObj = questionMap.get(q._id.toString());
-                if (q.parent) {
-                    const parent = questionMap.get(q.parent.toString());
-                    if (parent) {
-                        parent.children.push(questionObj);
-                    }
-                } else {
-                    rootQuestions.push(questionObj);
+        // Return populated comment
+        return res.status(201).json({
+            message: "Comment added successfully",
+            comment: createComment
+        });
+
+    } catch (error) {
+        console.error("Error adding comment:", error);
+        return res.status(500).json({
+            message: "Error adding comment",
+            error: error.message
+        });
+    }
+});
+
+router.post("/answer/vote", asyncHandler(async (req, res) => {
+    const { answerId, voteType } = req.body;
+
+    try {
+        const { userId } = getUserDetails(req);
+        const session = await mongoose.startSession();
+
+        await session.withTransaction(async () => {
+            const voteDoc = await StructuredVote.findOne({answerId:answerId}).session(session);
+            if (!voteDoc) {
+                throw new Error("Comment vote not found");
+            }
+
+            const currentVote = voteDoc.userVotes.get(userId) || null;
+
+            if (currentVote !== null && currentVote !== voteType) {
+                const updateOps = {
+                    $set: { [`userVotes.${userId}`]: voteType }
+                };
+
+                if (currentVote === 'upvote') {
+                    updateOps.$inc = { upVotesCount: -1 };
+                } else if (currentVote === 'downvote') {
+                    updateOps.$inc = { downVotesCount: -1 };
                 }
+
+                if (voteType === 'upvote') {
+                    updateOps.$inc = { ...updateOps.$inc, upVotesCount: 1 };
+                } else if (voteType === 'downvote') {
+                    updateOps.$inc = { ...updateOps.$inc, downVotesCount: 1 };
+                }
+                
+                const voteDocUpdated = await StructuredVote.findOneAndUpdate(
+                    {answerId:answerId},
+                    updateOps,
+                    { session, new: true }
+                );
+
+                return res.status(200).json({
+                    message: "Vote reprocessed successfully",
+                    upVotesCount: voteDocUpdated.upVotesCount,
+                    downVotesCount: voteDocUpdated.downVotesCount
+                });
+            }
+
+            if (currentVote === voteType) {
+                const updateOps = {
+                    $set: { [`userVotes.${userId}`]: null }
+                };
+
+                if (voteType === 'upvote') {
+                    updateOps.$inc = { upVotesCount: -1 };
+                } else if (voteType === 'downvote') {
+                    updateOps.$inc = { downVotesCount: -1 };
+                }
+
+                const voteDocUpdated = await  StructuredVote.findOneAndUpdate(
+                    {answerId:answerId},
+                    updateOps,
+                    { session, new: true }
+                );
+
+                return res.status(200).json({
+                    message: "Vote removed successfully",
+                    upVotesCount: voteDocUpdated.upVotesCount,
+                    downVotesCount: voteDocUpdated.downVotesCount,
+                    noneSelected: true
+                });
+            }
+
+            const updateOps = {
+                $set: { [`userVotes.${userId}`]: voteType }
+            };
+
+            if (voteType === 'upvote') {
+                updateOps.$inc = { upVotesCount: 1 };
+            } else if (voteType === 'downvote') {
+                updateOps.$inc = { downVotesCount: 1 };
+            }
+
+            const voteDocUpdated = await  StructuredVote.findOneAndUpdate(
+                {answerId:answerId},
+                updateOps,
+                { session, new: true }
+            );
+
+            return res.status(200).json({
+                message: "Vote processed successfully",
+                upVotesCount: voteDocUpdated.upVotesCount,
+                downVotesCount: voteDocUpdated.downVotesCount
             });
-
-            return rootQuestions;
-        };
-
-        const hierarchy = buildHierarchy(paper.structuredQuestions);
-
-        return res.json({
-            questions: hierarchy
         });
 
+        session.endSession();
     } catch (error) {
-        console.error("Error fetching question hierarchy:", error);
-        return res.status(500).json({
-            message: "Error fetching question hierarchy",
-            error: error.message
-        });
+        console.error("Error processing vote:", error.message);
+        res.status(500).json({ error: "Internal Server Error" });
     }
-});
+}))
 
-// Get next available question level
-router.get('/structured-questions/:paperId/next-level', async (req, res) => {
-    try {
-        const { type, currentLevel, parentId } = req.query;
-        const paper = await PastPaperItem.findById(req.params.paperId);
-
-        if (!paper) {
-            return res.status(404).json({ message: "Past paper not found" });
-        }
-
-        const StructuredQuestion = mongoose.model('StructuredQuestion');
-        const nextLevel = await StructuredQuestion.getNextLevel(type, currentLevel);
-
-        return res.json({
-            nextLevel,
-            type
-        });
-
-    } catch (error) {
-        console.error("Error getting next question level:", error);
-        return res.status(500).json({
-            message: "Error getting next question level",
-            error: error.message
-        });
-    }
-});
-
-// Update structured question
-router.put('/structured-question/:questionId', asyncHandler(async (req, res) => {
-    const { questionId } = req.params;
-    const { content } = req.body;
+// Vote on a comment
+router.post("/answer/comment/vote", asyncHandler(async (req, res) => {
+    const { commentId, voteType } = req.body;
 
     try {
-        const StructuredQuestion = mongoose.model('StructuredQuestion');
-        const question = await StructuredQuestion.findById(questionId);
+        const { userId } = getUserDetails(req);
+        const session = await mongoose.startSession();
 
-        if (!question) {
-            return res.status(404).json({ message: "Question not found" });
-        }
+        await session.withTransaction(async () => {
+            const voteDoc = await StructuredVote.findOne({commentId:commentId}).session(session);
+            if (!voteDoc) {
+                throw new Error("Comment vote not found");
+            }
 
-        question.content = content;
-        await question.save();
+            const currentVote = voteDoc.userVotes.get(userId) || null;
 
-        await question.populate({
-            path: 'answerId',
-            populate: [
-                { path: 'user', select: 'name email profilePicture' },
-                { path: 'voteId' }
-            ]
+            if (currentVote !== null && currentVote !== voteType) {
+                const updateOps = {
+                    $set: { [`userVotes.${userId}`]: voteType }
+                };
+
+                if (currentVote === 'upvote') {
+                    updateOps.$inc = { upVotesCount: -1 };
+                } else if (currentVote === 'downvote') {
+                    updateOps.$inc = { downVotesCount: -1 };
+                }
+
+                if (voteType === 'upvote') {
+                    updateOps.$inc = { ...updateOps.$inc, upVotesCount: 1 };
+                } else if (voteType === 'downvote') {
+                    updateOps.$inc = { ...updateOps.$inc, downVotesCount: 1 };
+                }
+                
+                const voteDocUpdated = await StructuredVote.findOneAndUpdate(
+                    {commentId:commentId},
+                    updateOps,
+                    { session, new: true }
+                );
+
+                return res.status(200).json({
+                    message: "Vote reprocessed successfully",
+                    upVotesCount: voteDocUpdated.upVotesCount,
+                    downVotesCount: voteDocUpdated.downVotesCount
+                });
+            }
+
+            if (currentVote === voteType) {
+                const updateOps = {
+                    $set: { [`userVotes.${userId}`]: null }
+                };
+
+                if (voteType === 'upvote') {
+                    updateOps.$inc = { upVotesCount: -1 };
+                } else if (voteType === 'downvote') {
+                    updateOps.$inc = { downVotesCount: -1 };
+                }
+
+                const voteDocUpdated = await  StructuredVote.findOneAndUpdate(
+                    {commentId:commentId},
+                    updateOps,
+                    { session, new: true }
+                );
+
+                return res.status(200).json({
+                    message: "Vote removed successfully",
+                    upVotesCount: voteDocUpdated.upVotesCount,
+                    downVotesCount: voteDocUpdated.downVotesCount,
+                    noneSelected: true
+                });
+            }
+
+            const updateOps = {
+                $set: { [`userVotes.${userId}`]: voteType }
+            };
+
+            if (voteType === 'upvote') {
+                updateOps.$inc = { upVotesCount: 1 };
+            } else if (voteType === 'downvote') {
+                updateOps.$inc = { downVotesCount: 1 };
+            }
+
+            const voteDocUpdated = await  StructuredVote.findOneAndUpdate(
+                {commentId:commentId},
+                updateOps,
+                { session, new: true }
+            );
+
+            return res.status(200).json({
+                message: "Vote processed successfully",
+                upVotesCount: voteDocUpdated.upVotesCount,
+                downVotesCount: voteDocUpdated.downVotesCount
+            });
         });
 
-        return res.json({
-            message: "Question updated successfully",
-            question
-        });
-
+        session.endSession();
     } catch (error) {
-        console.error("Error updating question:", error);
-        return res.status(500).json({
-            message: "Error updating question",
-            error: error.message
-        });
+        console.error("Error processing vote:", error.message);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 }));
+
+
+router.get('/answer', async (req, res) => {
+    const { answerId } = req.query;
+    const { userId } = getUserDetails(req);
+
+    try {
+
+        const answer = await StructuredAnswer.findById(answerId, {isDeleted: false}).populate([{path:'answeredByUser',  select:'name profile username'}, {path:'voteId'}]);
+
+        console.log("fetched  ANSWER ", answer)
+
+        if (!answer) {
+            return res.status(404).json({ message: "Answer not found" });
+        }
+
+
+        // Return populated comment
+        return res.status(201).json({
+            message: "Comment fetched successfully",
+            data: answer
+        });
+
+    } catch (error) {
+        console.error("Error adding comment:", error);
+        return res.status(500).json({
+            message: "Error adding comment",
+            error: error.message
+        });
+    }
+});
+// Add comment to discussion
+router.get('/answer/comments', async (req, res) => {
+    const { answerId } = req.query;
+    const { userId } = getUserDetails(req);
+    // console.log("ANSWER ID ", answerId)
+
+    try {
+
+        const answer = await StructuredAnswer.findById(answerId, {isDeleted: false})
+            .populate({ path: "replies",
+                
+                match: { isDeleted: false },
+                 populate: [{ path: "user", select: "name profile username", },
+                 { path: "voteId" }] });
+// console.log("ANSWER ", answer)
+        if (!answer) {
+            return res.status(404).json({ message: "Answer not found" });
+        }
+
+        // console.log("REPLIES ", answer.replies)
+
+        // Return populated comment
+        return res.status(201).json({
+            message: "Comment fetched successfully",
+            comment: answer.replies
+        });
+
+    } catch (error) {
+        console.error("Error adding comment:", error);
+        return res.status(500).json({
+            message: "Error adding comment",
+            error: error.message
+        });
+    }
+});
+
+router.get('/answer/comment/replies', async (req, res) => {
+    const { commentId } = req.query;
+    const { userId } = getUserDetails(req);
+
+    try {
+
+        const answer = await StructuredComment.findById(commentId)
+            .populate({ path: "replies",
+                
+                match: { isDeleted: false },
+                 populate: [{ path: "user", select: "name profile username" }, { path: "voteId" }] });
+
+        if (!answer) {
+            return res.status(404).json({ message: "Answer not found" });
+        }
+
+
+        // Return populated comment
+        return res.status(201).json({
+            message: "replies fetched successfully",
+            comment: answer.replies
+        });
+
+    } catch (error) {
+        console.error("Error adding comment:", error);
+        return res.status(500).json({
+            message: "Error adding comment",
+            error: error.message
+        });
+    }
+});
+
+
+
+
+
+
 
 // Get paginated discussion comments
 router.get('/comments/:discussionId', asyncHandler(async (req, res) => {
@@ -1128,79 +1242,6 @@ router.get('/comment/reply/:commentId', asyncHandler(async (req, res) => {
     }
 }));
 
-// Get answers for a specific question
-router.get("/structured-question/:questionId/answers", asyncHandler(async (req, res) => {
-    const { questionId } = req.params;
-    const { includeSubQuestions = false } = req.query;
 
-    const question = await StructuredQuestion.findById(questionId);
-    if (!question) {
-        return res.status(404).json({ message: "Question not found" });
-    }
-
-    const answers = await question.getAllAnswers(includeSubQuestions === 'true');
-    res.status(200).json(answers);
-}));
-
-// Get answers by question path
-router.get("/paper/:paperId/answers/:path", asyncHandler(async (req, res) => {
-    const { paperId, path } = req.params;
-
-    const paper = await PastPaperItem.findById(paperId)
-        .populate({
-            path: 'structuredQuestions',
-            match: { fullPath: path },
-            populate: {
-                path: 'answers.answerId',
-                populate: [
-                    { path: 'user', select: 'name email profilePicture' },
-                    { path: 'voteId' }
-                ]
-            }
-        });
-
-    if (!paper || !paper.structuredQuestions.length) {
-        return res.status(404).json({ message: "Question not found" });
-    }
-
-    const question = paper.structuredQuestions[0];
-    res.status(200).json({
-        question,
-        answers: question.answers
-    });
-}));
-
-// Add answer to structured question
-router.post('/structured-question/:questionId/answer', asyncHandler(async (req, res) => {
-    const { questionId } = req.params;
-    const { answerId } = req.body;
-    const { userId } = getUserDetails(req);
-
-    const session = await mongoose.startSession();
-    await session.withTransaction(async () => {
-        const question = await StructuredQuestion.findById(questionId).session(session);
-        if (!question) {
-            throw new Error("Question not found");
-        }
-
-        await question.addAnswer(answerId);
-
-        // Update the comment to mark it as an answer
-        await DiscussionComment.findByIdAndUpdate(answerId, {
-            $set: {
-                type: 'answer',
-                'questionTag.isAnswer': true
-            }
-        }).session(session);
-
-        const updatedQuestion = await question.populate('answers.answerId');
-        res.status(200).json({
-            message: "Answer added successfully",
-            question: updatedQuestion
-        });
-    });
-
-    await session.endSession();
-}));
 
 module.exports = router;

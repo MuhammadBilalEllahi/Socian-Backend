@@ -22,7 +22,7 @@ const structuredQuestionVoteSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
 
 
-}, { timestamps: true });
+}, { timestamps: true, });
 
 const StructuredVote = mongoose.model('StructuredVote', structuredQuestionVoteSchema);
 module.exports = StructuredVote;
