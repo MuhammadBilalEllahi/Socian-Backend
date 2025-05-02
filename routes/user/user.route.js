@@ -6,6 +6,8 @@ const { getUserDetails } = require('../../utils/utils')
 const { default: mongoose } = require('mongoose')
 const Society = require('../../models/society/society.model')
 const FriendRequest = require('../../models/user/friend.request.model')
+const Teacher = require('../../models/university/teacher/teacher.model')
+const UserRoles = require('../../models/userRoles')
 
 // No create user search field
 
@@ -613,8 +615,8 @@ router.get('/societies-top', async (req, res) => {
 router.get('/teacher/attachUser', async (req, res) => {
     try {
         const { userId } = getUserDetails(req);
-        const user = await User.findById(userId)
-        const response = await user.setTeacherModal(req)
+        const user = await User.findById(userId);
+        const response = await setTeacherModal(req, user)
         console.log("DOG", response)
         res.status(response.status).json({
             message: response.message,
@@ -628,6 +630,95 @@ router.get('/teacher/attachUser', async (req, res) => {
         console.error("Error in /teacher/attachUser in user.route.js", error.message)
     }
 })
+
+const setTeacherModal = async function (req, user) {
+    try {
+        
+        if (user.role === UserRoles.teacher) {
+            const teacherModalExists = await Teacher.findOne({ email: user.universityEmail })
+
+            // if(!teacherModalExists) return res.status(404).json({message: 'No Teacher With This Model Yet'})
+            if (!teacherModalExists) {
+
+                const campusOrigin = user.university.campusId
+                const universityOrigin = user.university.universityId
+                const similarTeacherModals = await Teacher.findSimilarTeachers(campusOrigin, universityOrigin)
+
+                // console.log("TEACHER MODALS", similarTeacherModals, campusOrigin, universityOrigin)
+
+                if (!similarTeacherModals || similarTeacherModals.length === 0) {
+                    return { message: 'No similar teachers to show yet', status: 204 };
+                }
+
+                return {
+                    status: 200,
+                    teachers: similarTeacherModals.map((teacher) => ({
+                        _id: teacher._id,
+                        name: teacher.name,
+                        email: teacher.email,
+                        userAttachedBool: teacher.userAttachedBool,
+                        imageUrl: teacher.imageUrl,
+                        onLeave: teacher.onLeave,
+                        hasLeft: teacher.hasLeft,
+                        rating: teacher.rating,
+                        userAttachedBool: teacher.userAttachedBool,
+                        department: teacher.department.departmentId.name
+                    })),
+                    attached: false
+                };
+
+            } else {
+
+                if (!teacherModalExists.userAttached && !teacherModalExists.userAttachedBool) {
+                    teacherModalExists.userAttached = user._id
+                    teacherModalExists.userAttachedBool = true;
+                    teacherModalExists.userAttachedBy.userType = UserRoles.teacher
+                    teacherModalExists.userAttachedBy.by = user._id
+                    await teacherModalExists.save()
+                    user.teacherConnectivities.teacherModal = teacherModalExists._id;
+                    user.teacherConnectivities.attached = true;
+
+                    await user.save()
+
+
+                    req.session.user.teacherConnectivities = {
+                        attached: user.teacherConnectivities.attached,
+                        teacherModal: user.teacherConnectivities.teacherModal
+                    }
+
+                    // req.session.save((err) => {
+                    //   if (err) {
+                    //     console.error("Session save error:", err);
+                    //     return res.status(500).json({ error: "Internal Server Error" });
+                    //   }
+                    // })
+
+
+                    return new Promise((resolve, reject) => {
+                        req.session.save((err) => {
+                            if (err) {
+                                console.error("Session save error:", err);
+                                reject({ status: 500, message: "Internal Server Error" });
+                            } else {
+                                resolve({ status: 201, message: 'User with role teacher attached with Modal successfully' });
+                            }
+                        });
+                    });
+
+
+                    // return { status: 200, message: 'User with role teacher attached with Modal successfully', teacher: teacherModalExists, attached: true }
+                } else {
+                    return { status: 200, message: 'User already attached with another modal, Please verify before Modifyng', attached: false }
+                }
+
+            }
+        }
+    } catch (error) {
+        console.error("Error in setTeacherModal method in user.model.js", error)
+        return { status: 500, message: "Internal Server Error", error: error.message };
+
+    }
+}
 
 
 router.get('/teacher/joinModel', async (req, res) => {

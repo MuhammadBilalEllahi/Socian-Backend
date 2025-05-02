@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const { Schema, model } = mongoose;
 
-const postSchema = new Schema(
+const indivPostSchema = new Schema(
   {
     title: { type: String, required: true },
     body: { type: String },
@@ -9,20 +9,15 @@ const postSchema = new Schema(
     society: {
       type: Schema.Types.ObjectId,
       ref: "Society",
-      required: function () {
-        return !this.isPersonalPost && !this.subSociety;
-      },
+      required: false,
       index: true,
     },
     subSociety: {
       type: Schema.Types.ObjectId,
       ref: "SubSociety",
-      required: function () {
-        return !this.isPersonalPost && !this.society;
-      },
+      required: false,
       index: true,
     },
-
     createdAt: { type: Date, default: Date.now },
     upvotes: { type: Number, default: 0 },
     downvotes: { type: Number, default: 0 },
@@ -46,8 +41,7 @@ const postSchema = new Schema(
             "image/png",
             "image/gif",
             "image/*",
-             "audio", "audio/opus", "audio/webm", "audio/*"
-          ], //add youtube url later
+          ],
           default: "text",
         },
         url: { type: String, default: "" },
@@ -60,8 +54,6 @@ const postSchema = new Schema(
             url: { type: String, default: "" },
           },
         ],
-
-        // processedImageUrl:  { type: String, default: "" },
       },
     ],
     flair: { type: String, default: "" },
@@ -76,27 +68,22 @@ const postSchema = new Schema(
       promoted: { type: Boolean, default: false },
       byUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
     },
-
     shareableLevel: {
       type: String,
-      enum: ['campus', 'inter', 'all']
+      enum: ["campus", "inter", "all"],
     },
-
-    // Repost Option
     isRepost: {
       type: Boolean,
-      default: false
+      default: false,
     },
     repostedPost: {
       type: Schema.Types.ObjectId,
-      ref: 'Post'
+      ref: "IndivPost",
     },
     isPersonalPost: {
       type: Boolean,
-      default: false
+      default: true,
     },
-
-    // Poll Feature
     isPoll: { type: Boolean, default: false },
     pollOptions: [
       {
@@ -106,11 +93,9 @@ const postSchema = new Schema(
     ],
     pollExpiresAt: { type: Date },
     totalVotes: { type: Number, default: 0 },
-    votedUsers: [{ type: Schema.Types.ObjectId, ref: "User" }], // Users who voted
-
-    // Voice Thread Feature
+    votedUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
     isVoiceThread: { type: Boolean, default: false },
-    voiceThreadUrl: { type: String, default: "" }, // Stores voice note URL
+    voiceThreadUrl: { type: String, default: "" },
     transcodedVoiceUrls: [
       {
         bitrate: {
@@ -120,8 +105,6 @@ const postSchema = new Schema(
         url: { type: String, default: "" },
       },
     ],
-
-
     references: {
       isFromOtherUni: { type: Boolean, default: false },
       universityOrigin: {
@@ -136,21 +119,12 @@ const postSchema = new Schema(
       },
       role: {
         type: String,
-        enum: ['alumni', 'student', 'teacher', 'ext_org']
-      }
+        enum: ["alumni", "student", "teacher", "ext_org"],
+      },
     },
   },
-  { timestamps: true },
-  {
-    validate: {
-      validator: function () {
-        if(this.isPersonalPost) return true; // Skip validation for personal posts
-        return !(this.society && this.subSociety);
-      },
-      message: "You cannot set both Society and subSociety. Choose one.",
-    },
-  }
+  { timestamps: true }
 );
 
-const Post = model("Post", postSchema);
-module.exports = Post;
+const IndivPost = model("IndivPost", indivPostSchema);
+module.exports = IndivPost;

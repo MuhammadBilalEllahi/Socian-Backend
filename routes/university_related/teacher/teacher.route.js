@@ -153,6 +153,7 @@ router.post("/by/teacher/create", async (req, res) => {
 
     // Validate User
     const userExists = await User.findById(userId).session(session);
+    
     if (!userExists) {
       await session.abortTransaction();
       session.endSession();
@@ -163,21 +164,21 @@ router.post("/by/teacher/create", async (req, res) => {
     const teacher = await Teacher.findOneAndUpdate(
       {
         userAttachedBool: true,
-        userAttached: userId,
-        "userAttachedBy.by": userId,
+        userAttached: userExists._id,
+        "userAttachedBy.by": userExists._id,
         "userAttachedBy.userType": "teacher",
       },
       {
-        name: user.name,
-        email: user.universityEmail,
-        imageUrl: user.profile.picture ?? "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
+        name: userExists.name,
+        email: userExists.universityEmail,
+        imageUrl: userExists.profile.picture ?? "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
         "department.name": findDepartment.name,
         "department.departmentId": departmentId,
         universityOrigin: universityOrigin,
         campusOrigin: campusOrigin,
         userAttachedBool: true,
-        userAttached: userId,
-        "userAttachedBy.by": userId,
+        userAttached: userExists._id,
+        "userAttachedBy.by": userExists._id,
         "userAttachedBy.userType": "teacher",
       },
       { upsert: true, new: true, session }
@@ -228,7 +229,7 @@ router.post("/by/teacher/create", async (req, res) => {
     // ]);
 
     await session.commitTransaction();
-    session.endSession();
+    // session.endSession();
 
     res.status(201).json({ message: "Teacher created successfully", teacher });
   } catch (error) {
@@ -522,6 +523,8 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
         
         upVotesCount: review.upVotesCount || 0,
         downVotesCount: Math.abs(review.downVotesCount || 0),
+
+        userVotes: review.userVotes || {},
         updatedAt: review.updatedAt,
         createdAt: review.createdAt,
         user: userData,
@@ -832,7 +835,7 @@ router.post("/reviews/feedbacks/vote", async (req, res) => {
       
     await session.commitTransaction();
     session.endSession();
-    
+
       return res.status(200).json({
         message: "Vote reprocessed successfully.",
         upVotesCount: reviewUpdated.upVotesCount,

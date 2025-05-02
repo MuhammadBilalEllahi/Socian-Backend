@@ -312,94 +312,94 @@ userSchema.methods.setJoinATeacherModal = async function (teacherId, req) {
 
 }
 
-userSchema.methods.setTeacherModal = async function (req) {
-  try {
-    console.log("ROLE", this)
-    if (this.role === UserRoles.teacher) {
-      const teacherModalExists = await Teacher.findOne({ email: this.universityEmail })
+// userSchema.methods.setTeacherModal = async function (req) {
+//   try {
+//     console.log("ROLE", this)
+//     if (this.role === UserRoles.teacher) {
+//       const teacherModalExists = await Teacher.findOne({ email: this.universityEmail })
 
-      // if(!teacherModalExists) return res.status(404).json({message: 'No Teacher With This Model Yet'})
-      if (!teacherModalExists) {
+//       // if(!teacherModalExists) return res.status(404).json({message: 'No Teacher With This Model Yet'})
+//       if (!teacherModalExists) {
 
-        const campusOrigin = this.university.campusId
-        const universityOrigin = this.university.universityId
-        const similarTeacherModals = await Teacher.findSimilarTeachers(campusOrigin, universityOrigin)
+//         const campusOrigin = this.university.campusId
+//         const universityOrigin = this.university.universityId
+//         const similarTeacherModals = await Teacher.findSimilarTeachers(campusOrigin, universityOrigin)
 
-        // console.log("TEACHER MODALS", similarTeacherModals, campusOrigin, universityOrigin)
+//         // console.log("TEACHER MODALS", similarTeacherModals, campusOrigin, universityOrigin)
 
-        if (!similarTeacherModals || similarTeacherModals.length === 0) {
-          return { message: 'No similar teachers to show yet', status: 204 };
-        }
+//         if (!similarTeacherModals || similarTeacherModals.length === 0) {
+//           return { message: 'No similar teachers to show yet', status: 204 };
+//         }
 
-        return {
-          status: 200,
-          teachers: similarTeacherModals.map((teacher) => ({
-            _id: teacher._id,
-            name: teacher.name,
-            email: teacher.email,
-            userAttachedBool: teacher.userAttachedBool,
-            imageUrl: teacher.imageUrl,
-            onLeave: teacher.onLeave,
-            hasLeft: teacher.hasLeft,
-            rating: teacher.rating,
-            userAttachedBool: teacher.userAttachedBool,
-            department: teacher.department.departmentId.name
-          })),
-          attached: false
-        };
+//         return {
+//           status: 200,
+//           teachers: similarTeacherModals.map((teacher) => ({
+//             _id: teacher._id,
+//             name: teacher.name,
+//             email: teacher.email,
+//             userAttachedBool: teacher.userAttachedBool,
+//             imageUrl: teacher.imageUrl,
+//             onLeave: teacher.onLeave,
+//             hasLeft: teacher.hasLeft,
+//             rating: teacher.rating,
+//             userAttachedBool: teacher.userAttachedBool,
+//             department: teacher.department.departmentId.name
+//           })),
+//           attached: false
+//         };
 
-      } else {
+//       } else {
 
-        if (!teacherModalExists.userAttached && !teacherModalExists.userAttachedBool) {
-          teacherModalExists.userAttached = this._id
-          teacherModalExists.userAttachedBool = true;
-          teacherModalExists.userAttachedBy.userType = UserRoles.teacher
-          teacherModalExists.userAttachedBy.by = this._id
-          await teacherModalExists.save()
-          this.teacherConnectivities.teacherModal = teacherModalExists._id;
-          this.teacherConnectivities.attached = true;
+//         if (!teacherModalExists.userAttached && !teacherModalExists.userAttachedBool) {
+//           teacherModalExists.userAttached = this._id
+//           teacherModalExists.userAttachedBool = true;
+//           teacherModalExists.userAttachedBy.userType = UserRoles.teacher
+//           teacherModalExists.userAttachedBy.by = this._id
+//           await teacherModalExists.save()
+//           this.teacherConnectivities.teacherModal = teacherModalExists._id;
+//           this.teacherConnectivities.attached = true;
 
-          await this.save()
-
-
-          req.session.user.teacherConnectivities = {
-            attached: this.teacherConnectivities.attached,
-            teacherModal: this.teacherConnectivities.teacherModal
-          }
-
-          // req.session.save((err) => {
-          //   if (err) {
-          //     console.error("Session save error:", err);
-          //     return res.status(500).json({ error: "Internal Server Error" });
-          //   }
-          // })
+//           await this.save()
 
 
-          return new Promise((resolve, reject) => {
-            req.session.save((err) => {
-              if (err) {
-                console.error("Session save error:", err);
-                reject({ status: 500, message: "Internal Server Error" });
-              } else {
-                resolve({ status: 201, message: 'User with role teacher attached with Modal successfully' });
-              }
-            });
-          });
+//           req.session.user.teacherConnectivities = {
+//             attached: this.teacherConnectivities.attached,
+//             teacherModal: this.teacherConnectivities.teacherModal
+//           }
+
+//           // req.session.save((err) => {
+//           //   if (err) {
+//           //     console.error("Session save error:", err);
+//           //     return res.status(500).json({ error: "Internal Server Error" });
+//           //   }
+//           // })
 
 
-          // return { status: 200, message: 'User with role teacher attached with Modal successfully', teacher: teacherModalExists, attached: true }
-        } else {
-          return { status: 200, message: 'User already attached with another modal, Please verify before Modifyng', attached: false }
-        }
+//           return new Promise((resolve, reject) => {
+//             req.session.save((err) => {
+//               if (err) {
+//                 console.error("Session save error:", err);
+//                 reject({ status: 500, message: "Internal Server Error" });
+//               } else {
+//                 resolve({ status: 201, message: 'User with role teacher attached with Modal successfully' });
+//               }
+//             });
+//           });
 
-      }
-    }
-  } catch (error) {
-    console.error("Error in setTeacherModal method in user.model.js", error)
-    return { status: 500, message: "Internal Server Error", error: error.message };
 
-  }
-}
+//           // return { status: 200, message: 'User with role teacher attached with Modal successfully', teacher: teacherModalExists, attached: true }
+//         } else {
+//           return { status: 200, message: 'User already attached with another modal, Please verify before Modifyng', attached: false }
+//         }
+
+//       }
+//     }
+//   } catch (error) {
+//     console.error("Error in setTeacherModal method in user.model.js", error)
+//     return { status: 500, message: "Internal Server Error", error: error.message };
+
+//   }
+// }
 
 /**
  * Updates the email of the user.

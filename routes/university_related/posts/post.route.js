@@ -1,6 +1,7 @@
 const express = require("express");
 const PostsCollection = require("../../../models/society/post/collection/post.collection.model");
 const Post = require("../../../models/society/post/post.model");
+const indivPost = require("../../../models/society/post/indivPost.model");
 const SocietyPostAndCommentVote = require("../../../models/society/post/vote/vote.post.community.model");
 const mongoose = require("mongoose");
 const User = require("../../../models/user/user.model");
@@ -276,14 +277,14 @@ router.post("/create", upload.array('file'), async (req, res) => {
 
 
 //////////////////////////////////////////////////////////////
-
-router.post("/create-indiv", upload.array('file'), async (req, res) => {
+//to create an individual post. not in a society
+ router.post("/create-indiv", upload.array('file'), async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
         const { userId, campusOrigin, universityOrigin, role } = getUserDetails(req);
-        const { title, body, author } = req.body;
+        const { title, body, author=userId } = req.body;
         const files = req.files;
 
         console.log("/create-indiv ", { title, body, files, author });
@@ -314,6 +315,7 @@ router.post("/create-indiv", upload.array('file'), async (req, res) => {
             }
             postContent.media = mediaArray;
         }
+        postContent.isPersonalPost = true; // Mark as personal post
 
         const post = new Post(postContent);
         await post.save({ session });
@@ -352,6 +354,52 @@ router.post("/create-indiv", upload.array('file'), async (req, res) => {
 });
 
 
+
+//////////with new schema
+// router.post("/create-indiv", upload.array('file'), async (req, res) => {
+//     try {
+//       console.log('/create-indiv ', req.body);
+//       const { title, author, body, societyId } = req.body;
+//       const files = req.files;
+  
+//       if (!title || !author) {
+//         return res.status(400).json({ message: "Title and author are required" });
+//       }
+  
+//       const user = await User.findById(author);
+//       if (!user) {
+//         return res.status(404).json({ message: "User not found" });
+//       }
+  
+//       const postDetails = {
+//         title,
+//         author,
+//         body,
+//         isPersonalPost: true,
+//         media: [],
+//       };
+  
+//       if (files && files.length > 0) {
+//         const mediaUrls = files.map((file) => ({
+//           type: file.mimetype,
+//           url: file.path,
+//         }));
+//         postDetails.media = mediaUrls;
+//       }
+  
+//       const newPost = new indivPost(postDetails);
+//       const savedPost = await newPost.save();
+  
+//       return res.status(201).json({
+//         message: "Post Created",
+//         postId: savedPost._id,
+//         postTitle: savedPost.title,
+//       });
+//     } catch (error) {
+//       console.warn("Error in /create-indiv", error);
+//       return res.status(500).json({ message: error.message });
+//     }
+//   });
 
 //////////////////////////////////////////////////////////////
 
