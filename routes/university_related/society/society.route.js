@@ -340,7 +340,7 @@ router.get("/:id", async (req, res) => {
 
         await redisClient.set(cacheKeyPosts, JSON.stringify(posts), 'EX', 600); // Shorter expiry for posts
 
-        console.log("\n\n\n\nsocity",society, "\n\nposts", posts )
+        // console.log("\n\n\n\nsocity",society, "\n\nposts", posts )
         res.status(200).json({ society: society, posts: posts });
     } catch (error) {
         console.error("Error in society.route.js /:id", error);

@@ -12,7 +12,7 @@ router.post("/", [
   check( 'title', 'Title is required').not().isEmpty(),
   check('location.latitude', 'Valid latitude is required').isFloat({ min: -90, max: 90 }),
   check('location.longitude', 'Valid longitude is required').isFloat({ min: -180, max: 180 }),
-  check('radius', 'Valid radius is required').isInt({ min: 100 }),
+  check('radius', 'Valid radius is required').isInt({ min: 5 }),
   check('startTime', 'Valid start time is required').isISO8601(),
   check('endTime', 'Valid end time is required').isISO8601()
 ], async (req, res) => {

@@ -14,41 +14,12 @@ const { sessionSaveHandler } = require("../../../utils/save.session");
 const redisClient = require('../../../db/reddis');
 const FeedBackCommentTeacher = require("../../../models/university/teacher/feedback.rating.teacher.model");
 
-const aiFeedback = require("../../../services/aifeedback.service.js")
 const axios = require('axios');
 
 
 
 
-////////////////////////////Teacher feedback updates////////////////////////////////////
-async function updateTeacherFeedbackSummary(teacherId) {
-  try {
-    const teacher = await Teacher.findById(teacherId).populate("ratingsByStudents");
 
-    if (!teacher) {
-      console.error("Teacher not found");
-      return;
-    }
-
-    // Extract feedback texts
-    const feedbackTexts = teacher.ratingsByStudents.map(rating => rating.feedback);
-
-    if (feedbackTexts.length === 0) {
-      teacher.feedbackSummary[0] = "No feedback available yet.";
-    } else {
-      // Generate AI summary
-      const summary = await aiFeedback(feedbackTexts.join("\n"));
-      // console.log(`summary is -> ${teacher.feedbackSummary}`);
-
-      teacher.feedbackSummary.push(summary);
-    }
-
-    await teacher.save();
-    console.log("Feedback summary updated for", teacher.name);
-  } catch (error) {
-    console.error("Error updating feedback summary:", error);
-  }
-}
 
 
 router.get("/campus/teachers", async (req, res) => {
@@ -491,6 +462,8 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
       }],
     });
 
+    console.log("TEACHER ", teacher)
+
     if (!teacher) {
       return res.status(404).json({ message: "Teacher not found" });
     }
@@ -552,7 +525,7 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
       };
     });
 
-    console.log("POPULATED RTINGS", populatedRatings.map(m => console.log(m)))
+    console.log("\n\n\n\n\n\n\nPOPULATED RTINGS", populatedRatings)
 
     res.status(200).json(populatedRatings);
   } catch (err) {
@@ -624,6 +597,8 @@ router.post("/rate", async (req, res) => {
       redisClient.del(`campus_teachers_${teacher.campusOrigin}`),
       redisClient.del(`campus_teacher_${teacherId}`)
     ]);
+
+
 
     res.status(200).json({ message: "Rating processed successfully" });
   } catch (err) {
