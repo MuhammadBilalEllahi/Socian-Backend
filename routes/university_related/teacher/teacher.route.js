@@ -11,7 +11,7 @@ const { getUserDetails } = require("../../../utils/utils");
 const UserRoles = require("../../../models/userRoles");
 const User = require("../../../models/user/user.model");
 const { sessionSaveHandler } = require("../../../utils/save.session");
-const redisClient = require('../../../db/reddis');
+// const redisClient = require('../../../db/reddis');
 const FeedBackCommentTeacher = require("../../../models/university/teacher/feedback.rating.teacher.model");
 
 const axios = require('axios');
@@ -28,12 +28,12 @@ router.get("/campus/teachers", async (req, res) => {
     const { user, userId, role, universityOrigin, campusOrigin, departmentId } = getUserDetails(req);
     console.log("Campus Origin", user, userId, role, universityOrigin, campusOrigin, departmentId)
 
-    const cacheKey = `campus_teachers_${campusOrigin}`;
-    const cachedData = await redisClient.get(cacheKey);
-    if (cachedData) {
-      console.log("Cache hit: campus teachers");
-      return res.status(200).json(JSON.parse(cachedData))
-    }
+    // const cacheKey = `campus_teachers_${campusOrigin}`;
+    // const cachedData = await redisClient.get(cacheKey);
+    // if (cachedData) {
+    //   console.log("Cache hit: campus teachers");
+    //   return res.status(200).json(JSON.parse(cachedData))
+    // }
 
     if (!campusOrigin) return res.status(400).json({ error: "Campus location not provided" });
 
@@ -59,7 +59,7 @@ router.get("/campus/teachers", async (req, res) => {
       };
     });
 
-    await redisClient.set(cacheKey, JSON.stringify(result), 'EX', 3600)
+    // await redisClient.set(cacheKey, JSON.stringify(result), 'EX', 3600)
 
     res.status(200).json(result);
   } catch (error) {
@@ -222,10 +222,10 @@ router.post("/by/teacher/create", async (req, res) => {
     await sessionSaveHandler(req, res);
 
     // Invalidate relevant Redis caches
-    await Promise.all([
-      redisClient.del(`campus_teachers_${campusOrigin}`),
-      redisClient.del(`campus_teacher_${teacher._id}`)
-    ]);
+    // await Promise.all([
+    //   redisClient.del(`campus_teachers_${campusOrigin}`),
+    //   redisClient.del(`campus_teacher_${teacher._id}`)
+    // ]);
 
     await session.commitTransaction();
     session.endSession();
@@ -311,10 +311,10 @@ router.post("/", async (req, res) => {
     ]);
 
     // Invalidate relevant Redis caches
-    await Promise.all([
-      redisClient.del(`campus_teachers_${campusOrigin}`),
-      redisClient.del(`campus_teacher_${teacher[0]._id}`)
-    ]);
+    // await Promise.all([
+    //   redisClient.del(`campus_teachers_${campusOrigin}`),
+    //   redisClient.del(`campus_teacher_${teacher[0]._id}`)
+    // ]);
 
     await session.commitTransaction();
     session.endSession();
@@ -332,12 +332,12 @@ router.get("/info", async (req, res) => {
   const { id } = req.query;
   // console.log("info id", id);
   try {
-    const cacheKey = `campus_teacher_${id}`;
-    const cachedData = await redisClient.get(cacheKey);
-    if (cachedData) {
-      console.log("Cache hit: teacher");
-      return res.status(200).json(JSON.parse(cachedData))
-    }
+    // const cacheKey = `campus_teacher_${id}`;
+    // const cachedData = await redisClient.get(cacheKey);
+    // if (cachedData) {
+    //   console.log("Cache hit: teacher");
+    //   return res.status(200).json(JSON.parse(cachedData))
+    // }
 
 
     const teacher = await Teacher.findById(id).populate({
@@ -347,7 +347,7 @@ router.get("/info", async (req, res) => {
       return res.status(404).json({ message: "Teacher not found" });
     }
     // console.log(teacher)
-    await redisClient.set(cacheKey, JSON.stringify(teacher), 'EX', 36000);
+    // await redisClient.set(cacheKey, JSON.stringify(teacher), 'EX', 36000);
 
 
     res.status(200).json(teacher);
@@ -470,6 +470,8 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
 
     const populatedRatings = teacher.ratingsByStudents.map((review) => {
       // Standardize user data
+
+      console.log("\n___________WHAT IS REVIEW_____________________\n", review)
       const userData = review.userId ? {
         _id: review.userId._id,
         name: review.hideUser ? 'Anonymous' : review.userId.name,
@@ -515,8 +517,11 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
         _id: review._id,
         rating: review.rating,
         feedback: review.feedback,
-        upvoteCount: review.upvoteCount || 0,
-        downvoteCount: Math.abs(review.downvoteCount || 0),
+        upvoteCount: review.upVotesCount || 0,
+        downvoteCount: Math.abs(review.downVotesCount || 0),
+        
+        upVotesCount: review.upVotesCount || 0,
+        downVotesCount: Math.abs(review.downVotesCount || 0),
         updatedAt: review.updatedAt,
         createdAt: review.createdAt,
         user: userData,
@@ -593,10 +598,10 @@ router.post("/rate", async (req, res) => {
     session.endSession();
 
     // Invalidate relevant Redis caches
-    await Promise.all([
-      redisClient.del(`campus_teachers_${teacher.campusOrigin}`),
-      redisClient.del(`campus_teacher_${teacherId}`)
-    ]);
+    // await Promise.all([
+    //   redisClient.del(`campus_teachers_${teacher.campusOrigin}`),
+    //   redisClient.del(`campus_teacher_${teacherId}`)
+    // ]);
 
 
 
@@ -765,8 +770,15 @@ router.get('/reply/reply/feedback', async (req, res) => {
 
 router.post("/reviews/feedbacks/vote", async (req, res) => {
   const { reviewId, userIdOther, voteType } = req.body;
+  const voteTypes = {
+    upvote: "upvote",
+    downvote: "downvote",
+  };
+  const voteTypeData = voteType.toString().toLowerCase();
 
-  if (!reviewId || !userIdOther || !voteType) {
+  console.log("\n_________VOTE TYPE_________\n", voteTypeData, voteType , voteTypes.upvote, voteTypes.downvote, voteTypes)
+
+  if (!reviewId || !userIdOther || !voteTypeData) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
@@ -787,31 +799,40 @@ router.post("/reviews/feedbacks/vote", async (req, res) => {
 
 
     // Fetch current vote status
-    const currentVote = review.userVotes.get(userId) || null;
+    const currentVote = review.userVotes.get(userId)?.toString()?.toLowerCase() || null;
+
+    console.log("\n ________Current Vote______\n ", currentVote, review.userVotes.get(userId), userId, review.userVotes)
 
     // If the user has already voted and is changing their vote
-    if (currentVote !== null && currentVote !== voteType) {
+    if (currentVote !== null && currentVote !== voteTypeData) {
       const updateOps = {
-        $set: { [`userVotes.${userId}`]: voteType }
+        $set: { [`userVotes.${userId}`]: voteTypeData }
       };
 
       // Remove the old vote first (decrement the respective vote count)
-      if (currentVote === 'upVote') {
+      if (currentVote === voteTypes.upvote) {
         updateOps.$inc = { upVotesCount: -1 };
-      } else if (currentVote === 'downVote') {
+      } else if (currentVote === voteTypes.downvote) {
         updateOps.$inc = { downVotesCount: -1 };
       }
 
       // Apply the new vote and increment the respective vote count
-      if (voteType === 'upVote') {
+      if (voteTypeData === voteTypes.upvote) {
         updateOps.$inc = { ...updateOps.$inc, upVotesCount: 1 };
-      } else if (voteType === 'downVote') {
+      } else if (voteTypeData === voteTypes.downvote) {
         updateOps.$inc = { ...updateOps.$inc, downVotesCount: 1 };
       }
 
       // Perform the update with the changes
       const reviewUpdated = await TeacherRating.findOneAndUpdate({ _id: reviewId, userId: userIdOther }, updateOps, { session, new: true });
 
+      console.log("updated review first", reviewUpdated, 
+        "\n",  review.userVotes.get(userId)?.toString(),  reviewUpdated.userVotes
+      )
+      
+    await session.commitTransaction();
+    session.endSession();
+    
       return res.status(200).json({
         message: "Vote reprocessed successfully.",
         upVotesCount: reviewUpdated.upVotesCount,
@@ -820,21 +841,27 @@ router.post("/reviews/feedbacks/vote", async (req, res) => {
     }
 
     // Skip processing if the vote is unchanged
-    if (currentVote === voteType) {
+    if (currentVote === voteTypeData) {
       const updateOps = {
         $set: { [`userVotes.${userId}`]: null }
+        // $unset: { [`userVotes.${userId}`]: "" }
       };
 
       // If the user is undoing the vote, decrement the vote count accordingly
-      if (voteType === 'upVote') {
+      if (voteTypeData === voteTypes.upvote) {
         updateOps.$inc = { upVotesCount: -1 };
-      } else if (voteType === 'downVote') {
+      } else if (voteTypeData === voteTypes.downvote) {
         updateOps.$inc = { downVotesCount: -1 };
       }
 
       const reviewUpdated = await TeacherRating.findOneAndUpdate({ _id: reviewId, userId: userIdOther }, updateOps, { session, new: true });
       await session.commitTransaction();
       session.endSession();
+
+      
+  console.log("updated review already reg\n", reviewUpdated, 
+    "\n",  review.userVotes.get(userId)?.toString(),  review.userVotes
+  )
 
       return res.status(200).json({
         message: "Vote already registered.",
@@ -847,12 +874,12 @@ router.post("/reviews/feedbacks/vote", async (req, res) => {
 
     // Handle the initial vote if the user hasn't voted yet
     const updateOps = {
-      $set: { [`userVotes.${userId}`]: voteType }
+      $set: { [`userVotes.${userId}`]: voteTypeData }
     };
 
-    if (voteType === 'upVote') {
+    if (voteTypeData === voteTypes.upvote) {
       updateOps.$inc = { upVotesCount: 1 };
-    } else if (voteType === 'downVote') {
+    } else if (voteTypeData === voteTypes.downvote) {
       updateOps.$inc = { downVotesCount: 1 };
     }
 
@@ -861,6 +888,10 @@ router.post("/reviews/feedbacks/vote", async (req, res) => {
 
     await session.commitTransaction();
     session.endSession();
+
+  console.log("updated review End", reviewUpdated, 
+    "\n",  review.userVotes.get(userId)?.toString(),  review.userVotes
+  )
 
 
     return res.status(200).json({
@@ -917,10 +948,10 @@ router.delete("/reviews/feedbacks/delete", async (req, res) => {
       await teacher.save({ session });
 
       // Invalidate relevant Redis caches
-      await Promise.all([
-        redisClient.del(`campus_teachers_${teacher.campusOrigin}`),
-        redisClient.del(`campus_teacher_${teacherId}`)
-      ]);
+      // await Promise.all([
+      //   redisClient.del(`campus_teachers_${teacher.campusOrigin}`),
+      //   redisClient.del(`campus_teacher_${teacherId}`)
+      // ]);
     }
 
     await session.commitTransaction();
