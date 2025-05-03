@@ -988,6 +988,7 @@ router.get('/account/feedbacks', async (req, res) => {
       teacher.ratingsByStudents.map(async (review) => {
         return {
           rating: review.rating,
+          teacherDirectComment: review?.teacherDirectComment?.length >=0  && review.teacherDirectComment[review.teacherDirectComment.length-1] || [],
           feedback: review.feedback,
           __v: review.__v,
           _id: review._id,
@@ -1005,6 +1006,45 @@ router.get('/account/feedbacks', async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 })
+
+
+router.post('/feedback/comment/teacher', async (req, res) => {
+  try {
+    const {comment, ratingId} = req.body;
+    console.log("comment", comment, ratingId)
+    if (!comment || !ratingId) {
+      return res.status(400).json({ message: "Comment and ratingId are required" });
+    }
+    
+    const { userId , role} = getUserDetails(req);
+    if(role !== UserRoles.teacher) return res.status(403).json({ message: "Your role is not Teacher" });
+
+    const ratingTeacher= await TeacherRating.findByIdAndUpdate(
+      ratingId,
+      {
+        $push: {
+          teacherDirectComment: {
+            comment,
+            teacherUserId: userId
+          }
+        }
+      },
+      { new: true }
+
+    );
+    if (!ratingTeacher) {
+      return res.status(404).json({ message: "Rating not found" });
+    }
+    res.status(200).json({ message: "Comment added successfully" });
+
+  } catch (error) {
+    console.error("Error in /feedback/comment/teacher ", error);
+    res.status(500).json({ message: "Internal Server Error" });
+    
+  }
+})
+
+
 
 const getTeacherReviews = async (req, res) => {
   const { id } = req.query;

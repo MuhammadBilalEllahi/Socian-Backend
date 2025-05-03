@@ -27,7 +27,18 @@ const teacherRatingSchema = new Schema({
         bool: { type: Boolean, default: false }
     },
 
-    // comment: { type: String },
+    teacherDirectComment: [{
+        comment: { type: String },
+        isDeleted: { type: Boolean, default: false },
+        isReported: { type: Boolean, default: false },
+        isEdited: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now },
+editedTimestamp: { type: Date, default: Date.now },
+
+
+        editedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+        teacherUserId: { type: Schema.Types.ObjectId, ref: 'User' },
+    }],
     feedback: { type: String },
     rating: { type: Number, required: true, min: 0, max: 5 },
 

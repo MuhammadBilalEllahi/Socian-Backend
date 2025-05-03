@@ -194,7 +194,8 @@ router.post("/create", upload.array('file'), async (req, res) => {
         if (!title || !societyId || !author) {
             return res.status(400).json("All fields are required");
         }
-        if (!body && !files) return res.status(400).json({ message: 'Body or image/video is required' })
+        if (!body && files) return res.status(400).json({ message: 'Body is required' })
+
 
         let postContent = {
             title: title,
@@ -207,7 +208,7 @@ router.post("/create", upload.array('file'), async (req, res) => {
         if (body) {
             postContent.body = body;
         }
-        else if (files) {
+         if (files) {
             // const { url, type } = await uploadPostMedia(societyId, file, req)
             // console.log("DTA IN ", url, type)
 

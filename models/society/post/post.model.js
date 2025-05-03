@@ -46,7 +46,7 @@ const postSchema = new Schema(
             "image/png",
             "image/gif",
             "image/*",
-             "audio", "audio/opus", "audio/webm", "audio/*"
+             "audio/m4a","audio", "audio/opus", "audio/webm", "audio/*"
           ], //add youtube url later
           default: "text",
         },
