@@ -523,7 +523,7 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
         
         upVotesCount: review.upVotesCount || 0,
         downVotesCount: Math.abs(review.downVotesCount || 0),
-
+        favouritedByTeacher: review.favouritedByTeacher || false,
         userVotes: review.userVotes || {},
         updatedAt: review.updatedAt,
         createdAt: review.createdAt,
@@ -571,6 +571,7 @@ router.post("/rate", async (req, res) => {
         hideUser,
         upVotesCount: 0,
         downVotesCount: 0,
+        favouritedByTeacher: false,
         replies: [],
         userVotes: {},
         isFeedbackEdited: {
@@ -995,6 +996,7 @@ router.get('/account/feedbacks', async (req, res) => {
           upVotesCount: review.upVotesCount,
           downVotesCount: review.downVotesCount * -1,
           updatedAt: review.updatedAt,
+          favouritedByTeacher: review.favouritedByTeacher,
         };
       })
     );
@@ -1029,8 +1031,10 @@ router.post('/feedback/comment/teacher', async (req, res) => {
           }
         }
       },
-      { new: true }
-
+      {
+        new: true,
+        timestamps: false
+      }
     );
     if (!ratingTeacher) {
       return res.status(404).json({ message: "Rating not found" });
@@ -1041,6 +1045,77 @@ router.post('/feedback/comment/teacher', async (req, res) => {
     console.error("Error in /feedback/comment/teacher ", error);
     res.status(500).json({ message: "Internal Server Error" });
     
+  }
+})
+router.post('/feedback/comment/favorite', async (req, res) => {
+  try {
+    const { ratingId } = req.body;
+
+    if (!ratingId) {
+      return res.status(400).json({ message: "ratingId is required" });
+    }
+
+    const { userId, role } = getUserDetails(req);
+    if (role !== UserRoles.teacher) {
+      return res.status(403).json({ message: "Your role is not Teacher" });
+    }
+
+    const updatedRating = await TeacherRating.findOneAndUpdate(
+      { _id: ratingId },
+      [
+        { $set: { favouritedByTeacher: { $not: "$favouritedByTeacher" } } }
+      ],
+      {
+        new: true,
+        timestamps: false
+      }
+    );
+
+    if (!updatedRating) {
+      return res.status(404).json({ message: "Rating not found" });
+    }
+    console.log("updatedRating", updatedRating)
+
+    res.status(200).json({ message: "Rated successfully", rating: updatedRating });
+
+  } catch (error) {
+    console.error("Error in /feedback/comment/favorite", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+router.post('subjectsTaught/add', async (req, res) => {
+  try{
+    const { teacherId, subjectId } = req.body;
+    const { userId, role } = getUserDetails(req);
+
+    if (role !== UserRoles.teacher) {
+      return res.status(403).json({ message: "Your role is not Teacher" });
+    }
+
+    const teacher = await Teacher.findOne({userAttached: userId, _id: teacherId});
+    if (!teacher) {
+      return res.status(404).json({ message: "Teacher/User not attached" });
+    }
+
+    const subject = await Subject.findById(subjectId);
+    if (!subject) {
+      return res.status(404).json({ message: "Subject not found" });
+    }
+
+    if (teacher.subjectsTaught.includes(subjectId)) {
+      return res.status(400).json({ message: "Subject already added" });
+    }
+
+    teacher.subjectsTaught.push(subjectId);
+    await teacher.save();
+
+    res.status(200).json({ message: "Subject added successfully", teacher });
+
+  }catch(error){
+    console.error("Error in /subjectsTaught/add", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 })
 
