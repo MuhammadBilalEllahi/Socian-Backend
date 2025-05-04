@@ -614,15 +614,17 @@ router.get('/societies-top', async (req, res) => {
 
 router.get('/teacher/attachUser', async (req, res) => {
     try {
-        const { userId } = getUserDetails(req);
+        const { userId, platform } = getUserDetails(req);
+        console.log("CHecking platform ", platform)
         const user = await User.findById(userId);
-        const response = await setTeacherModal(req, user)
+        const response = await setTeacherModal(req, user, platform)
         console.log("DOG", response)
         res.status(response.status).json({
             message: response.message,
             teacher: response.teacher || null,
             attached: response.attached || false,
             teachers: response.teachers || null,
+            teacherConnectivities: response?.teacherConnectivities || null,
             error: response.error || null,
         });
     } catch (error) {
@@ -631,7 +633,8 @@ router.get('/teacher/attachUser', async (req, res) => {
     }
 })
 
-const setTeacherModal = async function (req, user) {
+const setTeacherModal = async function (req, user, platform) {
+    console.log("Platform->", platform)
     try {
         
         if (user.role === UserRoles.teacher) {
@@ -686,13 +689,19 @@ const setTeacherModal = async function (req, user) {
                         teacherModal: user.teacherConnectivities.teacherModal
                     }
 
+                    const  teacherConnectivities = {
+                            attached: user.teacherConnectivities.attached,
+                            teacherModal: user.teacherConnectivities.teacherModal
+                        }
+                    
                     // req.session.save((err) => {
                     //   if (err) {
                     //     console.error("Session save error:", err);
                     //     return res.status(500).json({ error: "Internal Server Error" });
                     //   }
                     // })
-
+                    const resolvedData = { status: 201, message: 'User with role teacher attached with Modal successfully' };
+                    if(platform === "app") {resolvedData.teacherConnectivities = teacherConnectivities}
 
                     return new Promise((resolve, reject) => {
                         req.session.save((err) => {
@@ -700,7 +709,7 @@ const setTeacherModal = async function (req, user) {
                                 console.error("Session save error:", err);
                                 reject({ status: 500, message: "Internal Server Error" });
                             } else {
-                                resolve({ status: 201, message: 'User with role teacher attached with Modal successfully' });
+                                resolve(resolvedData);
                             }
                         });
                     });
@@ -708,7 +717,7 @@ const setTeacherModal = async function (req, user) {
 
                     // return { status: 200, message: 'User with role teacher attached with Modal successfully', teacher: teacherModalExists, attached: true }
                 } else {
-                    return { status: 200, message: 'User already attached with another modal, Please verify before Modifyng', attached: false }
+                    return { status: 200, message: 'User already attached with another modal, Please verify before Modifyng', attached: false}
                 }
 
             }

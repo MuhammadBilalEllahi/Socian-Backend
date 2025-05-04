@@ -148,7 +148,7 @@ const getUserDetails = (req) => {
   //   }
   // }
 
-  return { user, userId, role, universityOrigin, campusOrigin, departmentId };
+  return { user, userId, role, universityOrigin, campusOrigin, departmentId , platform};
 };
 
 

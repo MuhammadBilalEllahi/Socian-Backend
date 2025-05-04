@@ -108,7 +108,7 @@ router.get("/super-teachers-by-campus", async (req, res) => {
 
 // CREATEBYTEACHER a TEACHER modal created by a teacher
 router.post("/by/teacher/create", async (req, res) => {
-  const { user, userId, role, universityOrigin, campusOrigin, departmentId } = getUserDetails(req);
+  const { user, userId, role, universityOrigin, campusOrigin, departmentId , platform} = getUserDetails(req);
 
   console.log(user, userId, role, universityOrigin, campusOrigin, departmentId);
 
@@ -213,14 +213,17 @@ router.post("/by/teacher/create", async (req, res) => {
         { session }
       ),
     ]);
+    console.log("BEFORE")
 
-    // Update Session
+    if(platform === 'web'){
+      // Update Session
     req.session.user.teacherConnectivities = {
       attached: true,
       teacherModal: teacher._id,
     };
 
     await sessionSaveHandler(req, res);
+    }
 
     // Invalidate relevant Redis caches
     // await Promise.all([
@@ -230,8 +233,15 @@ router.post("/by/teacher/create", async (req, res) => {
 
     await session.commitTransaction();
     // session.endSession();
+    const data = { message: "Teacher created successfully", teacher }
+    if(platform === 'app'){
+      data.teacherConnectivities = {
+        attached: true,
+        teacherModal: teacher._id,
+      }
+    }
 
-    res.status(201).json({ message: "Teacher created successfully", teacher });
+    res.status(201).json(data);
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
