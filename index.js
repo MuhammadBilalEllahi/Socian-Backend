@@ -216,7 +216,7 @@ app.use("/api/user", protectRoute, userRouter);
 
 
 // const cafeProtect = require("./middlewares/cafe.protect.js");
-app.use('/api/cafe', cafeRouter);
+app.use('/api/cafe', protectRoute,cafeRouter);
 
 
 

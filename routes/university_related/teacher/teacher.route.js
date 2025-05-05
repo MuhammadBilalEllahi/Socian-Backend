@@ -530,7 +530,7 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
         feedback: review.feedback,
         upvoteCount: review.upVotesCount || 0,
         downvoteCount: Math.abs(review.downVotesCount || 0),
-        
+        isEdited: review.isFeedbackEdited.bool || false,
         upVotesCount: review.upVotesCount || 0,
         downVotesCount: Math.abs(review.downVotesCount || 0),
         favouritedByTeacher: review.favouritedByTeacher || false,
@@ -539,6 +539,7 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
         createdAt: review.createdAt,
         user: userData,
         isAnonymous: review.hideUser,
+        teacherDirectComment: review.teacherDirectComment[review.teacherDirectComment.length - 1] || null,
         replies: processedReplies
       };
     });

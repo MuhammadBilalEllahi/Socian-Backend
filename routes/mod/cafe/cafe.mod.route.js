@@ -9,7 +9,7 @@ const Cafe = require('../../../models/cafes_campus/cafe.model');
 const CafeUser = require('../../../models/cafes_campus/cafe.user.model');
 const moment = require('moment')
 
-// Cafe admin might be able to read and write. translate the reviews to them. or Speak the revies. Or just make app view in URDU
+// Cafe admin might not be able to read and write. translate the reviews to them. or Speak the revies. Or just make app view in URDU(not easy now i know)
 
 // Middleware for validation errors
 const handleValidationErrors = (req, res, next) => {
@@ -870,6 +870,8 @@ router.post('/:cafeId/category/:categoryId/item/create', async (req, res) => {
             // bestSelling, 
             volume, discount, references } = req.body;
         const { cafeId, categoryId } = req.params;
+
+        if(Number(price) < 0) return res.status(400).json({ error: 'Price must be greater than 0' });
 
         const { userId, campusOrigin, universityOrigin } = getUserDetails(req);
 

@@ -3,11 +3,15 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
-
+const mongoose = require('mongoose');
 const CafeUser = require('../../../models/cafes_campus/cafe.user.model');
 const Cafe = require('../../../models/cafes_campus/cafe.model');
 const cafeProtectedRoutes = require('./protected/cafe.protected.routes');
 const cafeProtect = require('../../../middlewares/cafe.protect');
+const { getUserDetails } = require('../../../utils/utils');
+const FoodItem = require('../../../models/cafes_campus/food.item.model');
+const CafeVote = require('../../../models/cafes_campus/ratings/vote/vote.cafe.model');
+const CafeItemRating = require('../../../models/cafes_campus/ratings/rating.cafe.item.model');
 
 router.use('/user', cafeProtect, cafeProtectedRoutes);
 
@@ -269,5 +273,278 @@ router.get('/', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
+
+
+
+// ? BELOW THESE ARE FOR STUDENTS | ALUMNI
+router.get('/campus/cafe/all', async (req, res) => {
+    try {
+        const { campusId } = getUserDetails(req);
+        console.log(campusId);
+        const cafes = await Cafe.find({ 'references.campusId': campusId, status:'active' }).select(' name attachedCafeAdmin status contact accumulatedRating information').populate([
+            {
+                path: 'attachedCafeAdmin',
+                select: 'name email',
+            }
+        ]);
+        console.log(cafes);
+        if (!cafes || cafes.length === 0) {
+            return res.status(404).json({ message: 'No cafes found for this campus, You can ask your moderator for Cafe creation or could become a moderator of your campus' });
+        }
+        res.status(200).json(cafes);
+    }
+    catch (error) {
+        console.error("Error fetching cafes:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
+);
+
+
+router.get('/campus/cafe/:cafeId/fooditems', async (req, res) => {
+    try {
+        
+        const { cafeId } = req.params;
+        
+        const cafes = await Cafe.findOne({_id: cafeId}).select('foodItems').where({ status: 'active'}).populate([{
+            path: 'foodItems',
+            select: 'name description imageUrl price takeAwayPrice takeAwayStatus category bestSelling volume favouritebByUsersCount ratingsMap',
+            populate: {
+                path: 'category',
+                select: 'name slug imageUrl'
+            }
+        }]);
+        if (!cafes || cafes.length === 0) {
+            return res.status(404).json({ message: 'No Food Items Yet' });
+        }
+        console.log(cafes);
+        res.status(200).json({fooditems: cafes});
+    }
+    catch (error) {
+        console.error("Error fetching cafes:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
+);
+
+router.get('/campus/cafe/fooditems/reviews/:fooditemId', async (req, res) => {
+    try {
+      const { fooditemId } = req.params;
+    //   CafeItemRating
+  
+      const foodItem = await FoodItem.findOne({ _id: fooditemId }).populate({
+        path: 'ratings',
+        select: '_id favourited favouritedBy ratingMessage cafeVoteId updatedAt createdAt rating',
+        populate: [{
+          path: 'cafeVoteId',
+          select: 'vote reactions votePlusCount voteMinusCount updatedAt'
+        }, {
+            path: 'userId',
+            select: 'name username',
+        }]
+      });
+  
+      if (!foodItem) {
+        return res.status(404).json({ message: 'No Ratings Yet' });
+      }
+
+      console.log("DATA IN FOOD ITEM", JSON.stringify(foodItem, null, 2));
+  
+      res.status(200).json(foodItem);
+    } catch (error) {
+      console.error("Error fetching food item reviews:", error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+  
+
+//   router.get('/campus/cafe/fooditems/:fooditemId', async (req, res) => {
+//     try {
+//       const { fooditemId } = req.params;
+//     //   CafeItemRating
+  
+//       const foodItem = await FoodItem.findOne({ _id: fooditemId }).populate({
+        
+//       });
+  
+//       if (!foodItem) {
+//         return res.status(404).json({ message: 'No Ratings Yet' });
+//       }
+
+//       console.log("DATA IN FOOD ITEM", JSON.stringify(foodItem, null, 2));
+  
+//       res.status(200).json(foodItem);
+//     } catch (error) {
+//       console.error("Error fetching food item reviews:", error);
+//       res.status(500).json({ message: 'Server error' });
+//     }
+//   });
+  
+
+
+
+
+router.post('/fooditem/rate', async (req, res) => {
+    const session = await mongoose.startSession();
+    try {
+        const { foodItemId, cafeId, ratingMessage, rating } = req.body;
+        const { userId, campusId, universityId } = getUserDetails(req);
+
+        console.log("ALL DATA", req.body, userId, campusId, universityId);
+
+        await session.withTransaction(async () => {
+            const fooditem = await FoodItem.findById(foodItemId).session(session);
+            if (!fooditem) {
+                throw new Error('Food item not found');
+            }
+
+            // Check if the user already rated
+            let ratingDoc = await CafeItemRating.findOne({ foodItemId, userId }).session(session);
+
+            if (ratingDoc) {
+                // Update existing rating
+                ratingDoc.ratingMessage = ratingMessage;
+                ratingDoc.rating = rating;
+                ratingDoc.isEdited = true;
+                await ratingDoc.save({ session });
+
+                // Recalculate average using aggregation
+                const updated = await CafeItemRating.aggregate([
+                    { $match: { foodItemId: new mongoose.Types.ObjectId(foodItemId) } },
+                    { $group: { _id: null, avgRating: { $avg: "$rating" } } }
+                ]);
+
+                const avgRating = updated[0]?.avgRating || 0;
+                fooditem.totalRatings = avgRating.toFixed(2);
+                await fooditem.save({ session });
+
+                return res.status(200).json({
+                    message: 'Rating updated successfully',
+                    rating: ratingDoc
+                });
+            }
+
+            // Create new rating
+            ratingDoc = new CafeItemRating({
+                foodItemId,
+                cafeId,
+                userId,
+                ratingMessage,
+                rating,
+                references: {
+                    campusId: universityId,
+                    universityId: campusId
+                }
+            });
+
+            await ratingDoc.save({ session });
+
+            const voteDoc = new CafeVote({
+                _id: ratingDoc._id,
+                attachedCafe: cafeId,
+                references: {
+                    campusId: universityId,
+                    universityId: campusId
+                }
+            });
+
+            await voteDoc.save({ session });
+
+            ratingDoc.cafeVoteId = voteDoc._id;
+            await ratingDoc.save({ session });
+
+            fooditem.ratings.push(ratingDoc._id);
+            await fooditem.save({ session });
+
+            // Recalculate average
+            const updated = await CafeItemRating.aggregate([
+                { $match: { foodItemId: new mongoose.Types.ObjectId(foodItemId) } },
+                { $group: { _id: null, avgRating: { $avg: "$rating" } } }
+            ]);
+
+            const avgRating = updated[0]?.avgRating || 0;
+            fooditem.totalRatings = avgRating.toFixed(2);
+            await fooditem.save({ session });
+        });
+
+        session.endSession();
+        return res.status(201).json({
+            message: 'Rating added successfully',
+            rating: 'Success' // If you want the actual doc, re-fetch it outside session
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error("Error in rating food item:", error);
+        res.status(500).json({ message: error.message || 'Server error' });
+    }
+});
+
+
+
+
+// router.post('/fooditem/rate', async (req, res) => {
+//     try {
+//         const { foodItemId, cafeId, ratingMessage, rating } = req.body;
+//         const { userId , campusId, universityId} = getUserDetails(req);
+
+//         const fooditem = await FoodItem.findById(foodItemId);
+//         if (!fooditem) {
+//             return res.status(404).json({ message: 'Food item not found' });
+//         }
+//         const ratingExistsThenUpdate = await CafeItemRating.findOne({ foodItemId, userId });
+//         if (ratingExistsThenUpdate) {
+//             ratingExistsThenUpdate.ratingMessage = ratingMessage;
+//             ratingExistsThenUpdate.rating = rating;
+//             ratingExistsThenUpdate.isEdited = true;
+//             await ratingExistsThenUpdate.save();
+//             return res.status(200).json({
+//                 message: 'Rating updated successfully',
+//                 rating: ratingExistsThenUpdate
+//             });
+//         }
+//         const createdRating = new CafeItemRating({
+//             foodItemId,
+//             cafeId,
+//             userId,
+//             ratingMessage,
+//             rating: rating,
+//             'references.campusId':universityId,
+//             'references.universityId':campusId ,
+//         });
+
+//         await createdRating.save();
+
+//         const voteId = new CafeVote({
+//             _id: createdRating._id,
+//             attachedCafe: cafeId,
+//             'references.campusId':universityId,
+// 'references.universityId':campusId ,
+//         })
+//         voteId.save();
+//         createdRating.cafeVoteId = voteId._id;
+//         await createdRating.save();
+
+//         fooditem.ratings.push(createdRating._id);
+//         fooditem.save();
+
+//        const newRating = ((fooditem.totalRatings + rating) / fooditem.ratings.length-1).toFixed(2);
+//        fooditem.totalRatings = newRating;
+//        fooditem.save();
+
+        
+
+//         return res.status(201).json({
+//             message: 'Rating added successfully',
+//             rating: createdRating
+//         });
+
+        
+//     } catch (error) {
+//         console.error("Error in rating food item:", error);
+//         res.status(500).json({ message: 'Server error' });
+//     }
+// })
 
 module.exports = router;

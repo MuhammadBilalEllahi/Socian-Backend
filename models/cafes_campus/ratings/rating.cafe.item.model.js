@@ -3,6 +3,10 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const cafeItemRatingSchema = new Schema({
+    userId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+    },
 
     favourited: {
         type: Boolean,
@@ -17,19 +21,20 @@ const cafeItemRatingSchema = new Schema({
         type: String,
         required: true
     },
+    rating: {
+        type: Number,
+        min: 1,
+        max: 5,
+    },
     cafeVoteId: {
         type: Schema.Types.ObjectId,
         ref: 'CafeVote'
     },
 
-
-
-
-
-
-
-
-
+    isEdited: {
+        type: Boolean,
+        default: false
+    },
     attachedCafe: {
         type: Schema.Types.ObjectId,
         ref: 'Cafe',
@@ -76,7 +81,7 @@ const cafeItemRatingSchema = new Schema({
         default: Date.now
     }
 
-}, { timestamps: true });
+}, { timestamps: true});
 
 const CafeItemRating = mongoose.model('CafeItemRating', cafeItemRatingSchema);
 

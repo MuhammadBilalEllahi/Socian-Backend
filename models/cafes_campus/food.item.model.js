@@ -129,13 +129,18 @@ const foodItemsSchema = new Schema({
         ref: 'CafeItemRating'
     }],
 
-    ratingsMap: {
-        type: Map,
-        of: Number,
-        default: {}, // ? userId: Rating
-        min: 0,
-        max: 5
+    totalRatings: {
+        type: Number,
+        default: 0
     },
+
+    // ratingsMap: {
+    //     type: Map,
+    //     of: Number,
+    //     default: {}, // ? userId: Rating
+    //     min: 0,
+    //     max: 5
+    // },
 
 
 

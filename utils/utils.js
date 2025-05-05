@@ -118,6 +118,7 @@ const getUserDetails = (req) => {
 
   const platform = req.headers["x-platform"];
 
+  // console.log("this is the platform", platform, req.headers["x-platform"], req.user);
   if (platform === "web") {
     user = req.session.user;
     userId = req.session.user._id;
@@ -137,6 +138,8 @@ const getUserDetails = (req) => {
       campusOrigin = req.user.university.campusId?._id ?? req.user.university.campusId;
     }
   }
+  let campusId = campusOrigin;
+  let universityId = universityOrigin;
 
   // if (checks) {
   //   if (!userId) return res.status(400).json({ message: "User ID is missing" }); // This will never happen
@@ -148,7 +151,7 @@ const getUserDetails = (req) => {
   //   }
   // }
 
-  return { user, userId, role, universityOrigin, campusOrigin, departmentId , platform};
+  return { user, userId, role, campusId,universityId,universityOrigin, campusOrigin, departmentId , platform};
 };
 
 
