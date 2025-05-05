@@ -308,7 +308,7 @@ router.get('/campus/cafe/:cafeId/fooditems', async (req, res) => {
         
         const cafes = await Cafe.findOne({_id: cafeId}).select('foodItems').where({ status: 'active'}).populate([{
             path: 'foodItems',
-            select: 'name description imageUrl price takeAwayPrice takeAwayStatus category bestSelling volume favouritebByUsersCount ratingsMap',
+            select: 'name description imageUrl price totalRatings takeAwayPrice takeAwayStatus category bestSelling volume favouritebByUsersCount ratingsMap',
             populate: {
                 path: 'category',
                 select: 'name slug imageUrl'
@@ -382,8 +382,6 @@ router.get('/campus/cafe/fooditems/reviews/:fooditemId', async (req, res) => {
   
 
 
-
-
 router.post('/fooditem/rate', async (req, res) => {
     const session = await mongoose.startSession();
     try {
@@ -395,12 +393,12 @@ router.post('/fooditem/rate', async (req, res) => {
         await session.withTransaction(async () => {
             const fooditem = await FoodItem.findById(foodItemId).session(session);
             if (!fooditem) {
-                throw new Error('Food item not found');
+                res.status(404).json({ message: 'Food item not found' });
             }
 
             // Check if the user already rated
             let ratingDoc = await CafeItemRating.findOne({ foodItemId, userId }).session(session);
-
+console.log("RATING DOC", ratingDoc);
             if (ratingDoc) {
                 // Update existing rating
                 ratingDoc.ratingMessage = ratingMessage;
@@ -411,68 +409,73 @@ router.post('/fooditem/rate', async (req, res) => {
                 // Recalculate average using aggregation
                 const updated = await CafeItemRating.aggregate([
                     { $match: { foodItemId: new mongoose.Types.ObjectId(foodItemId) } },
-                    { $group: { _id: null, avgRating: { $avg: "$rating" } } }
+                    { $group: { _id: null, avgRating: { $avg: "$rating" }, totalRatings: { $sum: 1 } } }
                 ]);
 
                 const avgRating = updated[0]?.avgRating || 0;
+                const totalRatings = updated[0]?.totalRatings || 0;
                 fooditem.totalRatings = avgRating.toFixed(2);
+                fooditem.ratingCount = totalRatings; // Optional: you can also store the total number of ratings
                 await fooditem.save({ session });
 
                 return res.status(200).json({
                     message: 'Rating updated successfully',
-                    rating: ratingDoc
+                    rating: ratingDoc // Return updated rating
+                });
+
+            } else {
+                // Create new rating
+                ratingDoc = new CafeItemRating({
+                    foodItemId,
+                    cafeId,
+                    userId,
+                    ratingMessage,
+                    rating,
+                    references: {
+                        campusId: universityId,
+                        universityId: campusId
+                    }
+                });
+
+                await ratingDoc.save({ session });
+
+                const voteDoc = new CafeVote({
+                    _id: ratingDoc._id,
+                    attachedCafe: cafeId,
+                    references: {
+                        campusId: universityId,
+                        universityId: campusId
+                    }
+                });
+
+                await voteDoc.save({ session });
+
+                ratingDoc.cafeVoteId = voteDoc._id;
+                await ratingDoc.save({ session });
+
+                fooditem.ratings.push(ratingDoc._id);
+                await fooditem.save({ session });
+
+                // Recalculate average using aggregation
+                const updated = await CafeItemRating.aggregate([
+                    { $match: { foodItemId: new mongoose.Types.ObjectId(foodItemId) } },
+                    { $group: { _id: null, avgRating: { $avg: "$rating" }, totalRatings: { $sum: 1 } } }
+                ]);
+
+                const avgRating = updated[0]?.avgRating || 0;
+                const totalRatings = updated[0]?.totalRatings || 0;
+                fooditem.totalRatings = avgRating.toFixed(2);
+                fooditem.ratingCount = totalRatings; // Optional: store total count of ratings
+                await fooditem.save({ session });
+
+                return res.status(201).json({
+                    message: 'Rating added successfully',
+                    rating: ratingDoc // Return the newly created rating
                 });
             }
-
-            // Create new rating
-            ratingDoc = new CafeItemRating({
-                foodItemId,
-                cafeId,
-                userId,
-                ratingMessage,
-                rating,
-                references: {
-                    campusId: universityId,
-                    universityId: campusId
-                }
-            });
-
-            await ratingDoc.save({ session });
-
-            const voteDoc = new CafeVote({
-                _id: ratingDoc._id,
-                attachedCafe: cafeId,
-                references: {
-                    campusId: universityId,
-                    universityId: campusId
-                }
-            });
-
-            await voteDoc.save({ session });
-
-            ratingDoc.cafeVoteId = voteDoc._id;
-            await ratingDoc.save({ session });
-
-            fooditem.ratings.push(ratingDoc._id);
-            await fooditem.save({ session });
-
-            // Recalculate average
-            const updated = await CafeItemRating.aggregate([
-                { $match: { foodItemId: new mongoose.Types.ObjectId(foodItemId) } },
-                { $group: { _id: null, avgRating: { $avg: "$rating" } } }
-            ]);
-
-            const avgRating = updated[0]?.avgRating || 0;
-            fooditem.totalRatings = avgRating.toFixed(2);
-            await fooditem.save({ session });
         });
 
         session.endSession();
-        return res.status(201).json({
-            message: 'Rating added successfully',
-            rating: 'Success' // If you want the actual doc, re-fetch it outside session
-        });
-
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
@@ -480,6 +483,107 @@ router.post('/fooditem/rate', async (req, res) => {
         res.status(500).json({ message: error.message || 'Server error' });
     }
 });
+
+
+// router.post('/fooditem/rate', async (req, res) => {
+//     const session = await mongoose.startSession();
+//     try {
+//         const { foodItemId, cafeId, ratingMessage, rating } = req.body;
+//         const { userId, campusId, universityId } = getUserDetails(req);
+
+//         console.log("ALL DATA", req.body, userId, campusId, universityId);
+
+//         await session.withTransaction(async () => {
+//             const fooditem = await FoodItem.findById(foodItemId).session(session);
+//             if (!fooditem) {
+//                 throw new Error('Food item not found');
+//             }
+
+//             // Check if the user already rated
+//             let ratingDoc = await CafeItemRating.findOne({ foodItemId, userId }).session(session);
+
+//             if (ratingDoc) {
+//                 // Update existing rating
+//                 ratingDoc.ratingMessage = ratingMessage;
+//                 ratingDoc.rating = rating;
+//                 ratingDoc.isEdited = true;
+//                 await ratingDoc.save({ session });
+
+//                 // Recalculate average using aggregation
+//                 const updated = await CafeItemRating.aggregate([
+//                     { $match: { foodItemId: new mongoose.Types.ObjectId(foodItemId) } },
+//                     { $group: { _id: null, avgRating: { $avg: "$rating" } } }
+//                 ]);
+
+//                 const avgRating = updated[0]?.avgRating || 0;
+//                 fooditem.totalRatings = avgRating.toFixed(2);
+//                 await fooditem.save({ session });
+
+//                 return res.status(200).json({
+//                     message: 'Rating updated successfully',
+//                     rating: ratingDoc
+//                 });
+//             }else{
+
+            
+
+//             // Create new rating
+//             ratingDoc = new CafeItemRating({
+//                 foodItemId,
+//                 cafeId,
+//                 userId,
+//                 ratingMessage,
+//                 rating,
+//                 references: {
+//                     campusId: universityId,
+//                     universityId: campusId
+//                 }
+//             });
+
+//             await ratingDoc.save({ session });
+
+//             const voteDoc = new CafeVote({
+//                 _id: ratingDoc._id,
+//                 attachedCafe: cafeId,
+//                 references: {
+//                     campusId: universityId,
+//                     universityId: campusId
+//                 }
+//             });
+
+//             await voteDoc.save({ session });
+
+//             ratingDoc.cafeVoteId = voteDoc._id;
+//             await ratingDoc.save({ session });
+
+//             fooditem.ratings.push(ratingDoc._id);
+//             await fooditem.save({ session });
+
+//             // Recalculate average
+//             const updated = await CafeItemRating.aggregate([
+//                 { $match: { foodItemId: new mongoose.Types.ObjectId(foodItemId) } },
+//                 { $group: { _id: null, avgRating: { $avg: "$rating" } } }
+//             ]);
+
+//             const avgRating = updated[0]?.avgRating || 0;
+//             fooditem.totalRatings = avgRating.toFixed(2);
+//             await fooditem.save({ session });
+//         }
+//         });
+
+//         session.endSession();
+//         return res.status(201).json({
+//             message: 'Rating added successfully',
+//             rating: 'Success' // If you want the actual doc, re-fetch it outside session
+//         });
+
+//     } catch (error) {
+//         await session.abortTransaction();
+//         session.endSession();
+//         console.error("Error in rating food item:", error);
+//         res.status(500).json({ message: error.message || 'Server error' });
+//     }
+// });
 
 
 

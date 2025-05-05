@@ -7,7 +7,10 @@ const cafeItemRatingSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'User'
     },
-
+    foodItemId:{
+        type: Schema.Types.ObjectId,
+        ref: 'FoodItem'
+    },
     favourited: {
         type: Boolean,
         default: false
