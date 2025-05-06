@@ -38,7 +38,45 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-module.exports = upload;
+
+
+
+const ImageStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const { universityOrigin, campusOrigin, role, userId } = getUserDetails(req);
+        console.log(universityOrigin, campusOrigin, role, userId)
+
+        const pathCWD = process.cwd();
+        console.log("PATHHH", pathCWD);
+
+
+        const uploadPath = path.join(
+            pathCWD,
+            'temp',
+            "uploads",
+            universityOrigin,
+            campusOrigin,
+            role,
+            userId,
+            "picture"
+        );
+
+        // Create directory if it doesn't exist
+        fs.mkdirSync(uploadPath, { recursive: true });
+
+        console.log("saved to destination", uploadPath)
+
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = `${Date.now()}-${file.originalname}`;
+        cb(null, uniqueName);
+    }
+});
+
+const uploadImage = multer({ ImageStorage });
+
+module.exports = {upload, uploadImage};
 
 
 

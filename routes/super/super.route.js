@@ -4,12 +4,15 @@ const Campus = require("../../models/university/campus.university.model");
 const University = require("../../models/university/university.register.model");
 const Society = require("../../models/society/society.model");
 const Subject = require("../../models/university/department/subject/subject.department.model");
-const { PastPaper, PastpapersCollectionByYear } = require("../../models/university/papers/pastpaper.subject.model");
-const PastPaperItem = require("../../models/university/papers/pastpaper.item.model");
+const { PastPaper } = require("../../models/university/papers/pastpaper.subject.model");
+// PastpapersCollectionByYear
+
+const {PastPaperItem} = require("../../models/university/papers/pastpaper.item.model");
 const router = express.Router();
 const redisClient = require("../../db/reddis");
 const { getUserDetails } = require("../../utils/utils");
 const mongoose = require("mongoose");
+const { PastpapersCollectionByYear } = require("../../models/university/papers/paper.collection.model");
 
 
 router.get("/all-users", async (req, res) => {

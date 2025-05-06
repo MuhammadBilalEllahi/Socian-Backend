@@ -8,6 +8,7 @@ const Society = require('../../models/society/society.model')
 const FriendRequest = require('../../models/user/friend.request.model')
 const Teacher = require('../../models/university/teacher/teacher.model')
 const UserRoles = require('../../models/userRoles')
+const { upload } = require('../../utils/multer.utils')
 
 // No create user search field
 
@@ -86,6 +87,23 @@ const UserRoles = require('../../models/userRoles')
 //         res.status(500).json("Internal Server Error")
 //     }
 // })
+
+
+exports.getUserProfile = async (req, res) => {
+    try {
+      const userId = req.query.id;
+      const user = await User.findById(userId)
+        .select('name username email profile university joined subscribedSocities connections')
+        .populate('university.universityId', 'name');
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      res.json({ profile: user });
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  };
 
 router.get('/profile', async (req, res) => {
     try {
@@ -357,7 +375,8 @@ router.get('/connection/stream', async (req, res) => {
         console.error("Error in /connection/stream in user.route.js", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
-})
+
+   })
 
 
 
@@ -788,6 +807,24 @@ router.get('/teacher/joinModel', async (req, res) => {
 })
 
 
+router.get("/me", async (req, res) => {
+    try {
+      const { userId } = getUserDetails(req);
+      const user = await User.findById(userId).select('_id');
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(200).json({ _id: user._id });
+    } catch (error) {
+      console.error("Error in /user/me", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
 
+// router.put('/update/name');
+// router.put('/update/personalEmail');
+// router.put('/update/picture',upload ,async (req, res) => {
+
+// });
 
 module.exports = router

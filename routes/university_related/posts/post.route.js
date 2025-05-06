@@ -7,7 +7,7 @@ const mongoose = require("mongoose");
 const User = require("../../../models/user/user.model");
 const { getUserDetails } = require("../../../utils/utils");
 const { uploadPostMedia } = require("../../../utils/aws.bucket.utils");
-const upload = require("../../../utils/multer.utils");
+const {upload} = require("../../../utils/multer.utils");
 const PostCommentCollection = require("../../../models/society/post/comment/post.comment.collect.model");
 const PostComment = require("../../../models/society/post/comment/post.comment.model");
 const Society = require("../../../models/society/society.model");
@@ -1225,7 +1225,76 @@ router.post('/post/repost/society', async (req, res) => {
 
 
 
+router.delete("/delete", async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
+    try {
+        const { postId } = req.query;
+        const { userId } = getUserDetails(req);
+
+        // Find the post
+        const post = await Post.findById(postId).session(session);
+        if (!post) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        // Check if the user is the author
+        if (post.author.toString() !== userId) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json({ message: "You are not authorized to delete this post" });
+        }
+
+        // Delete the post
+        await Post.findByIdAndDelete(postId, { session });
+
+        // Remove post from PostsCollection
+        await PostsCollection.findOneAndUpdate(
+            { societyId: post.society },
+            { $pull: { posts: { postId } } },
+            { session }
+        );
+
+        // Remove post from User's profile.posts
+        await User.findByIdAndUpdate(
+            userId,
+            { $pull: { "profile.posts": postId } },
+            { session }
+        );
+
+        // Delete associated votes
+        await SocietyPostAndCommentVote.findOneAndDelete(
+            { postId },
+            { session }
+        );
+
+        // Delete associated comments and their votes
+        const commentCollection = await PostCommentCollection.findById(postId).session(session);
+        if (commentCollection) {
+            for (const commentId of commentCollection.comments) {
+                await PostComment.findByIdAndDelete(commentId, { session });
+                await SocietyPostAndCommentVote.findOneAndDelete(
+                    { commentId: commentId },
+                    { session }
+                );
+            }
+            await PostCommentCollection.findByIdAndDelete(postId, { session });
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(200).json({ message: "Post deleted successfully" });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error("Error in delete('/posts/delete')", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 
 
 
