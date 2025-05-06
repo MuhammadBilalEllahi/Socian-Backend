@@ -8,7 +8,8 @@ const Society = require('../../models/society/society.model')
 const FriendRequest = require('../../models/user/friend.request.model')
 const Teacher = require('../../models/university/teacher/teacher.model')
 const UserRoles = require('../../models/userRoles')
-const { upload } = require('../../utils/multer.utils')
+const { upload, uploadImage } = require('../../utils/multer.utils')
+const { uploadPictureMedia } = require('../../utils/aws.bucket.utils')
 
 // No create user search field
 
@@ -822,9 +823,53 @@ router.get("/me", async (req, res) => {
   });
 
 // router.put('/update/name');
-// router.put('/update/personalEmail');
-// router.put('/update/picture',upload ,async (req, res) => {
+// router.put('/update/personalEmail');a
+router.put('/update/picture', uploadImage.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: "No file uploaded" });
+        }
 
-// });
+        const { userId } = getUserDetails(req);
+        const { url, type } = await uploadPictureMedia(req.file, req);
+
+        if (!url) {
+            return res.status(500).json({ error: "Failed to upload image" });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { $set: { 'profile.picture': url },
+            $push: {
+                'profile.pictureList': {
+                  image: url,
+                  timestamp: new Date()
+                }
+              }
+            },
+            { new: true, projection: { 'profile.picture': 1 } }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: "User Not Found" });
+        }
+    
+        if(req?.session?.user){
+            req.session?.user?.profile?.picture.push(newImageUrl);
+            req.session?.save(); // Save to MongoDB
+        }
+
+
+        return res.status(200).json({
+            message: "Profile Picture Added",
+            picture: user.profile.picture
+        });
+
+    } catch (error) {
+        console.error("Error in /update/picture:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
 
 module.exports = router

@@ -46,6 +46,11 @@ const userSchema = new mongoose.Schema({
       default:
         "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
     },
+    pictureList: [{
+      image: {
+        type: String,
+      }
+    }],
     bio: { type: String, default: "" },
     location: {
       type: String,

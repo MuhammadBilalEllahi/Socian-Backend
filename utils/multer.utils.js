@@ -58,7 +58,7 @@ const ImageStorage = multer.diskStorage({
             campusOrigin,
             role,
             userId,
-            "picture"
+            "pictures"
         );
 
         // Create directory if it doesn't exist
@@ -74,7 +74,7 @@ const ImageStorage = multer.diskStorage({
     }
 });
 
-const uploadImage = multer({ ImageStorage });
+const uploadImage = multer({ storage: ImageStorage });
 
 module.exports = {upload, uploadImage};
 
