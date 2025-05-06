@@ -7,13 +7,20 @@ class Valkey {
 if (valkeyEnv) {
     console.log("║ \x1bValkey is Present->", valkeyEnv.toString().includes('beyondtheclass'));
 } else {
-    console.warn("║ \x1b[33mVALKEY environment variable is not defined\x1b[0m");
+    console.warn("║ \x1b[33mVALKEY Azure environment variable is not defined\x1b[0m");
 }
         // console.log("║ \x1bValkey is Present->",process.env.VALKEY.toString().includes('beyondtheclass'));
         this.type = type;
         const isDevelopment = process.env.NODE_ENV === 'development';
         this.client = new Redis(
-            // isDevelopment ? 
+            isDevelopment ? 
+            {
+                port: process.env.NEW_AZURE_REDISPORT || 6379,
+                host: process.env.NEW_AZURE_REDISHOST || '127.0.0.1',
+                password: process.env.NEW_AZURE_REDISPASSWORD || '',
+                tls: {}
+            }
+            :
              process.env.VALKEY
             
         //     :
