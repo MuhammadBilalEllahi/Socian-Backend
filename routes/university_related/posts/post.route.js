@@ -7,7 +7,7 @@ const mongoose = require("mongoose");
 const User = require("../../../models/user/user.model");
 const { getUserDetails } = require("../../../utils/utils");
 const { uploadPostMedia } = require("../../../utils/aws.bucket.utils");
-const {upload} = require("../../../utils/multer.utils");
+const { upload } = require("../../../utils/multer.utils");
 const PostCommentCollection = require("../../../models/society/post/comment/post.comment.collect.model");
 const PostComment = require("../../../models/society/post/comment/post.comment.model");
 const Society = require("../../../models/society/society.model");
@@ -61,14 +61,24 @@ router.get("/universities/all", async (req, res) => {
         })
             .sort({ createdAt: -1 })
             .populate([
-                "author",
+                {
+                    path: "author",
+                    select: 'name username role  super_role university profile.picture',
+                    populate: {
+                        path: 'university',
+                        populate: {
+                            path: 'universityId departmentId campusId ',
+                            select: 'name'
+                        }
+                    }
+                },
                 "society",
                 "subSociety",
                 "voteId"
             ]);
 
 
-        // console.log("posts", posts)
+        // console.log("posts", JSON.stringify(posts, null, 2))
 
         if (!posts) return res.status(304).json("Posts Collection null");
 
@@ -93,7 +103,17 @@ router.get("/campuses/all", async (req, res) => {
         })
             .sort({ createdAt: -1 })
             .populate([
-                "author",
+                {
+                    path: "author",
+                    select: 'name username role  super_role university profile.picture',
+                    populate: {
+                        path: 'university',
+                        populate: {
+                            path: 'universityId departmentId campusId ',
+                            select: 'name'
+                        }
+                    }
+                },
                 "society",
                 "subSociety",
                 "voteId"
@@ -128,7 +148,17 @@ router.get("/campus/all", async (req, res) => {
         })
             .sort({ createdAt: -1 })
             .populate([
-                "author",
+                {
+                    path: "author",
+                    select: 'name username role  super_role university profile.picture',
+                    populate: {
+                        path: 'university',
+                        populate: {
+                            path: 'universityId departmentId campusId ',
+                            select: 'name'
+                        }
+                    }
+                },
                 "society",
                 "subSociety",
                 "voteId"
@@ -208,7 +238,7 @@ router.post("/create", upload.array('file'), async (req, res) => {
         if (body) {
             postContent.body = body;
         }
-         if (files) {
+        if (files) {
             // const { url, type } = await uploadPostMedia(societyId, file, req)
             // console.log("DTA IN ", url, type)
 
@@ -279,13 +309,13 @@ router.post("/create", upload.array('file'), async (req, res) => {
 
 //////////////////////////////////////////////////////////////
 //to create an individual post. not in a society
- router.post("/create-indiv", upload.array('file'), async (req, res) => {
+router.post("/create-indiv", upload.array('file'), async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
         const { userId, campusOrigin, universityOrigin, role } = getUserDetails(req);
-        const { title, body, author=userId } = req.body;
+        const { title, body, author = userId } = req.body;
         const files = req.files;
 
         console.log("/create-indiv ", { title, body, files, author });
@@ -362,16 +392,16 @@ router.post("/create", upload.array('file'), async (req, res) => {
 //       console.log('/create-indiv ', req.body);
 //       const { title, author, body, societyId } = req.body;
 //       const files = req.files;
-  
+
 //       if (!title || !author) {
 //         return res.status(400).json({ message: "Title and author are required" });
 //       }
-  
+
 //       const user = await User.findById(author);
 //       if (!user) {
 //         return res.status(404).json({ message: "User not found" });
 //       }
-  
+
 //       const postDetails = {
 //         title,
 //         author,
@@ -379,7 +409,7 @@ router.post("/create", upload.array('file'), async (req, res) => {
 //         isPersonalPost: true,
 //         media: [],
 //       };
-  
+
 //       if (files && files.length > 0) {
 //         const mediaUrls = files.map((file) => ({
 //           type: file.mimetype,
@@ -387,10 +417,10 @@ router.post("/create", upload.array('file'), async (req, res) => {
 //         }));
 //         postDetails.media = mediaUrls;
 //       }
-  
+
 //       const newPost = new indivPost(postDetails);
 //       const savedPost = await newPost.save();
-  
+
 //       return res.status(201).json({
 //         message: "Post Created",
 //         postId: savedPost._id,
@@ -530,7 +560,17 @@ router.get("/single/post", async (req, res) => {
         })
             .sort({ createdAt: -1 })
             .populate([
-                "author",
+                {
+                    path: "author",
+                    select: 'name username role  super_role university profile.picture',
+                    populate: {
+                        path: 'university',
+                        populate: {
+                            path: 'universityId departmentId campusId ',
+                            select: 'name'
+                        }
+                    }
+                },
                 "society",
                 "subSociety",
                 "voteId",
