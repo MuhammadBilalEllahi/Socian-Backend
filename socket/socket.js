@@ -3,6 +3,8 @@ const valkeyClient = require("../db/valkey.pubsub");
 const DiscussionChatMessage = require("../models/university/papers/discussion/chat/discussion.chat.message");
 const DiscussionChat = require("../models/university/papers/discussion/chat/discussion.chat");
 const Gathering = require("../models/gps/user.gathering.model");
+const { createAdapter } = require("@socket.io/redis-adapter");
+
 
 class SocketServer {
   constructor() {
@@ -107,6 +109,12 @@ class SocketServer {
         methods: ["GET", "POST"],
       },
     });
+
+    // Create Redis adapter with proper ioredis clients
+    const pubClient = this.publisher.client;
+    const subClient = this.subscriber.client;
+    
+    this.io.adapter(createAdapter(pubClient, subClient));
 
     if (this.io) {
       console.log("║ \x1b[33mSocket server\x1b[0m: \x1b[32minitialized\x1b[0m                    ║");
