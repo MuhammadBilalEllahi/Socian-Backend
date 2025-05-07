@@ -4,7 +4,7 @@ const DiscussionChatMessage = require("../models/university/papers/discussion/ch
 const DiscussionChat = require("../models/university/papers/discussion/chat/discussion.chat");
 const Gathering = require("../models/gps/user.gathering.model");
 const { createAdapter } = require("@socket.io/redis-adapter");
-const { createClient } = require("ioredis");
+
 
 class SocketServer {
   constructor() {
@@ -110,14 +110,10 @@ class SocketServer {
       },
     });
 
-    const pubClient = createClient( {
-      port: process.env.NEW_AZURE_REDISPORT || 6379,
-      host: process.env.NEW_AZURE_REDISHOST || '127.0.0.1',
-      password: process.env.NEW_AZURE_REDISPASSWORD || '',
-      tls: {}
-  });
-    const subClient = pubClient.duplicate();
-
+    // Create Redis adapter with proper ioredis clients
+    const pubClient = this.publisher.client;
+    const subClient = this.subscriber.client;
+    
     this.io.adapter(createAdapter(pubClient, subClient));
 
     if (this.io) {
