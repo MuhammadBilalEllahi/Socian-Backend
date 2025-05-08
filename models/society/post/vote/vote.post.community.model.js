@@ -1,3 +1,4 @@
+const { isDecimal } = require("geolib");
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
@@ -21,6 +22,7 @@ const societyPostAndCommentVoteSchema = new Schema({
   // upvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   // downvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
+  isDeleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
 

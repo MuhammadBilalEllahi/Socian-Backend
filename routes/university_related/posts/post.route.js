@@ -11,6 +11,7 @@ const { upload } = require("../../../utils/multer.utils");
 const PostCommentCollection = require("../../../models/society/post/comment/post.comment.collect.model");
 const PostComment = require("../../../models/society/post/comment/post.comment.model");
 const Society = require("../../../models/society/society.model");
+const DeletedDataCollection = require("../../../models/deleted/deletedmodels");
 const router = express.Router();
 
 /**
@@ -57,7 +58,8 @@ router.get("/universities/all", async (req, res) => {
         const { role, universityOrigin, campusOrigin } = getUserDetails(req)
 
         const posts = await Post.find({
-            'references.role': role
+            'references.role': role,
+            'status.isDeleted': false,
         })
             .sort({ createdAt: -1 })
             .populate([
@@ -100,6 +102,7 @@ router.get("/campuses/all", async (req, res) => {
         const posts = await Post.find({
             'references.role': role,
             'references.universityOrigin': universityOrigin,
+            'status.isDeleted': false,
         })
             .sort({ createdAt: -1 })
             .populate([
@@ -143,8 +146,9 @@ router.get("/campus/all", async (req, res) => {
 
         const posts = await Post.find({
             'references.role': role,
-            'references.universityOrigin': universityOrigin,
-            'references.campusOrigin': campusOrigin
+            // 'references.universityOrigin': universityOrigin,
+            'references.campusOrigin': campusOrigin,
+            'status.isDeleted': false,
         })
             .sort({ createdAt: -1 })
             .populate([
@@ -1289,7 +1293,7 @@ router.delete("/delete", async (req, res) => {
         }
 
         // Delete the post
-        await Post.findByIdAndDelete(postId, { session });
+        await Post.findByIdAndUpdate(postId, {'status.isDeleted': true},{ session });
 
         // Remove post from PostsCollection
         await PostsCollection.findOneAndUpdate(
@@ -1306,8 +1310,9 @@ router.delete("/delete", async (req, res) => {
         );
 
         // Delete associated votes
-        await SocietyPostAndCommentVote.findOneAndDelete(
+        await SocietyPostAndCommentVote.findOneAndUpdate(
             { postId },
+            {isDeleted: true },
             { session }
         );
 
@@ -1315,14 +1320,22 @@ router.delete("/delete", async (req, res) => {
         const commentCollection = await PostCommentCollection.findById(postId).session(session);
         if (commentCollection) {
             for (const commentId of commentCollection.comments) {
-                await PostComment.findByIdAndDelete(commentId, { session });
-                await SocietyPostAndCommentVote.findOneAndDelete(
+                await PostComment.findByIdAndUpdate(commentId,{isDeleted: true }, { session });
+                await SocietyPostAndCommentVote.findOneAndUpdate(
                     { commentId: commentId },
+                    {isDeleted: true },
                     { session }
                 );
             }
-            await PostCommentCollection.findByIdAndDelete(postId, { session });
+            await PostCommentCollection.findByIdAndUpdate(postId,{isDeleted: true }, { session });
         }
+        const addToDeletedData = await DeletedDataCollection.findByIdAndUpdate(userId, {
+            $push: {
+                deletedPosts: {
+                    postId,
+                    deletedAt: new Date()
+                }
+    }});
 
         await session.commitTransaction();
         session.endSession();
@@ -1336,6 +1349,218 @@ router.delete("/delete", async (req, res) => {
     }
 });
 
+router.put("/post/edit/:postId", upload.array('file'), async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    const { postId } = req.params;
+    const { title, body, mediaList } = req.body;
+    const { userId } = getUserDetails(req);
+    const files = req.files;
+
+    try {
+        const post = await Post.findById(postId).session(session);
+        if (!post) return res.status(404).json({ message: "Post not found" });
+
+        if (userId !== post.author.toString()) {
+            return res.status(403).json({ message: "Unauthorized" });
+        }
+
+        post.title = title;
+        post.body = body;
+        post.isEdited = true;
+        post.editedAt = new Date();
+
+        // Normalize mediaList to array of objects
+        let mediaListArray = [];
+        if (typeof mediaList === 'string') {
+            mediaListArray = [JSON.parse(mediaList)]; // if mediaList is a single object as a string
+        } else if (Array.isArray(mediaList)) {
+            mediaListArray = mediaList.map(m => typeof m === 'string' ? JSON.parse(m) : m);
+        }
+
+        const mediaListUrls = mediaListArray.map(m => m.url);
+
+        // Identify and store removed media (media in post.media but not in mediaList)
+        if (post.media && post.media.length > 0) {
+            const removedMedia = post.media.filter(m => !mediaListUrls.includes(m.url));
+
+            if (removedMedia.length > 0) {
+                await DeletedDataCollection.findByIdAndUpdate(
+                    userId,
+                    {
+                        postId,
+                        $push: { removedMedia }
+                    },
+                    { new: true, upsert: true } // upsert in case the document doesn't exist yet
+                );
+            }
+
+            // Retain only the media that is still present
+            post.media = post.media.filter(m => mediaListUrls.includes(m.url));
+        }
+
+        // Add newly uploaded media
+        if (files && files.length > 0) {
+            const mediaArray = [];
+            for (const file of files) {
+                const { url, type } = await uploadPostMedia(userId, file, req);
+                mediaArray.push({ url, type });
+            }
+            post.media.push(...mediaArray);
+        }
+
+        await post.save({ session });
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json({ message: "Post updated successfully", post });
+
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error("Error editing post:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+ 
+
+// router.put("/post/edit/:postId", upload.array('file'), async (req, res) => {
+//     const session = await mongoose.startSession();
+//     session.startTransaction();
+
+//     const { postId } = req.params;
+//     const { title, body, mediaList } = req.body;
+//     const { userId } = getUserDetails(req);
+//     const files = req.files;
+
+//     console.log("\nDATA:", req.body, "\nFiles:", files, "\nPOST ID:", postId)
+    
+
+//     try {
+//         const post = await Post.findById(postId).session(session);
+//         if (!post) return res.status(404).json({ message: "Post not found" });
+//         if (userId !== post.author.toString()) {
+//             return res.status(403).json({ message: "Unauthorized" });
+//         }
+
+//         post.title = title;
+//         post.body = body;
+//         post.isEdited = true;
+//         post.editedAt = new Date();
+
+//         // Ensure mediaList is always an array
+//         let mediaListArray = [];
+//         // if (typeof mediaList === 'string') {
+//         //     mediaListArray = [mediaList];
+//         // } else if (Array.isArray(mediaList)) {
+//         //     mediaListArray = mediaList;
+//         // }
+
+//         console.log("mediaListArray", mediaList)
+        
+
+//         console.log("post.media", post.media)
+
+//         // Identify and store removed media
+//         const removedMedia = post?.media?.filter(m => !mediaListArray.includes(m.url));
+//         console.log("removedMedia", removedMedia)
+//         if (removedMedia.length > 0) {
+//             await DeletedDataCollection.findByIdAndUpdate(userId,{
+//                 postId,
+//                 $push:{
+//                     removedMedia
+//                 },
+//             }, {new:true});
+//         }
+
+//         // Retain only current media
+//         post.media = post.media.filter(m => mediaListArray.includes(m.url));
+
+//         console.log("\n after post.media", post.media)
+//         // return res.status(200).json({message: "ok"});
+//         // Add newly uploaded media
+//         if (files && files.length > 0) {
+//             const mediaArray = [];
+//             for (const file of files) {
+//                 const { url, type } = await uploadPostMedia(userId, file, req);
+//                 mediaArray.push({ url, type });
+//             }
+//             post.media.push(...mediaArray);
+//         }
+
+//         await post.save({ session });
+//         await session.commitTransaction();
+//         session.endSession();
+
+//         return res.status(200).json({ message: "Post updated successfully", post });
+
+//     } catch (error) {
+//         await session.abortTransaction();
+//         session.endSession();
+//         console.error("Error editing post:", error);
+//         return res.status(500).json({ error: "Internal Server Error" });
+//     }
+// });
+
+
+// router.put("/post/edit/:postId", upload.array('file'), async (req, res) => {
+//     const session = await mongoose.startSession();
+//     session.startTransaction();
+
+//     const {postId} = req.params;
+//     const {title, body, mediaList} = req.body;
+//     const {userId} = getUserDetails(req);
+//     const files = req.files;
+
+//     console.log("\nDATA:", req.body, "\nFiles:",files, "\nPOST ID:", postId)
+//     // return res.status(200).json({message: "ok"});
+
+//     try {
+//         const post = await Post.findById(postId).session(session);
+//         if(!post) return res.status(404).json({message: "Post not found"});
+//         if(userId !== post.author.toString()) return res.status(403).json({message: "You are not authorized to edit this post"});
+
+//         post.title = title;
+//         post.body = body;
+//         post.isEdited = true;
+//         post.editedAt = new Date();
+//         if(mediaList && mediaList.length > 0){
+//             const saveMediaToSeperateStorage = await DeletedDataCollection.findByIdAndUpdate(userId, {
+//                 $push: {
+//                     removedMedia: mediaList
+//                 }
+//             }, {session});
+//         }
+//         // remove media from post collection which is not passed in the request, even though it existed before
+//         if(mediaList && mediaList.length > 0){
+//             post.media = mediaList.map((url) => {
+//                post.media.filter((mediaurl) => mediaurl.url !== url);
+//             })
+//         }
+//         if(files && files.length > 0){
+//             const mediaArray = [];
+//             for(let file of files){
+//                 const {url, type} = await uploadPostMedia(userId, file, req);
+//                 mediaArray.push({type, url});
+//             }
+//             post.media.push(mediaArray);
+//         }
+//         await post.save({session});
+
+//         await session.commitTransaction();
+//         session.endSession();
+
+//        return res.status(200).json({message: "Post updated successfully", post: post});
+
+//     } catch (error) {
+//         await session.abortTransaction();
+//         session.endSession();
+//         console.error("Error in put('/post/edit')", error);
+//         res.status(500).json({ error: "Internal Server Error" });
+//     }
+
+// })
 
 
 

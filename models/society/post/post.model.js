@@ -23,6 +23,9 @@ const postSchema = new Schema(
       index: true,
     },
 
+    isEdited: { type: Boolean, default: false },
+    editedAt: { type: Date },
+    
     createdAt: { type: Date, default: Date.now },
     upvotes: { type: Number, default: 0 },
     downvotes: { type: Number, default: 0 },
