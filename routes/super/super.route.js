@@ -4,7 +4,7 @@ const Campus = require("../../models/university/campus.university.model");
 const University = require("../../models/university/university.register.model");
 const Society = require("../../models/society/society.model");
 const Subject = require("../../models/university/department/subject/subject.department.model");
-const { PastPaper } = require("../../models/university/papers/pastpaper.subject.model");
+const { PastPaper } = require("../../models/university/papers/pastpaper.model");
 // PastpapersCollectionByYear
 
 const {PastPaperItem} = require("../../models/university/papers/pastpaper.item.model");
@@ -139,8 +139,10 @@ router.get("/:id", async (req, res) => {
 
 router.post("/pastpaper/upload/types", async (req, res) => {
   const { year, type, term, termMode, paperName, pdfUrl, teachers, subjectId, departmentId, sessionType } = req.body;
-  const { universityOrigin, campusOrigin } = getUserDetails(req);
+  const { universityOrigin, campusOrigin, userId } = getUserDetails(req);
 
+  console.log("Data: ", departmentId, subjectId, year, type, term, termMode, paperName, pdfUrl, teachers, sessionType)
+  // return res.status(200).json({message: "success"})
   try {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -178,7 +180,36 @@ router.post("/pastpaper/upload/types", async (req, res) => {
       }
 
       console.log("Past Paper ID:", pastPaper);
-
+      let paperItemExistsAndAdded = await PastPaperItem.findOneAndUpdate({
+        subjectId,
+        type: type.toUpperCase(),
+        academicYear: parseInt(year),
+        term: term ? term.toUpperCase() : undefined,
+        category: termMode ? termMode.toUpperCase() : undefined,
+        sessionType: sessionType ? sessionType : undefined
+      }, 
+    {
+      $push: {
+        files:{
+          teachers: teachers || [],
+          uploadedBy: userId,
+          url: pdfUrl,
+          uploadedAt: new Date()
+        }
+      }
+    },
+  ).session(session);
+  if(paperItemExistsAndAdded) {
+    // Paper item already exists, just update the files array
+    await session.commitTransaction();
+    return res.status(200).json({
+      message: `file added* successfully to ${type} that already exists`,
+      pastPaperItem: paperItemExistsAndAdded,
+      pastPaper,
+      collection: null
+    }
+  )
+}
       // Create new PastPaperItem with paperId
       const pastPaperItem = new PastPaperItem({
         sessionType: sessionType ? sessionType : undefined,
@@ -189,11 +220,20 @@ router.post("/pastpaper/upload/types", async (req, res) => {
         category: termMode ? termMode.toUpperCase() : undefined,
         term: term ? term.toUpperCase() : undefined,
         academicYear: parseInt(year),
-        teachers: teachers || [],
-        file: {
-          url: pdfUrl,
-          uploadedAt: new Date()
-        },
+        
+        // file: {
+        //   uploadedBy: userId,
+        //   url: pdfUrl,
+        //   uploadedAt: new Date()
+        // },
+        // $push: {
+          files:[{
+            teachers: teachers || [],
+            uploadedBy: userId,
+            url: pdfUrl,
+            uploadedAt: new Date()
+          }],
+        // },
         references: {
           universityOrigin,
           campusOrigin,

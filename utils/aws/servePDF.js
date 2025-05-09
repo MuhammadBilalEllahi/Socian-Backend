@@ -73,6 +73,7 @@ router.get('/:universityOrigin/:campusOrigin/student/pastpapers/:year/:departmen
 
 
 
+
 router.get('/:universityOrigin/:campusOrigin/student/pastpapers/:year/:departmentId/:subjectId/:term/:type/:termMode/:filename', async (req, res) => {
     const { universityOrigin, campusOrigin, year, departmentId, subjectId, term, termMode, type, filename } = req.params;
     // console.log("Data: ", department, courseId, subject, year, type, scheme, filename)
@@ -115,7 +116,12 @@ router.post('/upload/pastpaper/aws', superProtect, upload.single('file'), async 
     const { departmentId, subjectId, year, type, term, termMode, sessionType } = req.body;
     const file = req.file;
 
-    const { role, universityOrigin, campusOrigin } = getUserDetails(req)
+    const { role, universityOrigin, campusOrigin } = getUserDetails(req);
+
+    console.log("Data: ", departmentId, subjectId, year, type, 
+        "MORE",
+        term, termMode, sessionType)
+    // return res.status(200).send({message:"OK"})
 
     if (!file) {
         return res.status(400).send('No file uploaded');
@@ -124,20 +130,20 @@ router.post('/upload/pastpaper/aws', superProtect, upload.single('file'), async 
     // year, type, term, termMode, paperName, pdfUrl, teachers, subjectId, departmentId
     // ${term}.${type}.${termMode}`
     let concat = "/";
-    if (type === "assignment" || type === "quiz") {
-        console.log("IN MID OR FINAL", type, type === "assignment", type === "quiz")
+    if (type === "ASSIGNMENT" || type === "QUIZ") {
+        console.log("IN MID OR FINAL", type, type === "ASSIGNMENT", type === "QUIZ")
         concat = `/${type}`;
-    } else if (type === 'midterm' || type === 'final') {
-        console.log("IN MID OR FINAL", type, type === 'midterm', type === 'final')
+    } else if (type === 'MIDTERM' || type === 'FINAL') {
+        console.log("IN MID OR FINAL", type, type === 'MIDTERM', type === 'FINAL')
         concat = `/${term}/${type}/${termMode}`;
-    } else if (type === 'sessional') {
-        console.log("IN SESSIONAL", type, type === 'sessional' && (sessionType === '1' || sessionType === '2'))
+    } else if (type === 'SESSIONAL') {
+        console.log("IN SESSIONAL", type, type === 'SESSIONAL' && (sessionType === '1' || sessionType === '2'))
         concat = `/${type}/${sessionType}`;
     }
     else {
 
     }
-    console.log("IN MID OR FINAL2", type, type === 'midterm', type === 'final')
+    console.log("IN MID OR FINAL2", type, type === 'MIDTERM', type === 'FINAL')
     const pathNameDefined = `${universityOrigin}/${campusOrigin}/${role}/pastpapers/${year}/${departmentId}/${subjectId}${concat}/${file.originalname}-${Date.now()}`
 
     console.log("Path Name", pathNameDefined)

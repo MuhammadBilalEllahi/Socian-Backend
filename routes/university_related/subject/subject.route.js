@@ -6,7 +6,7 @@ const Department = require("../../../models/university/department/department.uni
 const {
   PastPaper,
   PastpapersCollectionByYear,
-} = require("../../../models/university/papers/pastpaper.subject.model");
+} = require("../../../models/university/papers/pastpaper.model");
 const { getUserDetails } = require("../../../utils/utils");
 const router = express.Router();
 

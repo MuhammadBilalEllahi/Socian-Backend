@@ -4,6 +4,16 @@ const { Schema } = mongoose;
 
 // File Schema
 const fileSchema = new Schema({
+    uploadedBy: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+    },
+    teachers: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Teacher',
+        index: true
+    }],
+
     url: { type: String, required: true },
     uploadedAt: { type: Date, default: Date.now }
 });
@@ -11,6 +21,7 @@ const fileSchema = new Schema({
 
 // PastPaperItem Schema - Optimized for querying
 const pastPaperItemSchema = new Schema({
+    
     academicYear: {
         type: Number,
         required: true,
@@ -37,7 +48,8 @@ const pastPaperItemSchema = new Schema({
         type: String,
         required: true,
         enum: ['ASSIGNMENT', 'QUIZ', 'MIDTERM', 'FINAL', 'SESSIONAL'],
-        index: true
+        index: true,
+        uppercase: true
     },
     sessionType: {
         type: String,
@@ -49,7 +61,8 @@ const pastPaperItemSchema = new Schema({
     category: {
         type: String,
         enum: ['LAB', 'THEORY'],
-        index: true
+        index: true,
+        uppercase: true
     },
     term: {
         type: String,
@@ -57,16 +70,12 @@ const pastPaperItemSchema = new Schema({
         required: function () {
             return this.type === 'MIDTERM' || this.type === 'FINAL';
         },
-        index: true
+        index: true,
+        uppercase: true
     },
 
-    teachers: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Teacher',
-        index: true
-    }],
-
-    file: fileSchema,
+    
+    files: [fileSchema],
 
     references: {
         universityOrigin: {

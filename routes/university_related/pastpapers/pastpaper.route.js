@@ -1,6 +1,6 @@
 const express = require('express');
 const Subject = require('../../../models/university/department/subject/subject.department.model');
-const { PastPaper, PastpapersCollectionByYear } = require('../../../models/university/papers/pastpaper.subject.model');
+const { PastPaper, PastpapersCollectionByYear } = require('../../../models/university/papers/pastpaper.model.js');
 const { PastPaperItem } = require('../../../models/university/papers/pastpaper.item.model');
 const { getUserDetails } = require('../../../utils/utils');
 const router = express.Router();
@@ -54,8 +54,19 @@ router.get('/all-pastpapers-in-subject/:subjectId',
         // Get all papers for the subject using PastPaperItem
         const papers = await PastPaperItem.find({ subjectId })
             .sort({ academicYear: -1, type: 1 })
-            .populate([{ path: 'teachers', select: 'name email' }, { path: 'references', select: 'subjectId universityOrigin campusOrigin departmentId' }
-                , { path: 'paperId', populate: { path: 'papers' } }
+            .populate([
+                {
+                    path: 'references',
+                    select: 'subjectId universityOrigin campusOrigin departmentId'
+                },
+                {
+                    path: 'paperId',
+                    populate: {
+                        path: 'papers.files',
+                        populate:
+                            { path: 'teachers', select: 'name email' },
+                    }
+                }
             ]);
 
         // Get the subject name
