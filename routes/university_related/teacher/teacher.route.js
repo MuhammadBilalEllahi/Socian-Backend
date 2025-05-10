@@ -1131,6 +1131,24 @@ router.post('subjectsTaught/add', async (req, res) => {
 })
 
 
+router.get('/all', async (req, res) => {
+  const { campusId } = getUserDetails(req);
+
+  try {
+    console.log("campusId", campusId)
+    const teachers = await Teacher.find({ campusOrigin: campusId }).select('name _id');
+    console.log("teachers", teachers)
+    if (!teachers || teachers.length === 0) {
+      return res.status(404).json({ message: "No teachers found" });
+    }
+
+    return  res.status(200).json({ data: teachers });
+  }
+  catch (error) {
+    console.error("Error in /all teachers", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
 
 const getTeacherReviews = async (req, res) => {
   const { id } = req.query;
@@ -1145,5 +1163,7 @@ const getTeacherReviews = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+
 
 module.exports = router;
