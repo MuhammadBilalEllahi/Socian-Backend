@@ -2,6 +2,18 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 const moment = require("moment");
 const otpSchema = new Schema({
+  purpose: {
+    type: String,
+    enum: [
+      "emailVerification",
+      "phoneVerification",
+      "passwordReset",
+      "login",
+      "signup",
+      "other",
+    ],
+    // required: true,
+  },
   email: {
     type: String,
     validate: {

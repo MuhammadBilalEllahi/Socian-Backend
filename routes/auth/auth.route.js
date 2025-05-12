@@ -198,6 +198,9 @@ router.post("/login", async (req, res) => {
           user.universityEmail ||
           user.personalEmail ||
           user.secondaryPersonalEmail,
+        universityEmail: user?.universityEmail ?? '',
+        personalEmail: user?.personalEmail ?? '',
+        secondaryPersonalEmail: user?.secondaryPersonalEmail ?? '',
         username: user.username,
         profile: user.profile,
         university: userRoleBool ? user.university : undefined,

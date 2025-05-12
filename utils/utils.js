@@ -61,7 +61,8 @@ const createUniqueUsername = async (name) => {
  * @param {string} otp - The OTP to be sent.
  * @returns {Promise<object>} - Result of OTP send operation.
  */
-const sendOtp = async (phoneNumber, email, user, name) => {
+const sendOtp = async (phoneNumber, email, user, name, purpose="verify") => {
+  console.log("DATA", phoneNumber, email, user, name);
   if (email && phoneNumber) {
     console.error("Cannot use both phone number and email.");
     return { error: "Cannot use both phone number and email." };
@@ -82,6 +83,7 @@ const sendOtp = async (phoneNumber, email, user, name) => {
       otp: hashedOTP,
       otpExpiration,
       used: false,
+      pupose: purpose,
       ref: user,
       refName: name,
       resendCount: 0,
@@ -114,12 +116,13 @@ const getUserDetails = (req) => {
   //   throw new Error("Response object (`res`) is required when `checks` is true");
   // }
 
-  let user, userId, role, universityOrigin, campusOrigin, departmentId;
+  let name, user, userId, role, universityOrigin, campusOrigin, departmentId;
 
   const platform = req.headers["x-platform"];
 
   // console.log("this is the platform", platform, req.headers["x-platform"], req.user);
   if (platform === "web") {
+    name = req.session.user.name;
     user = req.session.user;
     userId = req.session.user._id;
     role = req.session.user.role;
@@ -129,6 +132,7 @@ const getUserDetails = (req) => {
       campusOrigin = req.session.user.university.campusId?._id ?? req.session.user.university.campusId;
     }
   } else if (platform === "app") {
+    name = req.user.name;
     user = req.user;
     userId = req.user._id;
     role = req.user.role;
@@ -151,7 +155,7 @@ const getUserDetails = (req) => {
   //   }
   // }
 
-  return { user, userId, role, campusId,universityId,universityOrigin, campusOrigin, departmentId , platform};
+  return { name,user, userId, role, campusId,universityId,universityOrigin, campusOrigin, departmentId , platform};
 };
 
 
