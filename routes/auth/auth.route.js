@@ -26,7 +26,7 @@ const { OTP } = require("../../models/otp/otp.js");
 const Department = require("../../models/university/department/department.university.model.js");
 const UserRoles = require("../../models/userRoles.js");
 const { platformSessionOrJwt_CALL_on_glogin_only } = require("../../utils/platform/jwt.session.platform.js");
-// const protectRoute = require("../../middlewares/protect.route.js");
+const protectRoute = require("../../middlewares/protect.route.js");
 
 router.get("/session", async (req, res) => {
   // console.log("Req user:", req.session.user)
@@ -920,8 +920,9 @@ router.put("/update/email", async (req, res) => {
 //   });
 // });
 
-router.put("/reset-password", async (req, res) => {
-  const { oldPassword, newPassword, userId } = req.body;
+router.put("/reset-password", protectRoute, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  const {userId} = getUserDetails(req);
 
   let user;
   try {
