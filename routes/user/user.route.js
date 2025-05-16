@@ -1283,4 +1283,47 @@ router.put('/department/change-once', async (req, res) => {
   }
 });
 
+
+
+
+router.put('/graduation-year/change', async (req, res) => {
+  try {
+    const { graduationYearDateTime } = req.body;
+    const { userId } = getUserDetails(req);
+    console.log("graduationYearDateTime",graduationYearDateTime)
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Only allow once
+    if (user.changedGraduationYearOnce) {
+      return res.status(200).json({
+        message: "You already availed One Time Department Change",
+      });
+    }
+
+    // Update fields manually
+    user.changedGraduationYearOnce = true;
+    user.profile.graduationYear = graduationYearDateTime;
+    await user.save();
+
+    await user.populate([
+      { path: "university.universityId", select: "name _id" },
+      { path: "university.campusId", select: "name _id" },
+      { path: "university.departmentId", select: "name _id" },
+      { path: "subscribedSocities", select: "name _id" },
+      { path: "subscribedSubSocities", select: "name _id" },
+    ]);
+
+    await handlePlatformResponse(user, res, req);
+
+  } catch (e) {
+    console.error("Error in /department/change-once", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 module.exports = router

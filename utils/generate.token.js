@@ -20,7 +20,7 @@ const generateToken = (user) => {
     username: user.username,
     profile: user.profile,
     university: (user.role !== 'ext_org') ? {
-       universityId: {
+      universityId: {
         name: user.university.universityId.name,
         _id: user.university.universityId._id,
       },
@@ -40,6 +40,8 @@ const generateToken = (user) => {
     joinedSubSocieties: user.subscribedSubSocities,
     verified: user.universityEmailVerified,
     requiresMoreInformation: user.requiresMoreInformation ?? false,
+    changedDepartmentOnce: user?.changedDepartmentOnce ?? false,
+    changedGraduationYearOnce: user?.changedGraduationYearOnce ?? false,
     references: {
       university: {
         name: user.university.universityId.name,

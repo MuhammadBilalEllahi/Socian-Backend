@@ -77,6 +77,7 @@ const userSchema = new mongoose.Schema({
       // },
     },
 
+
     department: {
       type: String,
     },
@@ -105,6 +106,7 @@ const userSchema = new mongoose.Schema({
       ],
     },
   },
+  
   university: {
     slug: String,
     universityId: {
@@ -191,6 +193,10 @@ const userSchema = new mongoose.Schema({
     default: false,
   },
   changedDepartmentOnce:{
+    type: Boolean,
+    default: false
+  },
+    changedGraduationYearOnce:{
     type: Boolean,
     default: false
   },
@@ -482,8 +488,9 @@ userSchema.methods.updateEmail = async function (emailType, email) {
 // Applied > today , not >= to save user from incomplete work they have in student section
 userSchema.methods.convertToAlumni = function () {
   const today = new Date();
-  if (this.role === "student" && this.profile.graduationYear > today) {
+  if (this.role === "student" && this.profile.graduationYear < today) {
     this.role = "alumni";
+    this.restrictions.approval.isApproved=true;
   }
 };
 
