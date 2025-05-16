@@ -2,7 +2,8 @@ const { OTP } = require("../models/otp/otp");
 const User = require("../models/user/user.model");
 const moment = require("moment");
 const otpGenerator = require("otp-generator");
-const bcryptjs = require('bcryptjs')
+const bcryptjs = require('bcryptjs');
+const generateToken = require("./generate.token");
 /**
  * Generates a 6-digit OTP.
  * @returns {string} - A 6-digit OTP as a string.
@@ -61,7 +62,7 @@ const createUniqueUsername = async (name) => {
  * @param {string} otp - The OTP to be sent.
  * @returns {Promise<object>} - Result of OTP send operation.
  */
-const sendOtp = async (phoneNumber, email, user, name, purpose="verify") => {
+const sendOtp = async (phoneNumber, email, user, name, purpose = "verify") => {
   console.log("DATA", phoneNumber, email, user, name);
   if (email && phoneNumber) {
     console.error("Cannot use both phone number and email.");
@@ -155,7 +156,104 @@ const getUserDetails = (req) => {
   //   }
   // }
 
-  return { name,user, userId, role, campusId,universityId,universityOrigin, campusOrigin, departmentId , platform};
+  return { name, user, userId, role, campusId, universityId, universityOrigin, campusOrigin, departmentId, platform };
+};
+
+
+
+
+/**
+ * USE BELOW CODE ONLY IF OTP is correct
+ * Handles user response based on platform type.
+ * 
+ * @param {string} platform - Platform type ("app" or "web").
+ * @param {object} user - User object from the database.
+ * @param {object} res - Express.js response object.
+ * @param {object} req - Express.js request object (for session in web).
+ * @param {function} generateToken - Function to generate access and refresh tokens.
+ * @returns {Promise} - Resolves with the response sent to the client.
+ */
+const handlePlatformResponse = async (user, res, req) => {
+  // console.log("here")
+  const platform = req.headers["x-platform"];
+  // console.log("here2", platform)
+  if (platform === "app") {
+
+    // Generate JWT tokens
+    const { accessToken, refreshToken } = generateToken(user);
+
+    // Assign tokens to the user object
+    user.tokens = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    };
+
+    await user.save(); // Save the updated user tokens
+
+    // Send JWT tokens to the client
+    return res.status(200).json({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+  } else if (platform === "web") {
+    // Set user session data
+    // console.log("here", "pla")
+    req.session.user = {
+      _id: user._id,
+      name: user.name,
+      email:
+        user.universityEmail ||
+        user.personalEmail ||
+        user.secondaryPersonalEmail,
+      universityEmail: user?.universityEmail,
+      personalEmail: user?.personalEmail,
+      secondaryPersonalEmail: user?.secondaryPersonalEmail,
+
+      username: user.username,
+      profile: user.profile,
+      university: user.role !== 'ext_org' ? user.university : undefined,
+      super_role: user.super_role,
+      role: user.role,
+      verified: user.universityEmailVerified,
+      joined: user.joined,
+      requiresMoreInformation: user.requiresMoreInformation ?? false,
+      // joinedSocieties: user.joinedSocieties,
+      // joinedSubSocieties: user.joinedSubSocieties,
+
+    };
+    if (user.role === UserRoles.teacher) {
+      req.session.user.teacherConnectivities = {
+        attached: user?.teacherConnectivities?.attached ?? false,
+        teacherModal: user?.teacherConnectivities?.teacherModal ?? null
+      }
+    }
+
+    // Set references for the session
+    req.session.references = {
+      university: {
+        name: user.university.universityId.name,
+        _id: user.university.universityId._id,
+      },
+      campus: {
+        name: user.university.campusId.name,
+        _id: user.university.campusId._id,
+      },
+    };
+
+    // Save session and handle any errors
+    return req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
+
+      // Send the session user as the response
+      return res.status(200).json(req.session.user);
+    });
+  } else {
+    // Handle invalid platform
+    return res.status(400).json({ error: "Invalid platform" });
+  }
 };
 
 
@@ -207,5 +305,6 @@ module.exports = {
   createUniqueUsername,
   sendOtp,
   getUserDetails,
-  getCafeUserDetails
+  getCafeUserDetails,
+  handlePlatformResponse
 };

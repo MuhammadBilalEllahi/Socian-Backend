@@ -4,7 +4,7 @@ const UserRoles = require("../models/userRoles");
 
 // Helper function to generate tokens
 const generateToken = (user) => {
-  // console.log("suer", user);
+  console.log("\nuser\n", user, "\n\n");
   const payload = {
     _id: user._id,
     name: user.name,

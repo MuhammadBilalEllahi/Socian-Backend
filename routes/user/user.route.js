@@ -2,7 +2,7 @@ const express = require('express')
 const User = require('../../models/user/user.model')
 const router = express.Router()
 const moment = require('moment')
-const { getUserDetails, sendOtp } = require('../../utils/utils')
+const { getUserDetails, sendOtp, handlePlatformResponse } = require('../../utils/utils')
 const { default: mongoose } = require('mongoose')
 const Society = require('../../models/society/society.model')
 const FriendRequest = require('../../models/user/friend.request.model')
@@ -14,6 +14,7 @@ const { OTP } = require('../../models/otp/otp')
 const { resendEmailConfirmation } = require('../../utils/email.util')
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Department = require('../../models/university/department/department.university.model')
 
 // No create user search field
 
@@ -96,19 +97,19 @@ const jwt = require('jsonwebtoken');
 
 exports.getUserProfile = async (req, res) => {
     try {
-      const userId = req.query.id;
-      const user = await User.findById(userId)
-        .select('name username email profile university joined subscribedSocities connections')
-        .populate('university.universityId', 'name');
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      res.json({ profile: user });
+        const userId = req.query.id;
+        const user = await User.findById(userId)
+            .select('name username email profile university joined subscribedSocities connections')
+            .populate('university.universityId', 'name');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json({ profile: user });
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      res.status(500).json({ error: 'Server error' });
+        console.error('Error fetching profile:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-  };
+};
 
 router.get('/profile', async (req, res) => {
     try {
@@ -301,35 +302,35 @@ router.get('/subscribedSocieties', async (req, res) => {
 // Updated /connections route
 router.get('/connections', async (req, res) => {
     try {
-      const { userId } = getUserDetails(req);
-      const user = await User.findById(userId, 'friends').lean();
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      const friendIds = user.friends || [];
-      const friends = await User.find(
-        { _id: { $in: friendIds } },
-        { name: 1, username: 1, 'profile.picture': 1, _id: 1 } // Include only needed fields
-      ).lean();
-      res.status(200).json({ connections: friends });
+        const { userId } = getUserDetails(req);
+        const user = await User.findById(userId, 'friends').lean();
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        const friendIds = user.friends || [];
+        const friends = await User.find(
+            { _id: { $in: friendIds } },
+            { name: 1, username: 1, 'profile.picture': 1, _id: 1 } // Include only needed fields
+        ).lean();
+        res.status(200).json({ connections: friends });
     } catch (error) {
-      console.error('Error in /connections route:', error);
-      res.status(500).json({ message: 'Internal Server Error' });
+        console.error('Error in /connections route:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
-  });
-  
-  // Friend action routes (unchanged, included for completeness)
-  router.post('/add-friend', async (req, res) => {
+});
+
+// Friend action routes (unchanged, included for completeness)
+router.post('/add-friend', async (req, res) => {
     try {
-      const { userId } = getUserDetails(req);
-      const { toFriendUser } = req.body;
-      // Add friend request logic
-      res.status(200).json({ message: 'Friend request sent' });
+        const { userId } = getUserDetails(req);
+        const { toFriendUser } = req.body;
+        // Add friend request logic
+        res.status(200).json({ message: 'Friend request sent' });
     } catch (error) {
-      console.error('Error adding friend:', error);
-      res.status(500).json({ message: 'Internal Server Error' });
+        console.error('Error adding friend:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
-  });
+});
 
 
 
@@ -381,7 +382,7 @@ router.get('/connection/stream', async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 
-   })
+})
 
 
 
@@ -694,7 +695,7 @@ router.get('/teacher/attachUser', async (req, res) => {
 const setTeacherModal = async function (req, user, platform) {
     console.log("Platform->", platform)
     try {
-        
+
         if (user.role === UserRoles.teacher) {
             const teacherModalExists = await Teacher.findOne({ email: user.universityEmail })
 
@@ -747,11 +748,11 @@ const setTeacherModal = async function (req, user, platform) {
                         teacherModal: user.teacherConnectivities.teacherModal
                     }
 
-                    const  teacherConnectivities = {
-                            attached: user.teacherConnectivities.attached,
-                            teacherModal: user.teacherConnectivities.teacherModal
-                        }
-                    
+                    const teacherConnectivities = {
+                        attached: user.teacherConnectivities.attached,
+                        teacherModal: user.teacherConnectivities.teacherModal
+                    }
+
                     // req.session.save((err) => {
                     //   if (err) {
                     //     console.error("Session save error:", err);
@@ -759,7 +760,7 @@ const setTeacherModal = async function (req, user, platform) {
                     //   }
                     // })
                     const resolvedData = { status: 201, message: 'User with role teacher attached with Modal successfully' };
-                    if(platform === "app") {resolvedData.teacherConnectivities = teacherConnectivities}
+                    if (platform === "app") { resolvedData.teacherConnectivities = teacherConnectivities }
 
                     return new Promise((resolve, reject) => {
                         req.session.save((err) => {
@@ -775,7 +776,7 @@ const setTeacherModal = async function (req, user, platform) {
 
                     // return { status: 200, message: 'User with role teacher attached with Modal successfully', teacher: teacherModalExists, attached: true }
                 } else {
-                    return { status: 200, message: 'User already attached with another modal, Please verify before Modifyng', attached: false}
+                    return { status: 200, message: 'User already attached with another modal, Please verify before Modifyng', attached: false }
                 }
 
             }
@@ -814,17 +815,17 @@ router.get('/teacher/joinModel', async (req, res) => {
 
 router.get("/me", async (req, res) => {
     try {
-      const { userId } = getUserDetails(req);
-      const user = await User.findById(userId).select('_id');
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      res.status(200).json({ _id: user._id });
+        const { userId } = getUserDetails(req);
+        const user = await User.findById(userId).select('_id');
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        res.status(200).json({ _id: user._id });
     } catch (error) {
-      console.error("Error in /user/me", error);
-      res.status(500).json({ error: "Internal Server Error" });
+        console.error("Error in /user/me", error);
+        res.status(500).json({ error: "Internal Server Error" });
     }
-  });
+});
 
 // router.put('/update/name');
 // router.put('/update/personalEmail');a
@@ -843,13 +844,14 @@ router.put('/update/picture', uploadImage.single('file'), async (req, res) => {
 
         const user = await User.findByIdAndUpdate(
             userId,
-            { $set: { 'profile.picture': url },
-            $push: {
-                'profile.pictureList': {
-                  image: url,
-                  timestamp: new Date()
+            {
+                $set: { 'profile.picture': url },
+                $push: {
+                    'profile.pictureList': {
+                        image: url,
+                        timestamp: new Date()
+                    }
                 }
-              }
             },
             { new: true, projection: { 'profile.picture': 1 } }
         );
@@ -857,8 +859,8 @@ router.put('/update/picture', uploadImage.single('file'), async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: "User Not Found" });
         }
-    
-        if(req?.session?.user){
+
+        if (req?.session?.user) {
             req.session?.user?.profile?.picture.push(newImageUrl);
             req.session?.save(); // Save to MongoDB
         }
@@ -942,26 +944,29 @@ router.put('/update/personalEmail', async (req, res) => {
     try {
         const { personalEmail } = req.body;
         const { userId, name, role } = getUserDetails(req);
-        if(role !== UserRoles.student) {
+        if (role !== UserRoles.student) {
             return res.status(403).json({ error: "Only students can update secondary personal email" });
         }
 
 
-        const isUserAttached = await User.findOne({_id:userId, $or: 
-            [{personalEmail},
-                                {universityEmail: personalEmail},
+        const isUserAttached = await User.findOne({
+            _id: userId, $or:
+                [{ personalEmail },
+                { universityEmail: personalEmail },
 
-            {secondaryPersonalEmail: personalEmail}]}
+                { secondaryPersonalEmail: personalEmail }]
+        }
         );
-        if(isUserAttached) {
+        if (isUserAttached) {
             return res.status(400).json({ error: "Email already attached to this account" });
         }
 
-        const isUserAttachedToOtherPeopleAccount = await User.findOne({$or: 
-        [{personalEmail},
-            {secondaryPersonalEmail: personalEmail}]
+        const isUserAttachedToOtherPeopleAccount = await User.findOne({
+            $or:
+                [{ personalEmail },
+                { secondaryPersonalEmail: personalEmail }]
         });
-        if(isUserAttachedToOtherPeopleAccount) {
+        if (isUserAttachedToOtherPeopleAccount) {
             return res.status(400).json({ error: "Email already attached to someother account" });
         }
 
@@ -969,7 +974,7 @@ router.put('/update/personalEmail', async (req, res) => {
             return res.status(400).json({ error: "Personal Email is required" });
         }
 
-        deliverOTP({_id : userId, name: name }, personalEmail, resendEmailConfirmation, req, res)
+        deliverOTP({ _id: userId, name: name }, personalEmail, resendEmailConfirmation, req, res)
 
         return res.status(200).json({
             message: "Email Sent",
@@ -984,65 +989,65 @@ router.put('/update/personalEmail', async (req, res) => {
 
 
 router.post("/verify/personalEmail/otp", async (req, res) => {
-  const { email, phoneNumber, otp, purpose } = req.body;
-  const { userId,role} = getUserDetails(req);
-  const personalEmail = email ;
+    const { email, phoneNumber, otp, purpose } = req.body;
+    const { userId, role } = getUserDetails(req);
+    const personalEmail = email;
 
-  // Validate inputs
-  if ((!email && !phoneNumber) || !otp) {
-    return res
-      .status(400)
-      .json({ message: "Email or phoneNumber and OTP are required." });
-  }
-
-  // console.log()
-  try {
-    const query = email ? { email, purpose, used: false } : { phoneNumber, used: false };
-
-    // Find the OTP entry
-    const otpEntry = await OTP.findOne(query);
-
-
-    if (!otpEntry) {
-      return res
-        .status(404)
-        .json({ message: "No OTP found for the provided details." });
+    // Validate inputs
+    if ((!email && !phoneNumber) || !otp) {
+        return res
+            .status(400)
+            .json({ message: "Email or phoneNumber and OTP are required." });
     }
 
-    if (otpEntry.used === true) {
-      await OTP.findByIdAndDelete({ _id: otpEntry._id })
-      return res.status(404)
-        .json({ message: "OTP used already." });
-    }
+    // console.log()
+    try {
+        const query = email ? { email, purpose, used: false } : { phoneNumber, used: false };
+
+        // Find the OTP entry
+        const otpEntry = await OTP.findOne(query);
+
+
+        if (!otpEntry) {
+            return res
+                .status(404)
+                .json({ message: "No OTP found for the provided details." });
+        }
+
+        if (otpEntry.used === true) {
+            await OTP.findByIdAndDelete({ _id: otpEntry._id })
+            return res.status(404)
+                .json({ message: "OTP used already." });
+        }
 
 
 
-    const isOTPMatched = await bcryptjs.compare(
-      otp,
-      otpEntry.otp || ""
-    );
+        const isOTPMatched = await bcryptjs.compare(
+            otp,
+            otpEntry.otp || ""
+        );
 
 
-    if (!isOTPMatched) {
-      return res.status(401).json({ message: "Invalid OTP." });
-    }
+        if (!isOTPMatched) {
+            return res.status(401).json({ message: "Invalid OTP." });
+        }
 
-    if (moment().isAfter(moment(otpEntry.otpExpiration))) {
-      return res.status(401).json({ message: "OTP has expired." });
-    }
-    console.log("Id", otpEntry.ref)
+        if (moment().isAfter(moment(otpEntry.otpExpiration))) {
+            return res.status(401).json({ message: "OTP has expired." });
+        }
+        console.log("Id", otpEntry.ref)
 
-    // OTP is valid
-    // const token = jwt.sign(
-    //   { email, token_id: otpEntry.ref },
-    //   process.env.JWT_SECRET,
-    //   { expiresIn: "10m" } // Token valid for 10 minutes
-    // );
+        // OTP is valid
+        // const token = jwt.sign(
+        //   { email, token_id: otpEntry.ref },
+        //   process.env.JWT_SECRET,
+        //   { expiresIn: "10m" } // Token valid for 10 minutes
+        // );
 
 
-    otpEntry.used = true;
-    // delete after this: abhi ni. abhi tou hash k andr expiry time bhi dalna h
-    await otpEntry.save();
+        otpEntry.used = true;
+        // delete after this: abhi ni. abhi tou hash k andr expiry time bhi dalna h
+        await otpEntry.save();
 
         const user = await User.findByIdAndUpdate(
             userId,
@@ -1060,11 +1065,11 @@ router.post("/verify/personalEmail/otp", async (req, res) => {
         });
 
 
-    // res.status(200).json({ message: "OTP verified successfully.", token: token });
-  } catch (error) {
-    console.error("Error in verify-otp:", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
+        // res.status(200).json({ message: "OTP verified successfully.", token: token });
+    } catch (error) {
+        console.error("Error in verify-otp:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
 });
 
 
@@ -1086,21 +1091,24 @@ router.put('/update/secondaryPersonalEmail', async (req, res) => {
         // if(role !== UserRoles.alumni) {
         //     return res.status(403).json({ error: "Only alumni can update secondary personal email" });
         // }
-console.log("DATA", userId, name, role)
-        const isUserAttached = await User.findOne({_id:userId, $or: 
-            [{secondaryPersonalEmail},
-                {universityEmail: secondaryPersonalEmail},
-            {personalEmail: secondaryPersonalEmail}]}
+        console.log("DATA", userId, name, role)
+        const isUserAttached = await User.findOne({
+            _id: userId, $or:
+                [{ secondaryPersonalEmail },
+                { universityEmail: secondaryPersonalEmail },
+                { personalEmail: secondaryPersonalEmail }]
+        }
         );
-        if(isUserAttached) {
+        if (isUserAttached) {
             return res.status(400).json({ error: "Email already attached to this account" });
         }
 
-        const isUserAttachedToOtherPeopleAccount = await User.findOne({$or: 
-        [{secondaryPersonalEmail},
-            {personalEmail: secondaryPersonalEmail}]
+        const isUserAttachedToOtherPeopleAccount = await User.findOne({
+            $or:
+                [{ secondaryPersonalEmail },
+                { personalEmail: secondaryPersonalEmail }]
         });
-        if(isUserAttachedToOtherPeopleAccount) {
+        if (isUserAttachedToOtherPeopleAccount) {
             return res.status(400).json({ error: "Email already attached to someother account" });
         }
 
@@ -1108,7 +1116,7 @@ console.log("DATA", userId, name, role)
             return res.status(400).json({ error: "Personal Email is required" });
         }
 
-        deliverOTP({_id : userId, name: name }, secondaryPersonalEmail, resendEmailConfirmation, req, res)
+        deliverOTP({ _id: userId, name: name }, secondaryPersonalEmail, resendEmailConfirmation, req, res)
 
         return res.status(200).json({
             message: "Email Sent",
@@ -1123,65 +1131,65 @@ console.log("DATA", userId, name, role)
 
 
 router.post("/verify/secondaryPersonalEmail/otp", async (req, res) => {
-  const { email, phoneNumber, otp, purpose } = req.body;
-  const { userId} = getUserDetails(req);
-  const secondaryPersonalEmail = email ;
-console.log("DATA", userId, email, phoneNumber, otp, purpose )
-  // Validate inputs
-  if ((!email && !phoneNumber) || !otp) {
-    return res
-      .status(400)
-      .json({ message: "Email or phoneNumber and OTP are required." });
-  }
-
-  // console.log()
-  try {
-    const query = email ? { email, purpose, used: false } : { phoneNumber, used: false };
-
-    // Find the OTP entry
-    const otpEntry = await OTP.findOne(query);
-
-
-    if (!otpEntry) {
-      return res
-        .status(404)
-        .json({ message: "No OTP found for the provided details." });
+    const { email, phoneNumber, otp, purpose } = req.body;
+    const { userId } = getUserDetails(req);
+    const secondaryPersonalEmail = email;
+    console.log("DATA", userId, email, phoneNumber, otp, purpose)
+    // Validate inputs
+    if ((!email && !phoneNumber) || !otp) {
+        return res
+            .status(400)
+            .json({ message: "Email or phoneNumber and OTP are required." });
     }
 
-    if (otpEntry.used === true) {
-      await OTP.findByIdAndDelete({ _id: otpEntry._id })
-      return res.status(404)
-        .json({ message: "OTP used already." });
-    }
+    // console.log()
+    try {
+        const query = email ? { email, purpose, used: false } : { phoneNumber, used: false };
+
+        // Find the OTP entry
+        const otpEntry = await OTP.findOne(query);
+
+
+        if (!otpEntry) {
+            return res
+                .status(404)
+                .json({ message: "No OTP found for the provided details." });
+        }
+
+        if (otpEntry.used === true) {
+            await OTP.findByIdAndDelete({ _id: otpEntry._id })
+            return res.status(404)
+                .json({ message: "OTP used already." });
+        }
 
 
 
-    const isOTPMatched = await bcryptjs.compare(
-      otp,
-      otpEntry.otp || ""
-    );
+        const isOTPMatched = await bcryptjs.compare(
+            otp,
+            otpEntry.otp || ""
+        );
 
 
-    if (!isOTPMatched) {
-      return res.status(401).json({ message: "Invalid OTP." });
-    }
+        if (!isOTPMatched) {
+            return res.status(401).json({ message: "Invalid OTP." });
+        }
 
-    if (moment().isAfter(moment(otpEntry.otpExpiration))) {
-      return res.status(401).json({ message: "OTP has expired." });
-    }
-    console.log("Id", otpEntry.ref)
+        if (moment().isAfter(moment(otpEntry.otpExpiration))) {
+            return res.status(401).json({ message: "OTP has expired." });
+        }
+        console.log("Id", otpEntry.ref)
 
-    // OTP is valid
-    // const token = jwt.sign(
-    //   { email, token_id: otpEntry.ref },
-    //   process.env.JWT_SECRET,
-    //   { expiresIn: "10m" } // Token valid for 10 minutes
-    // );
+        // OTP is valid
+        // const token = jwt.sign(
+        //   { email, token_id: otpEntry.ref },
+        //   process.env.JWT_SECRET,
+        //   { expiresIn: "10m" } // Token valid for 10 minutes
+        // );
 
 
-    otpEntry.used = true;
-    // delete after this: abhi ni. abhi tou hash k andr expiry time bhi dalna h
-    await otpEntry.save();
+        otpEntry.used = true;
+        // delete after this: abhi ni. abhi tou hash k andr expiry time bhi dalna h
+        await otpEntry.save();
 
         const user = await User.findByIdAndUpdate(
             userId,
@@ -1199,36 +1207,80 @@ console.log("DATA", userId, email, phoneNumber, otp, purpose )
         });
 
 
-    // res.status(200).json({ message: "OTP verified successfully.", token: token });
-  } catch (error) {
-    console.error("Error in verify-otp:", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
+        // res.status(200).json({ message: "OTP verified successfully.", token: token });
+    } catch (error) {
+        console.error("Error in verify-otp:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
 });
 
 
 
 const deliverOTP = async (user, email, emailFunction, req, res) => {
     console.log("Deliver OTP", user, email)
-  const { otp, otpResponse } = await sendOtp(
-    null,
-    email = email,
-    user._id,
-    user.name, 
-    purpose='emailVerification',
-  );
-  if (!otpResponse) {
-    return res.status(500).json({ message: "Failed to generate OTP" });
-  }
-  // console.log("otp", otp, otpResponse);
-  const datas = {
-    name: user.name,
-    email: email,
-    otp,
-  };
-  emailFunction(datas, req, res)
+    const { otp, otpResponse } = await sendOtp(
+        null,
+        email = email,
+        user._id,
+        user.name,
+        purpose = 'emailVerification',
+    );
+    if (!otpResponse) {
+        return res.status(500).json({ message: "Failed to generate OTP" });
+    }
+    // console.log("otp", otp, otpResponse);
+    const datas = {
+        name: user.name,
+        email: email,
+        otp,
+    };
+    emailFunction(datas, req, res)
 }
 
 
+
+router.put('/department/change-once', async (req, res) => {
+  try {
+    const { departmentId } = req.body;
+    const { userId } = getUserDetails(req);
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const departmentExists = await Department.findById(departmentId);
+    if (!departmentExists) {
+      return res.status(404).json({ error: "No such DepartmentId exists" });
+    }
+
+    // Only allow once
+    if (user.changedDepartmentOnce) {
+      return res.status(200).json({
+        message: "You already availed One Time Department Change",
+      });
+    }
+
+    // Update fields manually
+    user.changedDepartmentOnce = true;
+    user.university.departmentId = departmentId;
+    await user.save();
+
+    await user.populate([
+      { path: "university.universityId", select: "name _id" },
+      { path: "university.campusId", select: "name _id" },
+      { path: "university.departmentId", select: "name _id" },
+      { path: "subscribedSocities", select: "name _id" },
+      { path: "subscribedSubSocities", select: "name _id" },
+    ]);
+
+    await handlePlatformResponse(user, res, req);
+
+  } catch (e) {
+    console.error("Error in /department/change-once", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 module.exports = router

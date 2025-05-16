@@ -35,6 +35,8 @@ router.get("/by-campus", async (req, res) => {
       "references.campusOrigin": campusId,
     }).lean();
 
+    console.log("DATA ", departments)
+
     if (!departments)
       return res.status(300).json({ message: "Error fetching Department" });
 

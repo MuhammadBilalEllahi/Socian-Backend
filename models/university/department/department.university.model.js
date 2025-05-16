@@ -7,6 +7,11 @@ const departmentSchema = new Schema({
         required: true,
         index: true,
     },
+    shortInitials: {
+        type: String,
+        required: true,
+        index: true
+    }, 
     subjects: [
         {
             type: Schema.Types.ObjectId,

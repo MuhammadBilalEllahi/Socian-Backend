@@ -36,7 +36,11 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ storage });
+const upload = multer({
+    storage, limits: {
+        fileSize: 50 * 1024 * 1024 // 50 MB per file
+    }
+});
 
 
 
@@ -74,9 +78,11 @@ const ImageStorage = multer.diskStorage({
     }
 });
 
-const uploadImage = multer({ storage: ImageStorage });
+const uploadImage = multer({ storage: ImageStorage, limits: {
+    fileSize: 50 * 1024 * 1024 // 50 MB per file
+  } });
 
-module.exports = {upload, uploadImage};
+module.exports = { upload, uploadImage };
 
 
 
