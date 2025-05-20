@@ -9,6 +9,7 @@ const {
   resendEmail,
   resendEmailForgotPassword,
   resendEmailAccountConfirmation,
+  resendAccountLogin
 } = require("../../utils/email.util.js");
 const bcryptjs = require("bcryptjs");
 const {
@@ -187,6 +188,8 @@ router.post("/login", async (req, res) => {
       // console.log("in app", token);
 
       // Send JWT to the client
+      const name = user.name;
+      resendAccountLogin({ name, email}, req,res)
       res.status(200).json({
         access_token: accessToken,
         refresh_token: refreshToken,
@@ -244,6 +247,8 @@ router.post("/login", async (req, res) => {
       // console.log(req.session.references);
       // res.setHeader("Authorization", `Bearer ${token}`);
 
+      const name = user.name;
+      resendAccountLogin({ name, email}, req,res)
       return res.status(200).json(req.session.user);
     } else {
       return res.status(400).json({ error: "Invalid platform" });

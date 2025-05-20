@@ -66,6 +66,7 @@
     "sanitize-html": "^2.13.1",
     "simple-git": "^3.27.0",
     "slugify": "^1.6.6",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "ua-parser-js": "^2.0.3"
   }
 }
