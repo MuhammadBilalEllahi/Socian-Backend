@@ -12,6 +12,8 @@ const PostCommentCollection = require("../../../models/society/post/comment/post
 const PostComment = require("../../../models/society/post/comment/post.comment.model");
 const Society = require("../../../models/society/society.model");
 const DeletedDataCollection = require("../../../models/deleted/deletedmodels");
+const Notification = require("../../../models/notification/notification.model");
+const { sendNotification } = require("../../../socket/socket");
 const router = express.Router();
 
 /**
@@ -735,10 +737,15 @@ router.post('/post/comment', async (req, res) => {
 
     try {
         const { postId, comment } = req.body;
-        const { userId, role, universityOrigin, campusOrigin } = getUserDetails(req);
+        const { userId, name, role, universityOrigin, campusOrigin } = getUserDetails(req);
 
         if (!postId) return res.status(400).json({ message: "No postId in body" });
         if (!comment || !comment.trim()) return res.status(400).json({ message: "No valid comment provided" });
+
+        const post = await Post.findById(postId);
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
 
         // Create comment document
         const postComment = new PostComment({
@@ -747,6 +754,17 @@ router.post('/post/comment', async (req, res) => {
             comment: comment,
             references: { universityOrigin, campusOrigin, role }
         });
+
+        // inside your message event
+        // if (message.includes("@username123")) {
+        //   sendNotification("123456userId", {
+        //     title: "You were mentioned!",
+        //     body: `${user.name} mentioned you in a message.`,
+        //     type: "mention",
+        //     link: `/discussion/${discussionId}`,
+        //   });
+        // }
+
 
         // Create vote schema for the comment
         const voteSchema = new SocietyPostAndCommentVote({
@@ -775,6 +793,25 @@ router.post('/post/comment', async (req, res) => {
                 commentsCount: 1
             }
         })
+
+        if (post.author.toString() !== userId) {
+            const notification = await Notification.create({
+                type: "comment",
+                recipient: post?.author,
+                sender: userId,
+                post: postId,
+                message: `${name} commented on your post`,
+            })
+            notification.save();
+
+            sendNotification(post?.author, {
+                title: "New Comment",
+                body: "You have a new comment in the discussion.",
+                type: "message",
+                link: `/discussion/abc123`,
+            }
+            )
+        }
         // Commit transaction
         await session.commitTransaction();
         session.endSession();
@@ -1293,7 +1330,7 @@ router.delete("/delete", async (req, res) => {
         }
 
         // Delete the post
-        await Post.findByIdAndUpdate(postId, {'status.isDeleted': true},{ session });
+        await Post.findByIdAndUpdate(postId, { 'status.isDeleted': true }, { session });
 
         // Remove post from PostsCollection
         await PostsCollection.findOneAndUpdate(
@@ -1312,7 +1349,7 @@ router.delete("/delete", async (req, res) => {
         // Delete associated votes
         await SocietyPostAndCommentVote.findOneAndUpdate(
             { postId },
-            {isDeleted: true },
+            { isDeleted: true },
             { session }
         );
 
@@ -1320,14 +1357,14 @@ router.delete("/delete", async (req, res) => {
         const commentCollection = await PostCommentCollection.findById(postId).session(session);
         if (commentCollection) {
             for (const commentId of commentCollection.comments) {
-                await PostComment.findByIdAndUpdate(commentId,{isDeleted: true }, { session });
+                await PostComment.findByIdAndUpdate(commentId, { isDeleted: true }, { session });
                 await SocietyPostAndCommentVote.findOneAndUpdate(
                     { commentId: commentId },
-                    {isDeleted: true },
+                    { isDeleted: true },
                     { session }
                 );
             }
-            await PostCommentCollection.findByIdAndUpdate(postId,{isDeleted: true }, { session });
+            await PostCommentCollection.findByIdAndUpdate(postId, { isDeleted: true }, { session });
         }
         const addToDeletedData = await DeletedDataCollection.findByIdAndUpdate(userId, {
             $push: {
@@ -1335,7 +1372,8 @@ router.delete("/delete", async (req, res) => {
                     postId,
                     deletedAt: new Date()
                 }
-    }});
+            }
+        });
 
         await session.commitTransaction();
         session.endSession();
@@ -1423,7 +1461,7 @@ router.put("/post/edit/:postId", upload.array('file'), async (req, res) => {
         return res.status(500).json({ error: "Internal Server Error" });
     }
 });
- 
+
 
 // router.put("/post/edit/:postId", upload.array('file'), async (req, res) => {
 //     const session = await mongoose.startSession();
@@ -1435,7 +1473,7 @@ router.put("/post/edit/:postId", upload.array('file'), async (req, res) => {
 //     const files = req.files;
 
 //     console.log("\nDATA:", req.body, "\nFiles:", files, "\nPOST ID:", postId)
-    
+
 
 //     try {
 //         const post = await Post.findById(postId).session(session);
@@ -1458,7 +1496,7 @@ router.put("/post/edit/:postId", upload.array('file'), async (req, res) => {
 //         // }
 
 //         console.log("mediaListArray", mediaList)
-        
+
 
 //         console.log("post.media", post.media)
 

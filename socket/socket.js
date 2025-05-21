@@ -14,9 +14,36 @@ class SocketServer {
     this.subscriber = new valkeyClient('subscriber');
     this.publisher = new valkeyClient('publisher');
     this.streamConsumers = {};
-    
+
     this.initializeRedisConnections();
   }
+
+
+  setupNotificationEvents(socket) {
+    // Client joins their personal notification room
+    socket.on("joinNotifications", (userId) => {
+      socket.join(`user:${userId}`);
+      console.log(`User ${userId} joined their notification room.`);
+    });
+
+    // Send a notification to a specific user
+    socket.on("sendNotification", async ({ toUserId, notification }) => {
+      if (!toUserId || !notification) return;
+      console.log("SEDNING NOTIFICATION", toUserId, notification);
+
+      try {
+        console.log("BEFORE EMITNIG")
+        this.io.to(`user:${toUserId}`).emit("newNotification", notification);
+        console.log("AFTER EMITNIG")
+
+        console.log(`Notification sent to user:${toUserId}`);
+      } catch (error) {
+        console.error("Failed to send notification:", error.message);
+      }
+    });
+  }
+
+
 
   async startDiscussionStreamConsumer(discussionId, blockTime = 1000) {
     if (this.streamConsumers[discussionId]) return;
@@ -27,7 +54,7 @@ class SocketServer {
 
     try {
       await this.publisher.xGroupCreate(streamKey, group, '0', { MKSTREAM: true });
-      
+
       const loop = async () => {
         try {
           const response = await this.subscriber.xReadGroup(
@@ -121,6 +148,7 @@ class SocketServer {
       this.setupDiscussionEvents(socket);
       this.setupLocationEvents(socket);
       this.setupGatheringEvents(socket);
+      this.setupNotificationEvents(socket);
       this.handleDisconnect(socket);
     });
 
@@ -244,14 +272,14 @@ class SocketServer {
     socket.on("joinGathering", ({ gatheringId, userId }) => {
       try {
         socket.join(gatheringId);
-        
+
         if (!this.gatheringRooms.has(gatheringId)) {
           this.gatheringRooms.set(gatheringId, new Set());
           this.gatheringAttendees.set(gatheringId, new Map());
         }
-        
+
         this.gatheringRooms.get(gatheringId).add(socket.id);
-        
+
         // Store userId and socketId for disconnection handling
         const attendees = this.gatheringAttendees.get(gatheringId);
         if (!attendees.has(userId)) {
@@ -259,7 +287,7 @@ class SocketServer {
         } else {
           attendees.get(userId).socketId = socket.id;
         }
-        
+
         socket.emit("gatheringAttendees", Array.from(attendees.values()));
         console.log(`User ${userId} joined gathering ${gatheringId}`);
       } catch (error) {
@@ -269,7 +297,7 @@ class SocketServer {
 
     socket.on("markGatheringAttendance", (data) => {
       const { gatheringId, userId, name, latitude, longitude } = data;
-      
+
       try {
         if (!this.isValidCoordinate(latitude) || !this.isValidCoordinate(longitude)) {
           socket.emit("attendanceError", { message: "Invalid coordinates" });
@@ -285,9 +313,9 @@ class SocketServer {
           socketId: socket.id,
           timestamp: new Date()
         });
-        
+
         this.gatheringAttendees.set(gatheringId, attendees);
-        
+
         this.io.to(gatheringId).emit("gatheringAttendanceUpdate", {
           userId,
           name,
@@ -339,7 +367,7 @@ class SocketServer {
       for (const [gatheringId, socketSet] of this.gatheringRooms.entries()) {
         if (socketSet.has(socket.id)) {
           socketSet.delete(socket.id);
-          
+
           const attendees = this.gatheringAttendees.get(gatheringId);
           let removedUserId = null;
           if (attendees) {
@@ -378,6 +406,7 @@ class SocketServer {
     });
   }
 
+
   attachToApp(app, server) {
     this.initSocketIO(app, server);
     app.set("io", this.io);
@@ -385,8 +414,28 @@ class SocketServer {
   }
 }
 
+/**
+ * Send a socket.io notification to a user
+ * @param {string} toUserId - User ID to send notification to
+ * @param {Object} notification - Notification payload
+ */
+function sendNotification(toUserId, notification) {
+  if (!toUserId || !notification) return;
+  socketServer.io.to('sendNotification', toUserId, notification);
+  socketServer.io.to(`user:${toUserId}`).emit("newNotification", notification);
+  console.log(`Notification sent to user:${toUserId}`);
+}
+sendNotification('676106e6923674f90259c650', {
+  type: 'comment',
+  recipient: '676106e6923674f90259c650',
+  sender: '676106e6923674f90259c650',
+  post: '676106e6923674f90259c650',
+  message: 'This is a test notification',
+});
+
 const socketServer = new SocketServer();
 module.exports = {
   initSocketIO: (app, server) => socketServer.initSocketIO(app, server),
-  attachSocketToApp: (app, server) => socketServer.attachToApp(app, server)
+  attachSocketToApp: (app, server) => socketServer.attachToApp(app, server),
+  sendNotification
 };
