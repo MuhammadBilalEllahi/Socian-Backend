@@ -410,6 +410,13 @@ class SocketServer {
   attachToApp(app, server) {
     this.initSocketIO(app, server);
     app.set("io", this.io);
+    sendNotification('676106e6923674f90259c650', {
+  type: 'comment',
+  recipient: '676106e6923674f90259c650',
+  sender: '676106e6923674f90259c650',
+  post: '676106e6923674f90259c650',
+  message: 'This is a test notification',
+});
     return this.io;
   }
 }
@@ -425,15 +432,13 @@ function sendNotification(toUserId, notification) {
   socketServer.io.to(`user:${toUserId}`).emit("newNotification", notification);
   console.log(`Notification sent to user:${toUserId}`);
 }
-sendNotification('676106e6923674f90259c650', {
-  type: 'comment',
-  recipient: '676106e6923674f90259c650',
-  sender: '676106e6923674f90259c650',
-  post: '676106e6923674f90259c650',
-  message: 'This is a test notification',
-});
+
 
 const socketServer = new SocketServer();
+
+
+
+
 module.exports = {
   initSocketIO: (app, server) => socketServer.initSocketIO(app, server),
   attachSocketToApp: (app, server) => socketServer.attachToApp(app, server),

@@ -269,6 +269,17 @@ router.post("/create", async (req, res) => {
 // });
 
 
+router.get("/types", async (req, res) => {
+    try {
+        const societyTypes = await SocietyType.find().select("societyType _id");
+        if (!societyTypes) return res.status(404).json("no society types found");
+        console.log("society types", societyTypes)
+        res.status(200).json(societyTypes);
+    } catch (error) {
+        console.error("Error in society.route.js ", error);
+        res.status(500).json("Internal Server Error");
+    }
+});
 /**
  * @summary Finds society based on ID and returns posts with pagination
  * @param {number} page - Page number for pagination (default 1)
@@ -1056,5 +1067,8 @@ router.get('/paginated/public/societies', async (req, res) => {
         res.status(500).json("Internal Server Error");
     }
 });
+
+
+
 
 module.exports = router;
