@@ -1215,7 +1215,7 @@ const loginAttemptTemplate = (name, {
           If not, we strongly recommend changing your password immediately.
         </p>
 
-        <a href="https://yourwebsite.com/reset-password" style="
+        <a href="https://socian.app/reset-password" style="
           display: inline-block;
           background-color: #000;
           color: #fff;
@@ -1295,7 +1295,7 @@ const loginAttemptTemplate = (name, {
 //                 If this was you, no further action is needed. <br />
 //                 If not, we recommend changing your password immediately and reviewing your account activity.
 //               </p>
-//               <a href="https://yourwebsite.com/reset-password" style="
+//               <a href="https://socian.app/reset-password" style="
 //                 display: inline-block;
 //                 margin-top: 20px;
 //                 padding: 10px 20px;

@@ -154,18 +154,18 @@ router.get('/connections', async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const connections = user.profile.connections.friends
-            .filter((friendRequest) => friendRequest.status === 'accepted')
+        const connections = user?.profile?.connections?.friends
+            .filter((friendRequest) => friendRequest?.status === 'accepted')
             .map((friendRequest) => {
                 const otherUser =
-                    friendRequest.user._id.toString() === userId
-                        ? friendRequest.requestedBy
-                        : friendRequest.user;
+                    friendRequest?.user?._id?.toString() === userId
+                        ? friendRequest?.requestedBy
+                        : friendRequest?.user;
                 return {
-                    _id: otherUser._id,
-                    name: otherUser.name,
-                    username: otherUser.username,
-                    picture: otherUser.profile.picture,
+                    _id: otherUser?._id,
+                    name: otherUser?.name,
+                    username: otherUser?.username,
+                    picture: otherUser?.profile?.picture,
                 };
             });
 
