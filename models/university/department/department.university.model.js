@@ -9,7 +9,7 @@ const departmentSchema = new Schema({
     },
     shortInitials: {
         type: String,
-        required: true,
+        // required: true,
         index: true
     }, 
     subjects: [
