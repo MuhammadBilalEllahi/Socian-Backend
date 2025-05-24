@@ -7,6 +7,10 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
   },
+  deletedUserId:{
+    type:String,
+    default: null,
+  },
   username: {
     type: String,
     unique: true,
@@ -271,6 +275,11 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+
+  agreedToPolicy: {
+    type: Boolean,
+    default: false,
+  }
 });
 
 userSchema.index({ role: 1 });

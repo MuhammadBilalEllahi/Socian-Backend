@@ -9,7 +9,8 @@ const {
   resendEmail,
   resendEmailForgotPassword,
   resendEmailAccountConfirmation,
-  resendAccountLogin
+  resendAccountLogin,
+  resendEmailAccountDeletion
 } = require("../../utils/email.util.js");
 const bcryptjs = require("bcryptjs");
 const {
@@ -29,6 +30,7 @@ const Department = require("../../models/university/department/department.univer
 const UserRoles = require("../../models/userRoles.js");
 const { platformSessionOrJwt_CALL_on_glogin_only } = require("../../utils/platform/jwt.session.platform.js");
 const protectRoute = require("../../middlewares/protect.route.js");
+const DeletedUser = require("../../models/user/deleted.user.model.js");
 
 router.get("/session", async (req, res) => {
   // console.log("Req user:", req.session.user)
@@ -67,7 +69,7 @@ router.get("/session", async (req, res) => {
 });
 
 router.post("/login", async (req, res) => {
-  const { universityId, campusId, email, password } = req.body;
+  const { universityId, campusId, email, password, ip, val_platform } = req.body;
 
   let user;
   let userRoleBool = false;
@@ -75,13 +77,13 @@ router.post("/login", async (req, res) => {
     // console.log("login log", universityId, campusId, email, password);
     const platform = req.headers["x-platform"];
 
-    
+
     if (!email) return res.status(400).json({ error: "Email is required" });
     email.trim();
     if (!password) return res.status(400).json({ error: "Password is required" });
     password.trim();
-    
-    
+
+
     let query = {
       $or: [
         { universityEmail: email },
@@ -189,7 +191,8 @@ router.post("/login", async (req, res) => {
 
       // Send JWT to the client
       const name = user.name;
-      resendAccountLogin({ name, email}, req,res)
+      console.log("User in APP ip", ip);
+      resendAccountLogin({ name, email, iP: ip, val_platform }, req, res)
       res.status(200).json({
         access_token: accessToken,
         refresh_token: refreshToken,
@@ -236,6 +239,8 @@ router.post("/login", async (req, res) => {
         },
       };
 
+      req.session.userId = user._id.toString();
+
       req.session.save((err) => {
         if (err) {
           console.error("Session save error:", err);
@@ -248,7 +253,7 @@ router.post("/login", async (req, res) => {
       // res.setHeader("Authorization", `Bearer ${token}`);
 
       const name = user.name;
-      resendAccountLogin({ name, email}, req,res)
+      resendAccountLogin({ name, email }, req, res)
       return res.status(200).json(req.session.user);
     } else {
       return res.status(400).json({ error: "Invalid platform" });
@@ -262,7 +267,7 @@ router.post("/login", async (req, res) => {
 
 
 router.post("/register", async (req, res) => {
-  const { name, username, universityEmail, personalEmail, password, universityId, campusId, role, departmentId } = req.body;
+  const { name, username, universityEmail, personalEmail, password, universityId, campusId, role, departmentId, agreedToPolicy } = req.body;
   let user;
   let query;
 
@@ -399,6 +404,7 @@ router.post("/register", async (req, res) => {
         universityEmail,
         role,
         super_role: "none",
+        agreedToPolicy: agreedToPolicy ?? true
       });
       role === "alumni"
         && (newUser.personalEmail = personalEmail)
@@ -424,6 +430,7 @@ router.post("/register", async (req, res) => {
         personalEmail: personalEmail,
         role: role,
         super_role: "none",
+        agreedToPolicy: agreedToPolicy ?? true
       });
       await newUser.save();
 
@@ -445,6 +452,138 @@ router.post("/register", async (req, res) => {
   }
 });
 
+
+router.delete("/user/delete", protectRoute, async (req, res) => {
+  try {
+    const { userId } = getUserDetails(req);
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required, or You're not Signed In." });
+    }
+
+    const user = await User.findById(userId).lean(); // Use `.lean()` to get a plain JS object
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const { name, universityEmail, personalEmail, secondaryPersonalEmail } = user;
+
+    // Create a deep copy and customize fields
+    const deletedUserData = {
+      ...user,
+      deletedUserId: user._id,
+      restrictions: {
+        ...user.restrictions,
+        blocking: {
+          isBlocked: true,
+          reason: "User deleted their account",
+        },
+        approval: {
+          isApproved: false,
+        }
+      },
+      requiresMoreInformation: false,
+      createdAt: new Date(), // Timestamp for when deletion record is created
+    };
+
+    // Optional: remove MongoDB internal fields
+    delete deletedUserData._id; // prevent conflict when saving to new collection
+    delete deletedUserData.__v;
+
+    await DeletedUser.create(deletedUserData);
+
+    // await User.findByIdAndDelete(userId);
+
+    // db.getCollection('user-sessions').find({ "session.userId": ObjectId(userId) })
+    // app.locals.db = mongoose.connection;
+    // await db.collection('user-sessions').deleteMany({ "session.userId": userId });
+
+  
+
+    // const emailToNotify = universityEmail || personalEmail || secondaryPersonalEmail;
+    // if (emailToNotify) {
+    //   resendEmailAccountDeletion({ name, email: emailToNotify }, req, res);
+    // }
+
+    if (universityEmail) {
+      resendEmailAccountDeletion({ name: name, email: universityEmail }, req, res)
+    } else if (personalEmail) {
+      resendEmailAccountDeletion({ name: name, email: personalEmail }, req, res)
+    } else if (secondaryPersonalEmail) {
+      resendEmailAccountDeletion({ name: name, email: secondaryPersonalEmail }, req, res)
+    }
+
+  req.session.destroy((err) => {
+      if (err) {
+        console.error("Failed to destroy session:", err);
+        return res.status(500).json({ message: "Deleted Session Removed failed" });
+      }
+      // Clear the cookie on the client side
+      res.clearCookie("iidxi");
+      return res.status(200).json({ message: "Account Deleted & Session Removed" });
+    });
+
+    // return res.status(200).json({ message: "User account deleted successfully" });
+
+  } catch (error) {
+    console.error("Error in delete/user:", error.message);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+// router.delete("/user/delete", protectRoute, async (req, res) => {
+//   try {
+//     const { userId } = getUserDetails(req);
+//     if (!userId) return res.status(400).json({ error: "User ID is required, or You're not Signed In." });
+
+//     const user = await User.findById(userId);
+//     if (!user) return res.status(404).json({ error: "User not found" });
+
+//     const name = user.name;
+//     const universityEmail = user?.universityEmail;
+//     const personalEmail = user?.personalEmail
+//     const secondaryPersonalEmail = user?.secondaryPersonalEmail
+
+//     const userDeleted = await DeletedUser.create({
+//       ...alllDATAAA,
+//       deletedUserId: userId,
+//       username: user.username,
+//       universityEmail: user.universityEmail,
+//       personalEmail: user?.personalEmail,
+//       secondaryPersonalEmail: user?.secondaryPersonalEmail,
+//       phoneNumber: user?.phoneNumber,
+//       restrictions: {
+//         blocking: {
+//           isBlocked: true,
+//           reason: "User deleted their account",
+//         },
+//         approval: {
+//           isApproved: false,
+//         },
+//       },
+//       requiresMoreInformation: false,
+//     });
+
+//   await  User.findByIdAndDelete(userId)
+
+//     if (!userDeleted) {
+//       return res.status(404).json({ error: "User not found or already deleted" });
+//     }
+//     if (universityEmail) {
+//       resendEmailAccountDeletion({ name: name, email: universityEmail }, req, res)
+//     } else if (personalEmail) {
+//       resendEmailAccountDeletion({ name: name, email: personalEmail }, req, res)
+//     } else if (secondaryPersonalEmail) {
+//       resendEmailAccountDeletion({ name: name, email: secondaryPersonalEmail }, req, res)
+//     }
+
+//     return res.status(200).json({ message: "User account deleted successfully" });
+
+
+
+//   } catch (error) {
+//     console.error("Error in delete/user:", error.message);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// })
 
 router.post('/complete/info', async (req, res) => {
   try {
@@ -841,7 +980,7 @@ router.put("/update/email", async (req, res) => {
 
 router.put("/reset-password", protectRoute, async (req, res) => {
   const { oldPassword, newPassword } = req.body;
-  const {userId} = getUserDetails(req);
+  const { userId } = getUserDetails(req);
 
   let user;
   try {

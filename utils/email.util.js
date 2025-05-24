@@ -7,10 +7,10 @@ const resendEmail = async (datas, req, res) => {
   try {
     // console.log(datas);
     const { data, error } = await resend.emails.send({
-      from: "no-reply@bilalellahi.com",
+      from: "no-reply@socian.app",
       to: [datas.email],
       subject: datas.subject,
-      html: `<h5>Chat Form no-reply.bilalellahi.com</h5>
+      html: `<h5>Chat Form no-reply.socian.app</h5>
                 <h3>${datas.message}</h3>
                 <p>${datas.email}</p>
                 <p>${datas.name}</p>
@@ -42,7 +42,7 @@ const resendEmailForgotPassword = async (datas, req, res) => {
     const forgotPasswordHTML = otpTemplate(name, otp);
     // console.log("this ", datas);
     const { data, error } = await resend.emails.send({
-      from: "no-reply@bilalellahi.com",
+      from: "no-reply@socian.app",
       to: [email],
       //   to: email,
       subject: subject,
@@ -110,7 +110,7 @@ const otpTemplate = (name, otp) => {
           <tbody>
             <tr style="height: 0;">
               <td>
-               <strong>Beyond The Class</strong>
+               <strong>Socian</strong>
               </td>
               <td style="text-align: right;">
                 <span
@@ -163,11 +163,11 @@ const otpTemplate = (name, otp) => {
                 letter-spacing: 0.56px;
               "
             >
-              Thank you for choosing Beyond The Class. Use the following OTP
+              Thank you for choosing Socian. Use the following OTP
               to complete the procedure to change your password. OTP is
               valid for
               <span style="font-weight: 600; color: #1f1f1f;">10 minutes</span>.
-              Do not share this code with others, including Beyond The Class
+              Do not share this code with others, including Socian
               employees.
             </p>
             <p
@@ -229,7 +229,7 @@ const otpTemplate = (name, otp) => {
             color: #434343;
           "
         >
-          Beyond The Class
+          Socian
         </p>
         <p style="margin: 0; margin-top: 8px; color: #434343;">
           DHA Lahore, Pakistan
@@ -313,7 +313,7 @@ const resendEmailAccountConfirmation = async (datas, req, res) => {
     const forgotPasswordHTML = confirmAccountTemplate(name, otp);
     // console.log("this ", datas);
     const { data, error } = await resend.emails.send({
-      from: "BeyondTheClass@bilalellahi.com",
+      from: "Socian@socian.app",
       to: [email],
       //   to: email,
       subject: subject,
@@ -382,7 +382,7 @@ const confirmAccountTemplate = (name, otp) => {
           <tbody>
             <tr style="height: 0;">
               <td>
-               <strong>Beyond The Class</strong>
+               <strong>Socian</strong>
               </td>
               <td style="text-align: right;">
                 <span
@@ -435,11 +435,11 @@ const confirmAccountTemplate = (name, otp) => {
                 letter-spacing: 0.56px;
               "
             >
-              Thank you for choosing Beyond The Class. Use the following OTP
+              Thank you for choosing Socian. Use the following OTP
               to complete the procedure to Confirm Your Account. OTP is
               valid for
               <span style="font-weight: 600; color: #1f1f1f;">10 minutes</span>.
-              Do not share this code with others, including Beyond The Class
+              Do not share this code with others, including Socian
               employees.
             </p>
             <p
@@ -501,7 +501,7 @@ const confirmAccountTemplate = (name, otp) => {
             color: #434343;
           "
         >
-          Beyond The Class
+          Socian
         </p>
         <p style="margin: 0; margin-top: 8px; color: #434343;">
           DHA Lahore, Pakistan
@@ -583,7 +583,7 @@ const resendEmailConfirmation = async (datas, req, res) => {
     const verifyEmailHTML = verifyEmailTemplate(name, otp);
     // console.log("this ", datas);
     const { data, error } = await resend.emails.send({
-      from: "BeyondTheClass@bilalellahi.com",
+      from: "Socian@socian.app",
       to: [email],
       //   to: email,
       subject: subject,
@@ -652,7 +652,7 @@ const verifyEmailTemplate = (name, otp) => {
           <tbody>
             <tr style="height: 0;">
               <td>
-               <strong>Beyond The Class</strong>
+               <strong>Socian</strong>
               </td>
               <td style="text-align: right;">
                 <span
@@ -705,11 +705,11 @@ const verifyEmailTemplate = (name, otp) => {
                 letter-spacing: 0.56px;
               "
             >
-              Thank you for choosing Beyond The Class. Use the following OTP
+              Thank you for choosing Socian. Use the following OTP
               to complete the procedure to Confirm Your Account. OTP is
               valid for
               <span style="font-weight: 600; color: #1f1f1f;">10 minutes</span>.
-              Do not share this code with others, including Beyond The Class
+              Do not share this code with others, including Socian
               employees.
             </p>
             <p
@@ -771,7 +771,7 @@ const verifyEmailTemplate = (name, otp) => {
             color: #434343;
           "
         >
-          Beyond The Class
+          Socian
         </p>
         <p style="margin: 0; margin-top: 8px; color: #434343;">
           DHA Lahore, Pakistan
@@ -870,7 +870,7 @@ const verifyEmailTemplate = (name, otp) => {
 //     const forgotPasswordHTML = loginAttemptTemplate(name, location, device, dateTime);
 //     // console.log("this ", datas);
 //     const { data, error } = await resend.emails.send({
-//       from: "BeyondTheClass@bilalellahi.com",
+//       from: "Socian@socian.app",
 //       to: [email],
 //       //   to: email,
 //       subject: subject,
@@ -919,7 +919,7 @@ const verifyEmailTemplate = (name, otp) => {
 //     });
 
 //     const { data, error } = await resend.emails.send({
-//       from: "BeyondTheClass@bilalellahi.com",
+//       from: "Socian@socian.app",
 //       to: [email],
 //       subject,
 //       html: forgotPasswordHTML,
@@ -939,7 +939,7 @@ const axios = require('axios');
 
 const resendAccountLogin = async (datas, req, res) => {
   try {
-    const { name, email,  subject = "Login Attempt" } = datas;
+    const { name, email,  subject = "Login Attempt", iP, val_platform } = datas;
 
     // 1. Parse device info from User-Agent
     const userAgent = req.headers['user-agent'] || 'Unknown';
@@ -947,10 +947,10 @@ const resendAccountLogin = async (datas, req, res) => {
     const parser = new UAParser();
     const uaResult = parser.setUA(userAgent).getResult();
     console.log("Parsed User-Agent:", uaResult);
-    const deviceInfo = `${uaResult.device.type || "Desktop"}, ${uaResult.os.name || "Unknown OS"} ${uaResult.os.version || ""}, ${uaResult.browser.name || "Unknown Browser"} ${uaResult.browser.version || ""}`;
+    const deviceInfo =val_platform !== '' ?val_platform:  `${uaResult.device.type || "Desktop"}, ${uaResult.os.name || "Unknown OS"} ${uaResult.os.version || ""}, ${uaResult.browser.name || "Unknown Browser"} ${uaResult.browser.version || ""}`;
 
     // 2. Get IP address
-    const ip =
+    const ip = iP!== '' ? iP :
       req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
       req.socket?.remoteAddress ||
       req.connection?.remoteAddress ||
@@ -978,7 +978,7 @@ const resendAccountLogin = async (datas, req, res) => {
 
     // 5. Send email
     const { data, error } = await resend.emails.send({
-      from: "BeyondTheClass@bilalellahi.com",
+      from: "Socian@socian.app",
       to: [email],
       subject,
       html: forgotPasswordHTML,
@@ -1027,7 +1027,7 @@ const loginAttemptTemplate = (name, {
           <table style="width: 100%;">
             <tbody>
               <tr>
-                <td><strong>Beyond The Class</strong></td>
+                <td><strong>Socian</strong></td>
                 <td style="text-align: right;">
                   <span style="font-size: 16px; line-height: 30px; color: #ffffff;">${new Date().toDateString()}</span>
                 </td>
@@ -1042,7 +1042,7 @@ const loginAttemptTemplate = (name, {
               <h1 style="margin: 0; font-size: 24px; font-weight: 500; color: #1f1f1f;">New Login Attempt</h1>
               <p style="margin-top: 17px; font-size: 16px; font-weight: 500;">Hello ${name},</p>
               <p style="margin-top: 17px; font-weight: 500; letter-spacing: 0.56px;">
-                We noticed a new login attempt to your <strong>Beyond The Class</strong> account:
+                We noticed a new login attempt to your <strong>Socian</strong> account:
               </p>
              <p><strong>Login Attempt Details:</strong></p>
 <ul>
@@ -1077,7 +1077,7 @@ const loginAttemptTemplate = (name, {
         </main>
 
         <footer style="max-width: 490px; margin: 20px auto 0; text-align: center; border-top: 1px solid #e6ebf1;">
-          <p style="margin-top: 40px; font-size: 16px; font-weight: 600; color: #434343;">Beyond The Class</p>
+          <p style="margin-top: 40px; font-size: 16px; font-weight: 600; color: #434343;">Socian</p>
           <p style="margin-top: 8px; color: #434343;">DHA Lahore, Pakistan</p>
           <div style="margin-top: 16px;">
             <a href="#" target="_blank"><img width="36" alt="Facebook" src="https://archisketch-resources.s3.ap-northeast-2.amazonaws.com/vrstyler/1661502815169_682499/email-template-icon-facebook" /></a>
@@ -1093,4 +1093,82 @@ const loginAttemptTemplate = (name, {
   `;
 };
 
-module.exports = { resendEmail, resendEmailForgotPassword, resendEmailAccountConfirmation, resendEmailConfirmation , resendAccountLogin};
+
+
+
+
+const resendEmailAccountDeletion = async (datas, req, res) => {
+  try {
+    const { name, email, subject = "Account Deleted" } = datas;
+
+    const emailHTML = accountDeletedTemplate(name);
+
+    const { data, error } = await resend.emails.send({
+      from: "Socian@socian.app",
+      to: [email],
+      subject,
+      html: emailHTML,
+    });
+
+    if (error) {
+      console.error("Error sending deletion email:", error);
+    }
+  } catch (error) {
+    console.error("Error in deletion email controller:", error);
+  }
+};
+
+
+
+
+
+/**
+ * Generates a farewell email template when a user's account is deleted.
+ * @param {string} name - Recipient's name.
+ * @returns {string} - The HTML email content.
+ */
+const accountDeletedTemplate = (name) => {
+  return `
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Account Deleted</title>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    </head>
+    <body style="margin: 0; background-color: #ffffff; font-family: 'Inter', sans-serif; color: #0f0f0f;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 40px 24px;">
+        <header style="text-align: left; border-bottom: 1px solid #e5e5e5; padding-bottom: 16px; margin-bottom: 40px;">
+          <h1 style="font-size: 20px; font-weight: 600; margin: 0;">Socian</h1>
+          <p style="margin: 4px 0 0; font-size: 13px; color: #666;">${new Date().toLocaleDateString()}</p>
+        </header>
+
+        <main>
+          <h2 style="font-size: 24px; font-weight: 600; margin-bottom: 16px;">We're sorry to see you go, ${name}.</h2>
+          <p style="font-size: 15px; line-height: 1.6; margin-bottom: 24px; color: #333;">
+            Your account has been successfully <strong>deleted</strong> from our system.
+          </p>
+          <p style="font-size: 15px; line-height: 1.6; margin-bottom: 24px; color: #333;">
+            If this was a mistake, please contact us as soon as possible and we’ll do our best to help you recover your account.
+          </p>
+
+          <div style="margin-top: 40px;">
+            <a href="mailto:support@socian.app" style="display: inline-block; padding: 10px 20px; background-color: #0f0f0f; color: #ffffff; font-size: 14px; font-weight: 500; text-decoration: none; border-radius: 6px;">
+              Contact Support
+            </a>
+          </div>
+        </main>
+
+        <footer style="margin-top: 60px; text-align: center; font-size: 13px; color: #888; border-top: 1px solid #e5e5e5; padding-top: 24px;">
+          <p style="margin: 0;">Socian</p>
+          <p style="margin: 4px 0 0;">DHA Lahore, Pakistan</p>
+          <p style="margin: 8px 0 0;">&copy; ${new Date().getFullYear()} Socian. All rights reserved.</p>
+        </footer>
+      </div>
+    </body>
+  </html>
+  `;
+};
+
+module.exports = { resendEmail, resendEmailForgotPassword, resendEmailAccountConfirmation, resendEmailConfirmation , resendAccountLogin , resendEmailAccountDeletion};

@@ -15,12 +15,12 @@ const connectToMongoDB = async (app) => {
         // NOT AVAILABLE IN FREE TIER
         // const db = mongoose.connection.db;
 
-        // await db.command({ enableSharding: "BeyondTheClass" });
-        // console.log("Sharding enabled for BeyondTheClass");
+        // await db.command({ enableSharding: "Socian" });
+        // console.log("Sharding enabled for Socian");
 
 
         // await db.command({
-        //     shardCollection: "BeyondTheClass.SocietyPostAndCommentVote",
+        //     shardCollection: "Socian.SocietyPostAndCommentVote",
         //     key: { "postId": 1 }  // Shard key: postId
         // });
 
