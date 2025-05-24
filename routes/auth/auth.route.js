@@ -489,7 +489,7 @@ router.delete("/user/delete", protectRoute, async (req, res) => {
 
     await DeletedUser.create(deletedUserData);
 
-    // await User.findByIdAndDelete(userId);
+    await User.findByIdAndDelete(userId);
 
     // db.getCollection('user-sessions').find({ "session.userId": ObjectId(userId) })
     // app.locals.db = mongoose.connection;
