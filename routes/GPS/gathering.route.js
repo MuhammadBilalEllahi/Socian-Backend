@@ -3,13 +3,13 @@ const router = express.Router();
 const Gathering = require("../../models/gps/user.gathering.model");
 const { check, validationResult } = require("express-validator");
 const geolib = require('geolib');
-const User = require("../../models/user/user.model") 
+const User = require("../../models/user/user.model")
 
 
 
 // Create a new gathering
 router.post("/", [
-  check( 'title', 'Title is required').not().isEmpty(),
+  check('title', 'Title is required').not().isEmpty(),
   check('location.latitude', 'Valid latitude is required').isFloat({ min: -90, max: 90 }),
   check('location.longitude', 'Valid longitude is required').isFloat({ min: -180, max: 180 }),
   check('radius', 'Valid radius is required').isInt({ min: 5 }),
@@ -58,19 +58,25 @@ router.get("/all", async (req, res) => {
 });
 // Get all upcoming gatherings
 router.get("/upcoming", async (req, res) => {
-    console.log('Upcoming gatherings endpoint hit'); // Add this line
-    try {
-      const gatherings = await Gathering.find({
-        startTime: { $gt: new Date() }
-      }).sort({ startTime: 1 });
-  
-      console.log(`Found ${gatherings.length} gatherings`); // Add this line
-      res.json(gatherings);
-    } catch (err) {
-      console.error('Error in upcoming gatherings:', err.message); // Enhanced logging
-      res.status(500).send("Server error");
-    }
-  });
+  console.log('Upcoming gatherings endpoint hit'); // Add this line
+  try {
+    // @Rayyan-6 You should know these issues, havent you ever deployed an app to server?
+    const offset = 5 * 60; // Pakistan Standard Time (UTC+5) in minutes
+    const nowUTC = new Date();
+    const karachiTime = new Date(nowUTC.getTime() + offset * 60000);
+
+
+    const gatherings = await Gathering.find({
+      startTime: { $gt: karachiTime } // Adjusted for timezone
+    }).sort({ startTime: 1 });
+
+    console.log(`Found ${gatherings.length} gatherings`); // Add this line
+    res.json(gatherings);
+  } catch (err) {
+    console.error('Error in upcoming gatherings:', err.message); // Enhanced logging
+    res.status(500).send("Server error");
+  }
+});
 
 // Mark attendance for a gathering
 // routes/gatherings.js
@@ -129,15 +135,15 @@ router.post('/:id/attend', async (req, res) => {
       // Continue even if socket fails
     }
 
-    return res.json({ 
+    return res.json({
       success: true,
       attendees: gathering.attendees
     });
 
   } catch (err) {
     console.error('Attendance error:', err);
-    return res.status(500).json({ 
-      message: 'Server error: ' + err.message 
+    return res.status(500).json({
+      message: 'Server error: ' + err.message
     });
   }
 });
