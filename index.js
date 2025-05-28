@@ -173,6 +173,9 @@ const gatheringRouter= require('./routes/GPS/gathering.route.js')
 const webhooks = require('./webhooks/webhooks.route.js');
 
 // Parse raw body for signature verification
+const messagesRouter = require("./routes/1to1messages/messages.routes.js");
+
+
 
 
 
@@ -181,7 +184,7 @@ app.use('/api/webhooks', webhooks);
 app.use("/api/super", superProtect, superRouter);
 app.use("/api/admin", adminProtect, adminRouter);
 app.use("/api/mod", modProtect, modRouter); // ?
-
+app.use("/api/messages", protectRoute, messagesRouter);
 
 app.use("/api/auth", authRouter);
 // app.use("/api/mob/auth", mobAuthRouter); // will not use maybe
