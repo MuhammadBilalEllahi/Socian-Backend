@@ -95,6 +95,9 @@ app.use(
 // app.use(helmet());
 // app.use(csrfProtection);
 
+// app.use('/api/webhooks', express.raw({ type: 'application/json' }));
+
+
 app.use(cookieParser());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({limit: '100mb'}));
@@ -167,8 +170,13 @@ const eventRouter = require('./routes/GPS/event.attendance.route.js')(io);
 const locationRouter= require('./routes/GPS/location.sharing.route.js')
 const gatheringRouter= require('./routes/GPS/gathering.route.js')
 
+const webhooks = require('./webhooks/webhooks.route.js');
+
+// Parse raw body for signature verification
 
 
+
+app.use('/api/webhooks', webhooks);
 
 app.use("/api/super", superProtect, superRouter);
 app.use("/api/admin", adminProtect, adminRouter);

@@ -1411,4 +1411,215 @@ const accountDeletedTemplate = (name) => {
   `;
 };
 
-module.exports = { resendEmail, resendEmailForgotPassword, resendEmailAccountConfirmation, resendEmailConfirmation , resendAccountLogin , resendEmailAccountDeletion};
+
+
+/**
+ * This email will be sent if some alumni types university email with personal email to signup. 
+ * This email is sent to universtity email to ask, university email user, just in case. if he is graduated. 
+ * because after graduation the university is nulled and email bounces back
+ * @param {username} datas 
+ * @param {email} req 
+ * @param {subject} res 
+ */
+
+const resendEmailIsThisAccountYours = async (datas, req, res) => {
+  try {
+    const { username, email, subject = "Incase, Someone tried to use your identity" } = datas;
+
+    const emailHTML = isThisYourAccountTemplate(username);
+
+    const { data, error } = await resend.emails.send({
+      from: "privacy@socian.app",
+      to: [email],
+      subject,
+      html: emailHTML,
+    });
+    if (error) {
+      console.error("Error sending account verification email:", error);
+    }
+  }
+  catch (error) {
+    console.error("Error in account verification email controller:", error);
+  }
+};
+/**
+ * Generates an email notifying the user if someone used their university email to sign up.
+ * @param {string} username - The name of the person (from the university email).
+ * @returns {string} - HTML email content.
+ */
+const isThisYourAccountTemplate = (username) => {
+  const now = new Date().toLocaleString('en-US', { timeZone: 'Asia/Karachi' });
+
+  return `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Account Identity Alert</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#000;">
+    <div style="max-width:600px;margin:0 auto;padding:40px 24px;">
+      <header style="border-bottom:1px solid #e5e5e5;padding-bottom:16px;margin-bottom:32px;">
+        <h1 style="margin:0;font-size:24px;font-weight:600;">Socian</h1>
+        <p style="margin:4px 0 0;font-size:12px;color:#666;">${now}</p>
+      </header>
+
+      <main>
+        <h2 style="font-size:20px;margin:0 0 24px 0;">Is this your account?</h2>
+
+        <p style="font-size:16px;line-height:1.6;margin:0 0 16px 0;">
+          Hi <strong>${username}</strong>,
+        </p>
+
+        <p style="font-size:16px;line-height:1.6;margin:0 0 16px 0;">
+          We received a request from someone trying to sign up using this university email address. 
+          If you're still a student, you may proceed to sign up. However, if you've graduated, this account creation may have been unintentional or suspicious.
+        </p>
+
+        <p style="font-size:16px;line-height:1.6;margin:0 0 24px 0;">
+          If this was <strong>you</strong>, no action is needed. Otherwise, please let us know.
+        </p>
+
+        <div style="margin:32px 0;text-align:center;">
+          <a href="mailto:privacy@socian.app" style="display:inline-block;padding:12px 24px;background-color:#000;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Report Misuse</a>
+        </div>
+      </main>
+
+      <footer style="border-top:1px solid #e5e5e5;padding-top:24px;margin-top:40px;text-align:center;">
+        <p style="font-size:14px;color:#666;margin:0;">Socian | DHA Lahore, Pakistan</p>
+        <p style="font-size:12px;color:#999;margin:4px 0 0;">Need help? Email us at <a href="mailto:support@socian.app" style="color:#000;text-decoration:underline;">support@socian.app</a></p>
+        <p style="font-size:12px;color:#999;margin-top:16px;">© ${new Date().getFullYear()} Socian. All rights reserved.</p>
+      </footer>
+    </div>
+  </body>
+  </html>
+  `;
+};
+
+
+
+const resendEmailWhyAlumniReceivedEmailInUniversityEmail = async (datas, req, res) => {
+  try {
+    const {
+      username,
+      email,
+      subject = "Developer Alert: Bounced Email Attempt",
+    } = datas;
+
+    const attemptedIP = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    const userAgent = req.headers["user-agent"];
+    const timestamp = new Date().toISOString();
+
+    const emailHTML = devDidNotBouncedEmailTemplate({
+      username,
+      email,
+      attemptedIP,
+      userAgent,
+      timestamp,
+    });
+
+    const { data, error } = await resend.emails.send({
+      from: email || "privacy@socian.app",
+      to: ["privacy@socian.app"], // replace with your internal dev/admin email
+      subject,
+      html: emailHTML,
+    });
+
+    if (error) {
+      console.error("Error sending dev bounced email:", error);
+    }
+  } catch (error) {
+    console.error("Error in dev bounced email controller:", error);
+  }
+};
+
+
+
+
+const devDidNotBouncedEmailTemplate = ({
+  username,
+  email,
+  attemptedIP,
+  userAgent,
+  timestamp,
+}) => {
+  return `
+  <html>
+    <head>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+          background-color: #ffffff;
+          color: #000000;
+          padding: 40px;
+          line-height: 1.6;
+        }
+        .container {
+          max-width: 640px;
+          margin: 0 auto;
+          border: 1px solid #e5e5e5;
+          border-radius: 8px;
+          padding: 32px;
+        }
+        .title {
+          font-size: 22px;
+          font-weight: 600;
+          margin-bottom: 20px;
+        }
+        .paragraph {
+          font-size: 14px;
+          margin-bottom: 16px;
+        }
+        .code-block {
+          background-color: #f9f9f9;
+          border: 1px solid #ddd;
+          padding: 12px;
+          font-family: monospace;
+          white-space: pre-wrap;
+          word-break: break-word;
+          font-size: 13px;
+          color: #111;
+        }
+        .footer {
+          font-size: 12px;
+          color: #888;
+          margin-top: 32px;
+          border-top: 1px solid #eee;
+          padding-top: 12px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="title">⚠️DID NOT Bounced University Email Attempt Detected for alumni</div>
+
+        <div class="paragraph">
+          An email attempt was made using <strong>${username}</strong>'s identity.
+        </div>
+
+        <div class="paragraph">Details of the attempt:</div>
+
+        <div class="code-block">
+email:        ${email}
+ip:           ${attemptedIP}
+user-agent:   ${userAgent}
+timestamp:    ${timestamp}
+        </div>
+
+        <div class="paragraph">
+          If this is expected behavior (e.g. failed email validation), you can ignore this. Otherwise, log or investigate as needed.
+        </div>
+
+        <div class="footer">
+          Logged by Socian System • privacy@socian.app
+        </div>
+      </div>
+    </body>
+  </html>
+  `;
+};
+
+
+
+module.exports = { resendEmail, resendEmailForgotPassword, resendEmailAccountConfirmation, resendEmailConfirmation , resendAccountLogin , resendEmailAccountDeletion, resendEmailIsThisAccountYours, resendEmailWhyAlumniReceivedEmailInUniversityEmail};

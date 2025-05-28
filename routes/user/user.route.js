@@ -962,4 +962,39 @@ router.put('/graduation-year/change', async (req, res) => {
     }
 });
 
+
+router.get('/moderated-societies',  async (req, res) => {
+  try {
+    // Get user ID from auth middleware (adjust based on your setup)
+    // const userId = req.sessoin.user._id; // Or req.session.user._id if using sessions
+    //USe this, why are you making things complicated
+    const {userId} = getUserDetails(req);
+
+    // Find user and populate moderated societies
+    const user = await User.findById(userId)
+      .select('profile.moderatorTo.society')
+      .populate('profile.moderatorTo.society', '_id name');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Extract societies (handle case where moderatorTo.society is undefined)
+    const societies = user.profile.moderatorTo?.society || [];
+
+    // Format response
+    const formattedSocieties = societies.map(society => ({
+      _id: society._id.toString(),
+      name: society.name
+    }));
+
+    res.status(200).json(formattedSocieties);
+  } catch (error) {
+    console.error('Error fetching moderated societies:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+
+
 module.exports = router;

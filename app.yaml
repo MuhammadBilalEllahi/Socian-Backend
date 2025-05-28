@@ -59,3 +59,4 @@ env_variables:
   KAFKA_BROKER: "kafka-beyondtheclass.servicebus.windows.net:9093"
   SAS_USERNAME: "$ConnectionString"
   SAS_PASSWORD: "Endpoint=sb://kafka-beyondtheclass.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=HWpYVZwLZnfPqCpBoz8/B1xufp6Be28Iz+AEhMu3RA0="
+  RESEND_SIGNING_SECRET: "whsec_fBpHcvoh55mQkVsPdZOhvoOx/5G5bfm3"

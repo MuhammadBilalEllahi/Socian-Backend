@@ -10,7 +10,8 @@ const {
   resendEmailForgotPassword,
   resendEmailAccountConfirmation,
   resendAccountLogin,
-  resendEmailAccountDeletion
+  resendEmailAccountDeletion,
+  resendEmailIsThisAccountYours
 } = require("../../utils/email.util.js");
 const bcryptjs = require("bcryptjs");
 const {
@@ -31,6 +32,7 @@ const UserRoles = require("../../models/userRoles.js");
 const { platformSessionOrJwt_CALL_on_glogin_only } = require("../../utils/platform/jwt.session.platform.js");
 const protectRoute = require("../../middlewares/protect.route.js");
 const DeletedUser = require("../../models/user/deleted.user.model.js");
+const { upload } = require("../../utils/multer.utils.js");
 
 router.get("/session", async (req, res) => {
   // console.log("Req user:", req.session.user)
@@ -290,6 +292,7 @@ router.post("/register", async (req, res) => {
     })
     if (!departmentExists) return res.status(404).json({ error: "No Department Found" })
 
+    // UserRoles.teacher
     if (role === 'teacher' || role === 'student') {
       query = { universityEmail };
     } else if (role === 'alumni') {
@@ -411,6 +414,13 @@ router.post("/register", async (req, res) => {
 
       await newUser.save();
 
+      if (role === 'alumni') {
+
+        resendEmailIsThisAccountYours({ username: newUser.username, email: newUser.universityEmail }, req, res);
+          // Deliver OTP for email verification
+          // deliverOTP(newUser, resendEmailAccountConfirmation, req, res);
+      }
+
       campus.users.push(newUser._id);
       uniExists.users.push(newUser._id);
 
@@ -451,6 +461,17 @@ router.post("/register", async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
+
+
+router.post('/alumni/verification', upload.array('files'), async (req, res) => {
+  try {
+
+  } catch (error) {
+    console.error("Error in register/alumni:", error.message);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+})
 
 
 router.delete("/user/delete", protectRoute, async (req, res) => {
@@ -495,7 +516,7 @@ router.delete("/user/delete", protectRoute, async (req, res) => {
     // app.locals.db = mongoose.connection;
     // await db.collection('user-sessions').deleteMany({ "session.userId": userId });
 
-  
+
 
     // const emailToNotify = universityEmail || personalEmail || secondaryPersonalEmail;
     // if (emailToNotify) {
@@ -510,7 +531,7 @@ router.delete("/user/delete", protectRoute, async (req, res) => {
       resendEmailAccountDeletion({ name: name, email: secondaryPersonalEmail }, req, res)
     }
 
-  req.session.destroy((err) => {
+    req.session.destroy((err) => {
       if (err) {
         console.error("Failed to destroy session:", err);
         return res.status(500).json({ message: "Deleted Session Removed failed" });
