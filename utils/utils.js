@@ -101,6 +101,7 @@ const sendOtp = async (phoneNumber, email, user, name, purpose = "verify") => {
 
 
 /**
+ * This function has leading protectRoute, which checks if user is logged in or not
  * Extracts user details based on the platform and session or user data.
  * @param {Object} req - The request object
  * @returns {Object} - The user details, including  user, userId, role, universityOrigin, campusOrigin, departmentId
@@ -111,6 +112,7 @@ const sendOtp = async (phoneNumber, email, user, name, purpose = "verify") => {
  * @returns {campusOrigin}
  */
 const getUserDetails = (req) => {
+try{
 
   // Validate `res` only if `checks` is true
   // if (checks && !res) {
@@ -123,6 +125,10 @@ const getUserDetails = (req) => {
 
   // console.log("this is the platform", platform, req.headers["x-platform"], req.user);
   if (platform === "web") {
+    if(!req?.session?.user) {
+      console.error("Session user is not defined");
+      return {};
+    }
     name = req.session.user.name;
     user = req.session.user;
     userId = req.session.user._id;
@@ -133,6 +139,10 @@ const getUserDetails = (req) => {
       campusOrigin = req.session.user.university.campusId?._id ?? req.session.user.university.campusId;
     }
   } else if (platform === "app") {
+    if(!req?.user) {
+      console.error("Session user is not defined");
+      return {};
+    }
     name = req.user.name;
     user = req.user;
     userId = req.user._id;
@@ -157,8 +167,11 @@ const getUserDetails = (req) => {
   // }
 
   return { name, user, userId, role, campusId, universityId, universityOrigin, campusOrigin, departmentId, platform };
+}catch(e){  
+  console.error("Error in getUserDetails:", e);
+  return {}
 };
-
+}
 
 
 

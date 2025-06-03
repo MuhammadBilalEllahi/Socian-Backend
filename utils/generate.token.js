@@ -40,6 +40,7 @@ const generateToken = (user) => {
     joinedSubSocieties: user.subscribedSubSocities,
     verified: user.universityEmailVerified,
     requiresMoreInformation: user.requiresMoreInformation ?? false,
+    // isAlumniAndRequiresDocumentation: user.isAlumniAndRequiresDocumentation ?? false,
     changedDepartmentOnce: user?.changedDepartmentOnce ?? false,
     changedGraduationYearOnce: user?.changedGraduationYearOnce ?? false,
     references: {
@@ -58,6 +59,12 @@ const generateToken = (user) => {
     },
   };
 
+  if(user.role === UserRoles.alumni) {
+    payload.verification={
+      studentCardUploaded: user?.studentOrAlumniDocument?.available ?? false,
+      livePictureUploaded: user?.livePicture?.available ?? false,
+    }
+  }
   if (user.role === UserRoles.teacher) {
     payload.teacherConnectivities = {
       attached: user?.teacherConnectivities?.attached ?? false,

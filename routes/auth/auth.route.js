@@ -33,6 +33,7 @@ const { platformSessionOrJwt_CALL_on_glogin_only } = require("../../utils/platfo
 const protectRoute = require("../../middlewares/protect.route.js");
 const DeletedUser = require("../../models/user/deleted.user.model.js");
 const { upload } = require("../../utils/multer.utils.js");
+const { uploadBothCardMedia, uploadLivePictureMedia } = require("../../utils/aws.bucket.utils.js");
 
 router.get("/session", async (req, res) => {
   // console.log("Req user:", req.session.user)
@@ -417,8 +418,9 @@ router.post("/register", async (req, res) => {
       if (role === 'alumni') {
 
         resendEmailIsThisAccountYours({ username: newUser.username, email: newUser.universityEmail }, req, res);
-          // Deliver OTP for email verification
-          // deliverOTP(newUser, resendEmailAccountConfirmation, req, res);
+
+        // Deliver OTP for email verification
+        // deliverOTP(newUser, resendEmailAccountConfirmation, req, res);
       }
 
       campus.users.push(newUser._id);
@@ -464,8 +466,116 @@ router.post("/register", async (req, res) => {
 
 
 
-router.post('/alumni/verification', upload.array('files'), async (req, res) => {
+router.post('/alumni/verification/card',protectRoute,  upload.array('files'), async (req, res) => {
   try {
+    const { userId } = getUserDetails(req);
+    const { docType } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required, or You're not Signed In." });
+    }
+    const user = await User.findById(userId).select('-profile.posts');
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    // if (user.role !== UserRoles.alumni) {
+    //     return res.status(403).json({ error: "Only alumni can submit verification card" });
+    // }
+
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: "No files uploaded" });
+    }
+
+    
+
+
+
+    const { url: frontUrl, type: frontType } = await uploadBothCardMedia(req.files[0], req, true);
+    const { url, type } = await uploadBothCardMedia(req.files[1], req, false);
+    console.log("Front URL:", frontUrl, "Type:", frontType);
+    console.log("Back URL:", url, "Type:", type);
+
+    const userVerif = await User.findByIdAndUpdate(userId, {
+      studentOrAlumniDocument: {
+        available: true,
+        // enum: ['studentCard', 'studentBusCard', 'transcript', 'degree', 'other'],
+
+        docType: docType,
+        images: {
+          front: {
+            url: frontUrl,
+            type: frontType,
+          },
+          back: {
+            url: url,
+            type: type,
+          },
+        }
+      }
+    })
+    const userVerif2 = await User.findById(userId).select('-profile.posts');
+
+    if (!userVerif2) {
+      return res.status(404).json({ error: "User process could not complete" });
+    }
+
+
+    await handlePlatformResponse(userVerif2, res, req);
+
+
+  } catch (error) {
+    console.error("Error in register/alumni:", error.message);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+})
+
+
+router.post('/alumni/verification/live-picture',protectRoute, upload.array('file'), async (req, res) => {
+  try {
+        const files = req.file;
+console.log("Files:", files);
+    const { userId } = getUserDetails(req);
+    
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required, or You're not Signed In." });
+    }
+    const user = await User.findById(userId).select('-profile.posts');
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    // if (user.role !== UserRoles.alumni) {
+    //     return res.status(403).json({ error: "Only alumni can submit verification card" });
+    // }
+
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: "No files uploaded" });
+    }
+
+
+
+    const { url, type } = await uploadLivePictureMedia(req.file, req);
+    
+    console.log("Back URL:", url, "Type:", type);
+
+    const userVerif = await User.findByIdAndUpdate(userId, {
+      livePicture: {
+        available: true,
+        image: {
+          url: url,
+          mimeType: type,
+        }
+      }
+    })
+    const userVerif2 = await User.findById(userId).select('-profile.posts');
+    if (!userVerif2) {
+      return res.status(404).json({ error: "User process could not complete" });
+    }
+    await handlePlatformResponse(userVerif2, res, req);
+
 
   } catch (error) {
     console.error("Error in register/alumni:", error.message);
@@ -549,62 +659,6 @@ router.delete("/user/delete", protectRoute, async (req, res) => {
   }
 });
 
-
-// router.delete("/user/delete", protectRoute, async (req, res) => {
-//   try {
-//     const { userId } = getUserDetails(req);
-//     if (!userId) return res.status(400).json({ error: "User ID is required, or You're not Signed In." });
-
-//     const user = await User.findById(userId);
-//     if (!user) return res.status(404).json({ error: "User not found" });
-
-//     const name = user.name;
-//     const universityEmail = user?.universityEmail;
-//     const personalEmail = user?.personalEmail
-//     const secondaryPersonalEmail = user?.secondaryPersonalEmail
-
-//     const userDeleted = await DeletedUser.create({
-//       ...alllDATAAA,
-//       deletedUserId: userId,
-//       username: user.username,
-//       universityEmail: user.universityEmail,
-//       personalEmail: user?.personalEmail,
-//       secondaryPersonalEmail: user?.secondaryPersonalEmail,
-//       phoneNumber: user?.phoneNumber,
-//       restrictions: {
-//         blocking: {
-//           isBlocked: true,
-//           reason: "User deleted their account",
-//         },
-//         approval: {
-//           isApproved: false,
-//         },
-//       },
-//       requiresMoreInformation: false,
-//     });
-
-//   await  User.findByIdAndDelete(userId)
-
-//     if (!userDeleted) {
-//       return res.status(404).json({ error: "User not found or already deleted" });
-//     }
-//     if (universityEmail) {
-//       resendEmailAccountDeletion({ name: name, email: universityEmail }, req, res)
-//     } else if (personalEmail) {
-//       resendEmailAccountDeletion({ name: name, email: personalEmail }, req, res)
-//     } else if (secondaryPersonalEmail) {
-//       resendEmailAccountDeletion({ name: name, email: secondaryPersonalEmail }, req, res)
-//     }
-
-//     return res.status(200).json({ message: "User account deleted successfully" });
-
-
-
-//   } catch (error) {
-//     console.error("Error in delete/user:", error.message);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// })
 
 router.post('/complete/info', async (req, res) => {
   try {

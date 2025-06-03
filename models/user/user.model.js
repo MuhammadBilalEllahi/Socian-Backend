@@ -1,14 +1,16 @@
 const mongoose = require("mongoose");
 const UserRoles = require("../userRoles");
 const Teacher = require("../university/teacher/teacher.model");
+const moment = require('moment-timezone');
+
 
 // Remmeber: Apply logic in prioirity on frontend then backend and then model.
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
   },
-  deletedUserId:{
-    type:String,
+  deletedUserId: {
+    type: String,
     default: null,
   },
   username: {
@@ -80,6 +82,63 @@ const userSchema = new mongoose.Schema({
       //   message: "Graduation year is required for students",
       // },
     },
+    // isAlumniAndRequiresDocumentation
+    studentOrAlumniDocument: {
+      available: {
+        type: Boolean,
+        default: false,
+      },
+      docType: {
+
+        type: String,
+        enum: ['studentCard', 'studentBusCard', 'transcript', 'degree', 'other'],
+      },
+      images: {
+        front: {
+          url: {
+            type: String,
+            default:
+              "",
+          },
+          mimeType: {
+            type: String,
+            default:
+              "",
+          },
+        },
+        back: {
+          url: {
+            type: String,
+            default:
+              "",
+          },
+          mimeType: {
+            type: String,
+            default:
+              "",
+          },
+        },
+      }
+
+    },
+    livePicture: {
+      available: {
+        type: Boolean,
+        default: false,
+      },
+      image: {
+        url: {
+          type: String,
+          default:
+            "",
+        },
+        mimeType: {
+          type: String,
+          default:
+            "",
+        },
+      },
+    },
 
 
     department: {
@@ -110,7 +169,7 @@ const userSchema = new mongoose.Schema({
       ],
     },
   },
-  
+
   university: {
     slug: String,
     universityId: {
@@ -175,6 +234,10 @@ const userSchema = new mongoose.Schema({
     match: [/^\d{10,15}$/, "Please fill a valid phone number"],
   },
 
+  wasStudentNowAlumni: {
+    type: Boolean,
+    default: false,
+  },
   // ## Verified?
   universityEmailVerified: {
     type: Boolean,
@@ -196,11 +259,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  changedDepartmentOnce:{
+  changedDepartmentOnce: {
     type: Boolean,
     default: false
   },
-    changedGraduationYearOnce:{
+  changedGraduationYearOnce: {
     type: Boolean,
     default: false
   },
@@ -496,10 +559,17 @@ userSchema.methods.updateEmail = async function (emailType, email) {
 
 // Applied > today , not >= to save user from incomplete work they have in student section
 userSchema.methods.convertToAlumni = function () {
-  const today = new Date();
-  if (this.role === "student" && this.profile.graduationYear < today) {
+  // const today = new Date();
+   // Get the current date in Pakistan Standard Time (PKT)
+  const todayInPKT = moment.tz('Asia/Karachi').startOf('day'); // Truncate time for day-only comparison
+
+  // Assume graduationYear is stored as a date or string (e.g., "2023-06-30")
+  const graduationDate = moment.tz(this.profile.graduationYear, 'Asia/Karachi').endOf('year');
+
+  if (this.role === "student" && graduationDate.isBefore(todayInPKT)) {
     this.role = "alumni";
-    this.restrictions.approval.isApproved=true;
+    this.wasStudentNowAlumni = true;
+    this.restrictions.approval.isApproved = true;
   }
 };
 

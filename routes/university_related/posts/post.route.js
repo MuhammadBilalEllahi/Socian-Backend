@@ -50,156 +50,231 @@ const router = express.Router();
 
 
 
-
-/**
- * get latest posts in a university section
- */
 router.get("/universities/all", async (req, res) => {
     try {
-        // console.log("here")
-        const { role, universityOrigin, campusOrigin } = getUserDetails(req)
+        const { role, universityOrigin, campusOrigin } = getUserDetails(req);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
 
-        const posts = await Post.find({
-            'references.role': role,
-            'status.isDeleted': false,
-        })
-            .sort({ createdAt: -1 })
-            .populate([
-                {
-                    path: "author",
-                    select: 'name username role  super_role university profile.picture',
-                    populate: {
-                        path: 'university',
+        const [posts, totalCount] = await Promise.all([
+            Post.find({
+                'references.role': role,
+                'references.campusOrigin': campusOrigin,
+                'status.isDeleted': false,
+            })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate([
+                    {
+                        path: "author",
+                        select: 'name username role super_role university profile.picture',
                         populate: {
-                            path: 'universityId departmentId campusId ',
-                            select: 'name'
+                            path: 'university',
+                            populate: {
+                                path: 'universityId departmentId campusId',
+                                select: 'name'
+                            }
                         }
-                    }
-                },
-                "society",
-                "subSociety",
-                "voteId"
-            ]);
+                    },
+                    "society",
+                    "subSociety",
+                    "voteId"
+                ]),
+            Post.countDocuments({
+                'references.role': role,
+                'status.isDeleted': false,
+            })
+        ]);
 
-
-        // console.log("posts", JSON.stringify(posts, null, 2))
-
-        if (!posts) return res.status(304).json("Posts Collection null");
-
-        res.status(200).json(posts);
+        res.status(200).json({
+            data: posts,
+            pagination: {
+                total: totalCount,
+                page,
+                limit,
+                hasNextPage: page * limit < totalCount
+            }
+        });
     } catch (error) {
-        console.error("Error in posts.route.js /all", error);
+        console.error("Error in posts.route.js /campus/all", error);
         res.status(500).json("Internal Server Error");
     }
 });
 
-/**
- * get latest posts in a university section
- */
+
 router.get("/campuses/all", async (req, res) => {
     try {
-        // console.log("here")
-        const { role, universityOrigin, campusOrigin } = getUserDetails(req)
+        const { role, universityOrigin, campusOrigin } = getUserDetails(req);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
 
-        const posts = await Post.find({
-            'references.role': role,
-            'references.universityOrigin': universityOrigin,
-            'status.isDeleted': false,
-        })
-            .sort({ createdAt: -1 })
-            .populate([
-                {
-                    path: "author",
-                    select: 'name username role  super_role university profile.picture',
-                    populate: {
-                        path: 'university',
+        const [posts, totalCount] = await Promise.all([
+            Post.find({
+                'references.role': role,
+                'references.campusOrigin': campusOrigin,
+                'status.isDeleted': false,
+            })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate([
+                    {
+                        path: "author",
+                        select: 'name username role super_role university profile.picture',
                         populate: {
-                            path: 'universityId departmentId campusId ',
-                            select: 'name'
+                            path: 'university',
+                            populate: {
+                                path: 'universityId departmentId campusId',
+                                select: 'name'
+                            }
                         }
-                    }
-                },
-                "society",
-                "subSociety",
-                "voteId"
-            ]);
+                    },
+                    "society",
+                    "subSociety",
+                    "voteId"
+                ]),
+            Post.countDocuments({
+                'references.role': role,
+                'references.universityOrigin': universityOrigin,
+                'status.isDeleted': false,
+            })
+        ]);
 
-
-
-        // console.log("posts", posts)
-
-        if (!posts) return res.status(304).json("Posts Collection null");
-
-        res.status(200).json(posts);
+        res.status(200).json({
+            data: posts,
+            pagination: {
+                total: totalCount,
+                page,
+                limit,
+                hasNextPage: page * limit < totalCount
+            }
+        });
     } catch (error) {
-        console.error("Error in posts.route.js /all", error);
+        console.error("Error in posts.route.js /campus/all", error);
         res.status(500).json("Internal Server Error");
     }
 });
 
-/**
- * get latest posts in a university section
- */
 router.get("/campus/all", async (req, res) => {
     try {
-        // console.log("here")
-        const { role, universityOrigin, campusOrigin } = getUserDetails(req)
-        console.log("/campus/all", role, universityOrigin, campusOrigin)
+        const { role, universityOrigin, campusOrigin } = getUserDetails(req);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
 
-        const posts = await Post.find({
-            'references.role': role,
-            // 'references.universityOrigin': universityOrigin,
-            'references.campusOrigin': campusOrigin,
-            'status.isDeleted': false,
-        })
-            .sort({ createdAt: -1 })
-            .populate([
-                {
-                    path: "author",
-                    select: 'name username role  super_role university profile.picture',
-                    populate: {
-                        path: 'university',
+        const [posts, totalCount] = await Promise.all([
+            Post.find({
+                'references.role': role,
+                'references.campusOrigin': campusOrigin,
+                'status.isDeleted': false,
+            })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate([
+                    {
+                        path: "author",
+                        select: 'name username role super_role university profile.picture',
                         populate: {
-                            path: 'universityId departmentId campusId ',
-                            select: 'name'
+                            path: 'university',
+                            populate: {
+                                path: 'universityId departmentId campusId',
+                                select: 'name'
+                            }
                         }
-                    }
-                },
-                "society",
-                "subSociety",
-                "voteId"
-            ]);
+                    },
+                    "society",
+                    "subSociety",
+                    "voteId"
+                ]),
+            Post.countDocuments({
+                'references.role': role,
+                'references.campusOrigin': campusOrigin,
+                'status.isDeleted': false,
+            })
+        ]);
 
-        // const posts = await PostsCollection.find({
-        //     'references.role': role,
-        //     'references.universityOrigin': universityOrigin,
-        //     'references.campusOrigin': campusOrigin
-        // })
-        //     .populate([  // 'postsCollectionRef',
-
-        //         {
-        //             path: 'posts.postId',
-        //             model: 'Post',
-        //             populate: [{
-        //                 path: 'author',
-        //                 model: 'User',
-        //             }, {
-        //                 path: 'voteId',
-        //                 model: 'SocietyPostAndCommentVote',
-        //             }],
-        //         },
-        //     ]);
-
-        // console.log("posts", posts)
-
-        if (!posts) return res.status(304).json("Posts Collection null");
-
-        res.status(200).json(posts);
+        res.status(200).json({
+            data: posts,
+            pagination: {
+                total: totalCount,
+                page,
+                limit,
+                hasNextPage: page * limit < totalCount
+            }
+        });
     } catch (error) {
-        console.error("Error in posts.route.js /all", error);
+        console.error("Error in posts.route.js /campus/all", error);
         res.status(500).json("Internal Server Error");
     }
 });
+
+// /**
+//  * get latest posts in a university section
+//  */
+// router.get("/campus/all", async (req, res) => {
+//     try {
+//         // console.log("here")
+//         const { role, universityOrigin, campusOrigin } = getUserDetails(req)
+//         console.log("/campus/all", role, universityOrigin, campusOrigin)
+
+//         const posts = await Post.find({
+//             'references.role': role,
+//             // 'references.universityOrigin': universityOrigin,
+//             'references.campusOrigin': campusOrigin,
+//             'status.isDeleted': false,
+//         })
+//             .sort({ createdAt: -1 })
+//             .populate([
+//                 {
+//                     path: "author",
+//                     select: 'name username role  super_role university profile.picture',
+//                     populate: {
+//                         path: 'university',
+//                         populate: {
+//                             path: 'universityId departmentId campusId ',
+//                             select: 'name'
+//                         }
+//                     }
+//                 },
+//                 "society",
+//                 "subSociety",
+//                 "voteId"
+//             ]);
+
+//         // const posts = await PostsCollection.find({
+//         //     'references.role': role,
+//         //     'references.universityOrigin': universityOrigin,
+//         //     'references.campusOrigin': campusOrigin
+//         // })
+//         //     .populate([  // 'postsCollectionRef',
+
+//         //         {
+//         //             path: 'posts.postId',
+//         //             model: 'Post',
+//         //             populate: [{
+//         //                 path: 'author',
+//         //                 model: 'User',
+//         //             }, {
+//         //                 path: 'voteId',
+//         //                 model: 'SocietyPostAndCommentVote',
+//         //             }],
+//         //         },
+//         //     ]);
+
+//         // console.log("posts", posts)
+
+//         if (!posts) return res.status(304).json("Posts Collection null");
+
+//         res.status(200).json(posts);
+//     } catch (error) {
+//         console.error("Error in posts.route.js /all", error);
+//         res.status(500).json("Internal Server Error");
+//     }
+// });
 
 
 

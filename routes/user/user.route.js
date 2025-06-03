@@ -135,9 +135,11 @@ router.get('/subscribedSocieties', async (req, res) => {
     }
 });
 
+
 router.get('/connections', async (req, res) => {
     try {
         const { userId } = getUserDetails(req);
+
         const user = await User.findById(userId)
             .select('profile.connections.friends')
             .populate({
@@ -154,27 +156,91 @@ router.get('/connections', async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const connections = user?.profile?.connections?.friends
-            .filter((friendRequest) => friendRequest?.status === 'accepted')
-            .map((friendRequest) => {
-                const otherUser =
-                    friendRequest?.user?._id?.toString() === userId
-                        ? friendRequest?.requestedBy
-                        : friendRequest?.user;
-                return {
-                    _id: otherUser?._id,
-                    name: otherUser?.name,
-                    username: otherUser?.username,
-                    picture: otherUser?.profile?.picture,
-                };
-            });
+        const allFriendRefs = user?.profile?.connections?.friends || [];
 
-        res.status(200).json({ connections });
+        const validFriends = [];
+        const invalidFriendIds = [];
+
+        for (const friendRequest of allFriendRefs) {
+            const isValid =
+                friendRequest?.status === 'accepted' &&
+                friendRequest?.user?._id &&
+                friendRequest?.requestedBy?._id;
+
+            if (isValid) {
+                const otherUser =
+                    friendRequest.user._id.toString() === userId
+                        ? friendRequest.requestedBy
+                        : friendRequest.user;
+
+                validFriends.push({
+                    _id: otherUser._id,
+                    name: otherUser.name,
+                    username: otherUser.username,
+                    picture: otherUser?.profile?.picture || null,
+                });
+            } else if (friendRequest?._id) {
+                invalidFriendIds.push(friendRequest._id);
+            }
+        }
+
+        // 🔥 Cleanup: remove broken friendRequest references from user
+        // if (invalidFriendIds.length > 0) {
+        //     await User.findByIdAndUpdate(userId, {
+        //         $pull: {
+        //             'profile.connections.friends': { $in: invalidFriendIds },
+        //         },
+        //     });
+        // }
+
+        res.status(200).json({ connections: validFriends });
     } catch (error) {
         console.error('Error in /connections route:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+
+
+// router.get('/connections', async (req, res) => {
+//     try {
+//         const { userId } = getUserDetails(req);
+//         const user = await User.findById(userId)
+//             .select('profile.connections.friends')
+//             .populate({
+//                 path: 'profile.connections.friends',
+//                 match: { status: 'accepted' },
+//                 populate: [
+//                     { path: 'user', select: '_id name username profile.picture' },
+//                     { path: 'requestedBy', select: '_id name username profile.picture' },
+//                 ],
+//             })
+//             .lean();
+
+//         if (!user) {
+//             return res.status(404).json({ message: 'User not found' });
+//         }
+
+//         const connections = user?.profile?.connections?.friends
+//             .filter((friendRequest) => friendRequest?.status === 'accepted')
+//             .map((friendRequest) => {
+//                 const otherUser =
+//                     friendRequest?.user?._id?.toString() === userId
+//                         ? friendRequest?.requestedBy
+//                         : friendRequest?.user;
+//                 return {
+//                     _id: otherUser?._id,
+//                     name: otherUser?.name,
+//                     username: otherUser?.username,
+//                     picture: otherUser?.profile?.picture,
+//                 };
+//             });
+
+//         res.status(200).json({ connections });
+//     } catch (error) {
+//         console.error('Error in /connections route:', error);
+//         res.status(500).json({ message: 'Internal Server Error' });
+//     }
+// });
 
 router.get('/connection/stream', async (req, res) => {
     try {
