@@ -1038,8 +1038,7 @@ router.get('/moderated-societies',  async (req, res) => {
 
     // Find user and populate moderated societies
     const user = await User.findById(userId)
-      .select('profile.moderatorTo.society')
-      .populate('profile.moderatorTo.society', '_id name');
+      .populate('profile.moderatorTo.society', '_id name').select('profile.moderatorTo.society');
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -1047,12 +1046,15 @@ router.get('/moderated-societies',  async (req, res) => {
 
     // Extract societies (handle case where moderatorTo.society is undefined)
     const societies = user.profile.moderatorTo?.society || [];
+    console.log(" Societies", societies)
 
     // Format response
     const formattedSocieties = societies.map(society => ({
       _id: society._id.toString(),
       name: society.name
     }));
+
+    console.log("MODERATED Societies", formattedSocieties)
 
     res.status(200).json(formattedSocieties);
   } catch (error) {

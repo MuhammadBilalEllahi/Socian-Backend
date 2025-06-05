@@ -108,7 +108,7 @@ router.post("/create", async (req, res) => {
         const user = await User.findByIdAndUpdate(
             { _id: userId },
             {
-                moderatorTo: {
+                'profile.moderatorTo': {
                     society: [newSociety._id],
                 },
                 subscribedSocities: [newSociety._id]
