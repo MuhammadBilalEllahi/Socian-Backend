@@ -192,6 +192,7 @@ const handlePlatformResponse = async (user, res, req) => {
   // console.log("here2", platform)
   if (platform === "app") {
 
+    console.log("USER In HandlePlatformResponse", user)
     // Generate JWT tokens
     const { accessToken, refreshToken } = generateToken(user);
 

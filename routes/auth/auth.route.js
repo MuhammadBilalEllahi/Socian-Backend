@@ -498,7 +498,7 @@ router.post('/alumni/verification/card',protectRoute,  upload.array('files'), as
     console.log("Back URL:", url, "Type:", type);
 
     const userVerif = await User.findByIdAndUpdate(userId, {
-      studentOrAlumniDocument: {
+      'profile.studentOrAlumniDocument': {
         available: true,
         // enum: ['studentCard', 'studentBusCard', 'transcript', 'degree', 'other'],
 
@@ -515,11 +515,21 @@ router.post('/alumni/verification/card',protectRoute,  upload.array('files'), as
         }
       }
     })
+
+    if (!userVerif) {
+      return res.status(404).json({ error: "User process could not complete first" });
+    }
     const userVerif2 = await User.findById(userId).select('-profile.posts');
 
     if (!userVerif2) {
       return res.status(404).json({ error: "User process could not complete" });
     }
+    await userVerif2.populate([
+        { path: "university.universityId", select: "-users _id" },
+        { path: "university.campusId", select: "-users _id" },
+        { path: "university.departmentId", select: "name _id" },
+
+      ]);
 
 
     await handlePlatformResponse(userVerif2, res, req);
@@ -532,9 +542,21 @@ router.post('/alumni/verification/card',protectRoute,  upload.array('files'), as
 })
 
 
-router.post('/alumni/verification/live-picture',protectRoute, upload.array('file'), async (req, res) => {
+router.post('/alumni/verification/live-picture',protectRoute, upload.array('files'), async (req, res) => {
   try {
-        const files = req.file;
+        const files = req.files;
+        
+
+        
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: "No files uploaded" });
+    }
+
+    const file = files[0];
+    
+        if(!file) {
+          return res.status(404).json({error: "Live Picture is Required"})
+        }
 console.log("Files:", files);
     const { userId } = getUserDetails(req);
     
@@ -543,6 +565,12 @@ console.log("Files:", files);
     }
     const user = await User.findById(userId).select('-profile.posts');
 
+    await user.populate([
+        { path: "university.universityId", select: "-users _id" },
+        { path: "university.campusId", select: "-users _id" },
+        { path: "university.departmentId", select: "name _id" },
+
+      ]);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -551,18 +579,15 @@ console.log("Files:", files);
     // }
 
 
-    if (!files || files.length === 0) {
-      return res.status(400).json({ error: "No files uploaded" });
-    }
 
 
 
-    const { url, type } = await uploadLivePictureMedia(req.file, req);
+    const { url, type } = await uploadLivePictureMedia(file, req);
     
     console.log("Back URL:", url, "Type:", type);
 
     const userVerif = await User.findByIdAndUpdate(userId, {
-      livePicture: {
+      'profile.livePicture': {
         available: true,
         image: {
           url: url,

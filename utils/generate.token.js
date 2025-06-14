@@ -61,8 +61,8 @@ const generateToken = (user) => {
 
   if(user.role === UserRoles.alumni) {
     payload.verification={
-      studentCardUploaded: user?.studentOrAlumniDocument?.available ?? false,
-      livePictureUploaded: user?.livePicture?.available ?? false,
+      studentCardUploaded: user?.profile?.studentOrAlumniDocument?.available ?? false,
+      livePictureUploaded: user?.profile?.livePicture?.available ?? false,
     }
   }
   if (user.role === UserRoles.teacher) {
@@ -71,6 +71,7 @@ const generateToken = (user) => {
       teacherModal: user?.teacherConnectivities?.teacherModal ?? null
     }
   }
+  console.log("TOKEN ", JSON.stringify(payload, null, 2))
   const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_ACCESS_EXPIRY_TIME,
   });
