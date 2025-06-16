@@ -124,7 +124,9 @@ const teacherSchema = new Schema({
             summary: { type: String, default: "" },
             date: { type: Date, default: Date.now }
           }
-    ]
+    ], 
+    hiddenByMod: { type: Boolean, default: false },
+    reason: { type: String},
 
 });
 

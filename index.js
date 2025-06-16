@@ -183,7 +183,7 @@ app.use('/api/webhooks', webhooks);
 
 app.use("/api/super", superProtect, superRouter);
 app.use("/api/admin", adminProtect, adminRouter);
-app.use("/api/mod", modProtect, modRouter); // ?
+app.use("/api/mod",protectRoute, modProtect, modRouter); // ?
 app.use("/api/messages", protectRoute, messagesRouter);
 
 app.use("/api/auth", authRouter);

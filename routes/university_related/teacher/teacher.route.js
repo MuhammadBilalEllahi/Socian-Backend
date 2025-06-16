@@ -40,11 +40,11 @@ router.get("/campus/teachers", async (req, res) => {
     const findCampus = await Campus.findOne({ _id: campusOrigin });
     if (!findCampus) return res.status(404).json({ error: "Error finding campus" });
 
-    const teachers = await Teacher.find({ campusOrigin: campusOrigin })
+    const teachers = await Teacher.find({ campusOrigin: campusOrigin , hiddenByMod: false})
       .populate({
         path: "ratingsByStudents",
         select: "feedback upvoteCount userId",
-        match: { isDeleted: false },
+        match: { isDeleted: false, hiddenByMod: false },
         options: { sort: { upvoteCount: -1 }, limit: 1 },
       })
       .lean();
@@ -353,6 +353,7 @@ router.get("/info", async (req, res) => {
 
     const teacher = await Teacher.findById(id).populate({
       path: "department.departmentId campusOrigin",
+      match: {hiddenByMod: false}
     });
     if (!teacher) {
       return res.status(404).json({ message: "Teacher not found" });
@@ -377,6 +378,7 @@ router.get("/reviews/feedbacks", async (req, res) => {
   try {
     const teacher = await Teacher.findById(id).populate({
       path: "ratingsByStudents",
+      match: {hiddenByMod: false},
       populate: [{
         path: "userId",
         select:
@@ -460,6 +462,7 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
   try {
     const teacher = await Teacher.findById(id).populate({
       path: "ratingsByStudents",
+              match: { hiddenByMod : false},
       populate: [{
         path: "userId",
         select: "_id name username profile.picture universityEmailVerified", // Reduced fields
@@ -470,7 +473,7 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
           path: 'user mentions',
           select: "_id name username" // Keeping only essential fields
         }
-      }],
+      }, ],
     });
 
     console.log("TEACHER ", teacher)
@@ -579,6 +582,7 @@ router.post("/rate", async (req, res) => {
       {
         rating,
         feedback,
+        hiddenByMod: false,
         hideUser,
         upVotesCount: 0,
         downVotesCount: 0,
@@ -727,6 +731,133 @@ router.post('/reply/reply/feedback', async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
+
+router.post('/reply/feedback/edit', async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { feedBackId, feedbackComment, gifUrl, mentions } = req.body;
+    const { userId } = getUserDetails(req);
+
+    if (!userId || feedbackComment === undefined) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const updateData = {};
+    if (feedbackComment !== undefined) updateData.comment = feedbackComment;
+    if (gifUrl !== undefined) updateData.gifUrl = gifUrl;
+    if (mentions !== undefined) updateData.mentions = mentions;
+
+    const updated = await FeedBackCommentTeacher.findByIdAndUpdate(
+      feedBackId,
+      { $set: updateData },
+      { session, new: true }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({
+      message: "Feedback reply updated",
+      updated
+    });
+
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    res.status(500).json({ message: "Something went wrong" });
+  }
+});
+
+
+
+router.post('/reply/reply/feedback/edit', async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { feedbackReplyReplyId, feedbackComment, gifUrl, mentions } = req.body;
+    const { userId } = getUserDetails(req);
+
+    if (!userId || feedbackComment === undefined) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const updateData = {};
+    if (feedbackComment !== undefined) updateData.comment = feedbackComment;
+    if (gifUrl !== undefined) updateData.gifUrl = gifUrl;
+    if (mentions !== undefined) updateData.mentions = mentions;
+
+    const updated = await FeedBackCommentTeacher.findByIdAndUpdate(
+      feedbackReplyReplyId,
+      { $set: updateData },
+      { session, new: true }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({
+      message: "Reply updated",
+      updated
+    });
+
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    res.status(500).json({ message: "Something went wrong" });
+  }
+});
+
+
+router.delete('/reply/feedback/delete', async (req, res) => {
+  try {
+    const { feedBackId } = req.body;
+    const { userId } = getUserDetails(req);
+
+    if (!userId || !feedBackId) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const deleted = await FeedBackCommentTeacher.findByIdAndDelete(feedBackId);
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Feedback reply not found" });
+    }
+
+    res.status(200).json({ message: "Feedback reply deleted successfully", deletedId: deleted._id });
+  } catch (err) {
+    console.error("Delete feedback error:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+router.delete('/reply/reply/feedback/delete', async (req, res) => {
+  try {
+    const { feedbackReplyReplyId } = req.body;
+    const { userId } = getUserDetails(req);
+
+    if (!userId || !feedbackReplyReplyId) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const deleted = await FeedBackCommentTeacher.findByIdAndDelete(feedbackReplyReplyId);
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Reply to feedback not found" });
+    }
+
+    res.status(200).json({ message: "Reply to feedback deleted successfully", deletedId: deleted._id });
+  } catch (err) {
+    console.error("Delete reply error:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
 
 
 router.get('/reply/feedback', async (req, res) => {
@@ -924,8 +1055,12 @@ router.post("/reviews/feedbacks/vote", async (req, res) => {
 });
 
 
+
 router.delete("/reviews/feedbacks/delete", async (req, res) => {
-  const { teacherId, userId } = req.body;
+  const { teacherId } = req.query;
+  const {userId} = getUserDetails(req);
+  
+  console.log("FIELDS", teacherId)
 
   if (!teacherId || !userId) {
     return res.status(400).json({ message: "Missing required fields" });

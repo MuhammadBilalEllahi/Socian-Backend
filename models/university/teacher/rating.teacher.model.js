@@ -48,6 +48,9 @@ editedTimestamp: { type: Date, default: Date.now },
 
     isDeleted: { type: Boolean, default: false },
     isReported: { type: Boolean, default: false },
+
+    hiddenByMod: { type: Boolean, default: false },
+    reason: { type: String},
     createdAt: { type: Date, default: Date.now },
     editedAt: { type: Date, default: Date.now },
     __v: { type: Number, default: 0 }

@@ -469,7 +469,7 @@ router.post("/register", async (req, res) => {
 router.post('/alumni/verification/card',protectRoute,  upload.array('files'), async (req, res) => {
   try {
     const { userId } = getUserDetails(req);
-    const { docType } = req.body;
+    
     if (!userId) {
       return res.status(400).json({ error: "User ID is required, or You're not Signed In." });
     }
@@ -497,6 +497,10 @@ router.post('/alumni/verification/card',protectRoute,  upload.array('files'), as
     console.log("Front URL:", frontUrl, "Type:", frontType);
     console.log("Back URL:", url, "Type:", type);
 
+    const { docType } = req.body;
+
+    console.log("DOCTYPE", docType)
+    
     const userVerif = await User.findByIdAndUpdate(userId, {
       'profile.studentOrAlumniDocument': {
         available: true,
