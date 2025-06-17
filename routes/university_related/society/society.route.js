@@ -107,13 +107,13 @@ router.post("/create", async (req, res) => {
 
         const user = await User.findByIdAndUpdate(
             { _id: userId },
-            {
-                'profile.moderatorTo': {
-                    society: [newSociety._id],
-                },
-                subscribedSocities: [newSociety._id]
-
-            }
+       {     
+    $addToSet: {
+      'profile.moderatorTo.society': newSociety._id ,
+      subscribedSocities: newSociety._id ,
+    },
+},
+    {new: true}
         );
 
         const postsCollectionRef = new PostsCollection({
