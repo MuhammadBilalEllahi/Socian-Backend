@@ -8,6 +8,9 @@ const feedbackCommentSchema = new Schema({
     // however the above are not needed but better to distinguish the data
     favouritedByTeacher: { type: Boolean, default: false },
 
+    hiddenByMod: {type: Boolean, default: false},
+    reason: {type: String},
+
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     comment: { type: String, required: true },
     gifUrl: { type: String, default: '' },

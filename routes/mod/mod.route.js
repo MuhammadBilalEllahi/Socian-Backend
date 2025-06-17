@@ -6,6 +6,7 @@ const modCafeRouter = require('./cafe/cafe.mod.route');
 const Teacher = require('../../models/university/teacher/teacher.model');
 const TeacherRating = require('../../models/university/teacher/rating.teacher.model');
 const mongoose = require('mongoose');
+const FeedBackCommentTeacher = require('../../models/university/teacher/feedback.rating.teacher.model');
 
 
 router.get('/users', async (req, res) => {
@@ -167,5 +168,66 @@ router.put("/teacher/un-hide", async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
+
+
+
+router.put('/teacher/reply/feedback/hide', async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { feedbackReviewId } = req.query;
+    const {reason} = req.body;
+
+    // Create feedback comment
+    const commentedOnaFeedback = await FeedBackCommentTeacher.findByIdAndUpdate(feedbackReviewId, {hiddenByMod: true, reason: reason}, { session });
+    if(!commentedOnaFeedback){
+      return res.status(402).json({error: "Feedback could not be hidden"})
+    }
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(201).json({ message: "Feedback reply hidden successfully"});
+  } catch (error) {
+    // Rollback transaction in case of error
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("Error in /reply/feedback: ", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+router.put('/teacher/reply/reply/feedback/hide', async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { feedbackCommentId } = req.query;
+    const {reason} = req.body;
+
+    // console.log("DATA", feedbackCommentId)
+
+    // Create feedback comment
+    const commentedOnaFeedback = await FeedBackCommentTeacher.findByIdAndUpdate(feedbackCommentId, {hiddenByMod: true, reason: reason}, { session });
+    if(!commentedOnaFeedback){
+      return res.status(402).json({error: "Feedback could not be hidden"})
+    }
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(201).json({ message: "Feedback reply hidden successfully"});
+  } catch (error) {
+    // Rollback transaction in case of error
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("Error in /reply/feedback: ", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
 
 module.exports = router;

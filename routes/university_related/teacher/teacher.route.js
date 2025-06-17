@@ -733,12 +733,12 @@ router.post('/reply/reply/feedback', async (req, res) => {
 });
 
 
-router.post('/reply/feedback/edit', async (req, res) => {
+router.put('/reply/feedback/edit', async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const { feedBackId, feedbackComment, gifUrl, mentions } = req.body;
+    const { feedbackCommentId, feedbackComment, gifUrl, mentions } = req.body;
     const { userId } = getUserDetails(req);
 
     if (!userId || feedbackComment === undefined) {
@@ -751,7 +751,7 @@ router.post('/reply/feedback/edit', async (req, res) => {
     if (mentions !== undefined) updateData.mentions = mentions;
 
     const updated = await FeedBackCommentTeacher.findByIdAndUpdate(
-      feedBackId,
+      feedbackCommentId,
       { $set: updateData },
       { session, new: true }
     );
@@ -773,13 +773,15 @@ router.post('/reply/feedback/edit', async (req, res) => {
 
 
 
-router.post('/reply/reply/feedback/edit', async (req, res) => {
+router.put('/reply/reply/feedback/edit', async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const { feedbackReplyReplyId, feedbackComment, gifUrl, mentions } = req.body;
+    const { feedbackCommentId, feedbackComment, gifUrl, mentions } = req.body;
     const { userId } = getUserDetails(req);
+
+    console.log(">REPLY DATA",feedbackCommentId, feedbackComment, gifUrl, mentions )
 
     if (!userId || feedbackComment === undefined) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -791,7 +793,7 @@ router.post('/reply/reply/feedback/edit', async (req, res) => {
     if (mentions !== undefined) updateData.mentions = mentions;
 
     const updated = await FeedBackCommentTeacher.findByIdAndUpdate(
-      feedbackReplyReplyId,
+      feedbackCommentId,
       { $set: updateData },
       { session, new: true }
     );
@@ -814,14 +816,14 @@ router.post('/reply/reply/feedback/edit', async (req, res) => {
 
 router.delete('/reply/feedback/delete', async (req, res) => {
   try {
-    const { feedBackId } = req.body;
+    const { feedbackReviewId } = req.query;
     const { userId } = getUserDetails(req);
 
-    if (!userId || !feedBackId) {
+    if (!userId || !feedbackReviewId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const deleted = await FeedBackCommentTeacher.findByIdAndDelete(feedBackId);
+    const deleted = await FeedBackCommentTeacher.findByIdAndDelete(feedbackReviewId);
 
     if (!deleted) {
       return res.status(404).json({ message: "Feedback reply not found" });
@@ -837,14 +839,14 @@ router.delete('/reply/feedback/delete', async (req, res) => {
 
 router.delete('/reply/reply/feedback/delete', async (req, res) => {
   try {
-    const { feedbackReplyReplyId } = req.body;
+    const { feedbackCommentId } = req.query;
     const { userId } = getUserDetails(req);
 
-    if (!userId || !feedbackReplyReplyId) {
+    if (!userId || !feedbackCommentId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const deleted = await FeedBackCommentTeacher.findByIdAndDelete(feedbackReplyReplyId);
+    const deleted = await FeedBackCommentTeacher.findByIdAndDelete(feedbackCommentId);
 
     if (!deleted) {
       return res.status(404).json({ message: "Reply to feedback not found" });
@@ -866,14 +868,16 @@ router.get('/reply/feedback', async (req, res) => {
     const { feedbackCommentId } = req.query;
     const getReplies = await TeacherRating.findById(feedbackCommentId).populate([{
       path: 'replies',
+      match: {hiddenByMod: false},
       populate: {
         path: 'user',
         select: 'username name profile.picture'
       }
-    }])
+    }]);
     if (!getReplies) return res.status(404).json({ message: "No Reply yet" })// however this operation should never initiate from frontedn
 
-    console.log("FEEDBACK LE", getReplies)
+        console.log("FEEDBACK LE", JSON.stringify(getReplies?.replies[0]?.user, null, 2))
+
     res.status(200).json({ replies: getReplies })
 
   } catch (error) {
@@ -891,6 +895,7 @@ router.get('/reply/reply/feedback', async (req, res) => {
 
     const getReplies = await FeedBackCommentTeacher.findById(feedbackCommentId).populate([{
       path: 'replies',
+      match: {hiddenByMod: false},
       populate: [{
         path: 'user',
         select: 'username name profile.picture'
@@ -902,10 +907,10 @@ router.get('/reply/reply/feedback', async (req, res) => {
     }])
     if (!getReplies) return res.status(404).json({ message: "No Reply yet" })// however this operation should never initiate from frontedn
 
-    console.log("FEEDBACK LE", getReplies)
-    getReplies.replies.forEach(reply => {
-      console.log("DATA ", reply);
-    });
+    console.log("FEEDBACK LE", JSON.stringify(getReplies, null, 2))
+    // getReplies.replies.forEach(reply => {
+    //   console.log("DATA ", reply);
+    // });
     res.status(200).json({ replies: getReplies })
 
   } catch (error) {
