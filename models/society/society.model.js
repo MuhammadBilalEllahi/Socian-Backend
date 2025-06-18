@@ -119,6 +119,10 @@ const societySchema = new Schema({
   allows: {
     type: [String],
     enum: ['alumni', 'student', 'teacher', 'ext_org', 'all'],
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
   }
 });
 

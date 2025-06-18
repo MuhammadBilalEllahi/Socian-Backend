@@ -581,6 +581,16 @@ router.get('/teacher/attachUser', async (req, res) => {
         const user = await User.findById(userId);
         const response = await setTeacherModal(req, user, platform);
         console.log("DOG", response);
+        if(response?.forwarded){
+            await user.populate([
+                    { path: "university.universityId", select: "-users _id" },
+                    { path: "university.campusId", select: "-users _id" },
+                    { path: "university.departmentId", select: "name _id" },
+                 ]);
+              return  handlePlatformResponse(user,res,req)
+
+
+        }
         res.status(response.status).json({
             message: response.message,
             teacher: response.teacher || null,
@@ -597,6 +607,7 @@ router.get('/teacher/attachUser', async (req, res) => {
 
 const setTeacherModal = async function (req, user, platform) {
     console.log("Platform->", platform);
+    console.log("THE USER ,", user)
     try {
         if (user.role === UserRoles.teacher) {
             const teacherModalExists = await Teacher.findOne({ email: user.universityEmail });
@@ -630,19 +641,25 @@ const setTeacherModal = async function (req, user, platform) {
                     teacherModalExists.userAttachedBy.userType = UserRoles.teacher;
                     teacherModalExists.userAttachedBy.by = user._id;
                     await teacherModalExists.save();
+                    if (!user.teacherConnectivities) {
+    user.teacherConnectivities = {};
+}
                     user.teacherConnectivities.teacherModal = teacherModalExists._id;
                     user.teacherConnectivities.attached = true;
                     await user.save();
-                    req.session.user.teacherConnectivities = {
-                        attached: user.teacherConnectivities.attached,
-                        teacherModal: user.teacherConnectivities.teacherModal
+                    if(platform === 'web'){
+                        req.session.user.teacherConnectivities = {
+                        attached: user?.teacherConnectivities?.attached,
+                        teacherModal: user?.teacherConnectivities?.teacherModal
                     };
+                    }
                     const teacherConnectivities = {
                         attached: user.teacherConnectivities.attached,
                         teacherModal: user.teacherConnectivities.teacherModal
                     };
                     const resolvedData = { status: 201, message: 'User with role teacher attached with Modal successfully' };
                     if (platform === "app") { resolvedData.teacherConnectivities = teacherConnectivities; }
+                    else{
                     return new Promise((resolve, reject) => {
                         req.session.save((err) => {
                             if (err) {
@@ -653,7 +670,25 @@ const setTeacherModal = async function (req, user, platform) {
                             }
                         });
                     });
+                }
+                 return { status: 201, message: "Forwarded", forwarded: true}
                 } else {
+                    // console.log("teacherModalExists",teacherModalExists.userAttached)
+                    // console.log(" user._id ", user._id )
+                    // console.log("teacherModalExists._id ",teacherModalExists._id )
+                    // console.log("user.teacherConnectivities.teacherModal",user.teacherConnectivities.teacherModal)
+
+                    // console.log("teacherModalExists.userAttached === user._id ",teacherModalExists.userAttached === user._id )
+                    // console.log("teacherModalExists._id === user.teacherConnectivities.teacherModal",teacherModalExists._id === user.teacherConnectivities.teacherModal)
+                   
+                   
+                    //  console.log("teacherModalExists.userAttached.equals(user._id)",teacherModalExists.userAttached.equals(user._id) )
+                    // console.log("teacherModalExists._id.equals(user.teacherConnectivities.teacherModal)",teacherModalExists._id.equals(user.teacherConnectivities.teacherModal))
+                   
+
+                    if(teacherModalExists.userAttached.equals(user._id) && teacherModalExists._id.equals(user.teacherConnectivities.teacherModal )){
+                        return { status: 201, message: "Forwarded", forwarded: true}
+                    }
                     return { status: 200, message: 'User already attached with another modal, Please verify before Modifyng', attached: false };
                 }
             }

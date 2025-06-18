@@ -8,148 +8,192 @@ const redisClient = require("../../../db/reddis.js");
 const mongoose = require('mongoose');
 const { DiscussionComment, PastPaperQuestion } = require('../../../models/university/papers/discussion/discussion.comment');
 const s3Service = require('../../../utils/aws/aws.js');
-const {upload}= require('../../../utils/multer.utils.js');
+const { upload } = require('../../../utils/multer.utils.js');
 const { PastpapersCollectionByYear } = require('../../../models/university/papers/paper.collection.model.js');
 const fs = require('fs');
+const User = require('../../../models/user/user.model.js');
 // Cache configuration
 const CACHE_TTL = 3600; // 1 hour in seconds
 const CACHE_KEYS = {
-    PAPER_BY_TYPE: (paperId, type) => `paper_${type}_${paperId}`,
-    ALL_PAPERS: (subjectId) => `all_papers_${subjectId}`,
-    PAPER_STATS: (subjectId) => `paper_stats_${subjectId}`
+  PAPER_BY_TYPE: (paperId, type) => `paper_${type}_${paperId}`,
+  ALL_PAPERS: (subjectId) => `all_papers_${subjectId}`,
+  PAPER_STATS: (subjectId) => `paper_stats_${subjectId}`
 };
 
 // Error handler middleware
 const asyncHandler = fn => (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
+  Promise.resolve(fn(req, res, next)).catch(next);
 };
 
 // Validation middleware
 const validatePaperUpload = (req, res, next) => {
-    const { name, type, category, term, year, subjectId, file } = req.body;
-    if (!name || !type || !year || !subjectId || !file?.url) {
-        return res.status(400).json({ message: "Missing required fields" });
-    }
-    next();
+  const { name, type, category, term, year, subjectId, file } = req.body;
+  if (!name || !type || !year || !subjectId || !file?.url) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+  next();
 };
 
 // Cache middleware
 const cacheMiddleware = (keyGenerator) => async (req, res, next) => {
-    try {
-        const cacheKey = keyGenerator(req);
-        const cachedData = await redisClient.get(cacheKey);
-        if (cachedData) {
-            return res.json(JSON.parse(cachedData));
-        }
-        next();
-    } catch (error) {
-        next(error);
+  try {
+    const cacheKey = keyGenerator(req);
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+      return res.json(JSON.parse(cachedData));
     }
+    next();
+  } catch (error) {
+    next(error);
+  }
 };
 
 // Get all papers for a subject
 router.get('/all-pastpapers-in-subject/:subjectId',
-    // cacheMiddleware(req => CACHE_KEYS.ALL_PAPERS(req.params.subjectId)),
-    asyncHandler(async (req, res) => {
-        const { subjectId } = req.params;
+  // cacheMiddleware(req => CACHE_KEYS.ALL_PAPERS(req.params.subjectId)),
+  asyncHandler(async (req, res) => {
+    const { subjectId } = req.params;
 
-        // Get all papers for the subject using PastPaperItem
-        const papers = await PastPaperItem.find({ subjectId })
-            .sort({ academicYear: -1, type: 1 })
-            .populate([
-                {
-                    path: 'references',
-                    select: 'subjectId universityOrigin campusOrigin departmentId'
-                },
-                {
-                    path: 'paperId',
-                    populate: {
-                        path: 'papers.files',
-                        populate:
-                            { path: 'teachers', select: 'name email' },
-                    }
-                }
-            ]);
+    // Get all papers for the subject using PastPaperItem
+    const papers = await PastPaperItem.find({ subjectId })
+      .sort({ academicYear: -1, type: 1 })
+      .populate([
+        {
+          path: 'references',
+          select: 'subjectId universityOrigin campusOrigin departmentId'
+        },
+        {
+          path: 'paperId',
+          populate: {
+            path: 'papers.files',
+            populate:
+              { path: 'teachers', select: 'name email' },
+          }
+        }
+      ]);
 
-        // Get the subject name
-        const subject = await Subject.findById(subjectId).select('name');
-        if (!subject) {
-            return res.status(404).json({ message: "Subject not found" });
+    // Get the subject name
+    const subject = await Subject.findById(subjectId).select('name');
+    if (!subject) {
+      return res.status(404).json({ message: "Subject not found" });
+    }
+
+    // Group papers by academic year
+    const papersByYear = papers.reduce((acc, paper) => {
+      const year = paper.academicYear;
+      if (!acc[year]) {
+        acc[year] = [];
+      }
+      acc[year].push(paper);
+      return acc;
+    }, {});
+
+    // Transform the data for the frontend
+    const response = {
+      subjectName: subject.name,
+      papers: Object.entries(papersByYear).map(([year, papers]) => ({
+        academicYear: parseInt(year),
+        papers: papers
+      })).sort((a, b) => b.academicYear - a.academicYear)
+    };
+
+    // Cache the response
+    await redisClient.setex(
+      CACHE_KEYS.ALL_PAPERS(subjectId),
+      CACHE_TTL,
+      JSON.stringify(response)
+    );
+
+    res.json(response);
+  })
+);
+
+router.get('/profile/papers', async (req, res) => {
+  try {
+    const { userId } = req.query;
+    // const {userId} = getUserDetails(req);
+    console.log("user id ", userId)
+
+    const user = await User.findById(userId, 'profile.papersUploaded')
+
+      .populate(
+        {
+          path: 'profile.papersUploaded',
+          populate: [
+
+            {
+              path: 'files.teachers', select: '_id name imageUrl userAttached userAttachedBool email department rating hasLeft onLeave feedbackSummary',
+              populate: [{
+                path: 'campusOrigin',
+                select: '_id name'
+              }, {
+                path: 'department',
+                select: "name _id"
+              }, {
+                path: 'userAttached',
+                select: '_id name username universityEmail personalEmail'
+              }]
+            },
+            { path: 'files.uploadedBy', select: '_id name username universityEmail personalEmail' }
+          ]
         }
 
-        // Group papers by academic year
-        const papersByYear = papers.reduce((acc, paper) => {
-            const year = paper.academicYear;
-            if (!acc[year]) {
-                acc[year] = [];
-            }
-            acc[year].push(paper);
-            return acc;
-        }, {});
+      );
 
-        // Transform the data for the frontend
-        const response = {
-            subjectName: subject.name,
-            papers: Object.entries(papersByYear).map(([year, papers]) => ({
-                academicYear: parseInt(year),
-                papers: papers
-            })).sort((a, b) => b.academicYear - a.academicYear)
-        };
+    console.log("user Data pasptpaer", user)
+    return res.status(200).json({ message: "profile papers received", data: user })
+  } catch (err) {
+    console.error("get profile papers Error:", err);
+    return res.status(500).json({ message: err.message || "Internal server error" });
 
-        // Cache the response
-        await redisClient.setex(
-            CACHE_KEYS.ALL_PAPERS(subjectId),
-            CACHE_TTL,
-            JSON.stringify(response)
-        );
+  }
+})
 
-        res.json(response);
-    })
-);
 
 // Get papers by type for a subject
 router.get('/:type/:subjectId',
-    cacheMiddleware(req => CACHE_KEYS.PAPER_BY_TYPE(req.params.subjectId, req.params.type)),
-    asyncHandler(async (req, res) => {
-        const { type, subjectId } = req.params;
+  // cacheMiddleware(req => CACHE_KEYS.PAPER_BY_TYPE(req.params.subjectId, req.params.type)),
+  asyncHandler(async (req, res) => {
+    const { type, subjectId } = req.params;
 
-        // Get papers using the PastPaperItem model
-        const papers = await PastPaperItem.findBySubjectAndType(subjectId, type);
+    // Get papers using the PastPaperItem model
+    const papers = await PastPaperItem.findBySubjectAndType(subjectId, type);
+    console.log("PAPERS", papers[0].files)
 
-        // Get the subject name
-        const subject = await Subject.findById(subjectId).select('name');
-        if (!subject) {
-            return res.status(404).json({ message: "Subject not found" });
-        }
+    // Get the subject name
+    const subject = await Subject.findById(subjectId).select('name');
+    if (!subject) {
+      return res.status(404).json({ message: "Subject not found" });
+    }
 
-        // Group papers by academic year
-        const papersByYear = papers.reduce((acc, paper) => {
-            const year = paper.academicYear;
-            if (!acc[year]) {
-                acc[year] = [];
-            }
-            acc[year].push(paper);
-            return acc;
-        }, {});
+    // Group papers by academic year
+    const papersByYear = papers.reduce((acc, paper) => {
+      const year = paper.academicYear;
+      if (!acc[year]) {
+        acc[year] = [];
+      }
+      acc[year].push(paper);
+      return acc;
+    }, {});
 
-        // Transform the data for the frontend
-        const response = {
-            subjectName: subject.name,
-            papers: Object.entries(papersByYear).map(([year, papers]) => ({
-                academicYear: parseInt(year),
-                papers: papers
-            })).sort((a, b) => b.academicYear - a.academicYear)
-        };
+    // Transform the data for the frontend
+    const response = {
+      subjectName: subject.name,
+      papers: Object.entries(papersByYear).map(([year, papers]) => ({
+        academicYear: parseInt(year),
+        papers: papers
+      })).sort((a, b) => b.academicYear - a.academicYear)
+    };
 
-        // Cache the response
-        await redisClient.setex(
-            CACHE_KEYS.PAPER_BY_TYPE(subjectId, type),
-            CACHE_TTL,
-            JSON.stringify(response)
-        );
+    // Cache the response
+    await redisClient.setex(
+      CACHE_KEYS.PAPER_BY_TYPE(subjectId, type),
+      CACHE_TTL,
+      JSON.stringify(response)
+    );
 
-        res.json(response);
-    })
+    res.json(response);
+  })
 );
 
 
@@ -194,9 +238,9 @@ router.post("/upload", upload.single('file'), async (req, res) => {
     const pdfUrl = `${universityOrigin}/${campusOrigin}/${role}/pastpapers/${year}/${departmentId}/${subjectId}${pathSegment}/${file.originalname}-${timestamp}`;
 
     console.log("PDF Path:", pdfUrl);
-        console.log("PDF FILE:", file);
+    console.log("PDF FILE:", file);
 
-        const fileBuffer = fs.readFileSync(file.path);
+    const fileBuffer = fs.readFileSync(file.path);
     await s3Service.putObjectBuffer(pdfUrl, fileBuffer, file.mimetype);
 
     const session = await mongoose.startSession();
@@ -257,15 +301,15 @@ router.post("/upload", upload.single('file'), async (req, res) => {
 
       if (paperItemExists) {
         await session.commitTransaction();
-        
-        // Invalidate cache
-      const cacheKeys = [
-        `pastpapers_${subjectId}`,
-        `paper_${type.toLowerCase()}_${subjectId}`,
-        `all_papers_${subjectId}`
-      ];
 
-      await Promise.all(cacheKeys.map(key => redisClient.del(key)));
+        // Invalidate cache
+        const cacheKeys = [
+          `pastpapers_${subjectId}`,
+          `paper_${type.toLowerCase()}_${subjectId}`,
+          `all_papers_${subjectId}`
+        ];
+
+        await Promise.all(cacheKeys.map(key => redisClient.del(key)));
 
         return res.status(200).json({
           message: `File successfully added to existing ${type}`,
@@ -319,6 +363,9 @@ router.post("/upload", upload.single('file'), async (req, res) => {
 
       await collection.save({ session });
 
+
+      const savePaperToUser = await User.findByIdAndUpdate(userId, { $addToSet: { 'profile.papersUploaded': newPastPaperItem._id } })
+
       // Invalidate cache
       const cacheKeys = [
         `pastpapers_${subjectId}`,
@@ -351,13 +398,14 @@ router.post("/upload", upload.single('file'), async (req, res) => {
 });
 
 
+
 // router.post("/upload",upload.single('file'), async (req, res) => {
 //   const { year, type, term, termMode, paperName,  teachers, subjectId, departmentId, sessionType } = req.body;
 //   const { universityOrigin, campusOrigin, userId ,role} = getUserDetails(req);
 
-    
+
 //   const file = req.file;
-  
+
 
 //   console.log("Data: ", departmentId, subjectId, year, type, term, termMode, paperName,  teachers, sessionType)
 //   // return res.status(200).json({message: "success"})
@@ -387,7 +435,7 @@ router.post("/upload", upload.single('file'), async (req, res) => {
 // const pdfUrl = `${universityOrigin}/${campusOrigin}/${role}/pastpapers/${year}/${departmentId}/${subjectId}${concat}/${file.originalname}-${Date.now()}`
 
 //     console.log("Path Name", pdfUrl)
-    
+
 
 //     const value = await s3Service.putObject(pdfUrl, file.buffer, file.mimetype)
 
@@ -467,7 +515,7 @@ router.post("/upload", upload.single('file'), async (req, res) => {
 //         category: termMode ? termMode.toUpperCase() : undefined,
 //         term: term ? term.toUpperCase() : undefined,
 //         academicYear: parseInt(year),
-        
+
 //         // file: {
 //         //   uploadedBy: userId,
 //         //   url: pdfUrl,
@@ -637,42 +685,42 @@ router.post("/upload", upload.single('file'), async (req, res) => {
 
 // Get papers statistics
 router.get('/stats/:subjectId',
-    cacheMiddleware(req => CACHE_KEYS.PAPER_STATS(req.params.subjectId)),
-    asyncHandler(async (req, res) => {
-        const { subjectId } = req.params;
-        const stats = await PastPaperItem.getSubjectStats(subjectId);
+  cacheMiddleware(req => CACHE_KEYS.PAPER_STATS(req.params.subjectId)),
+  asyncHandler(async (req, res) => {
+    const { subjectId } = req.params;
+    const stats = await PastPaperItem.getSubjectStats(subjectId);
 
-        // Cache the response
-        await redisClient.setex(
-            CACHE_KEYS.PAPER_STATS(subjectId),
-            CACHE_TTL,
-            JSON.stringify(stats)
-        );
+    // Cache the response
+    await redisClient.setex(
+      CACHE_KEYS.PAPER_STATS(subjectId),
+      CACHE_TTL,
+      JSON.stringify(stats)
+    );
 
-        res.json(stats);
-    })
+    res.json(stats);
+  })
 );
 
 // Track paper view
 router.post('/view/:paperId', asyncHandler(async (req, res) => {
-    const { paperId } = req.params;
-    const paper = await PastPaperItem.findById(paperId);
-    if (!paper) {
-        return res.status(404).json({ message: "Paper not found" });
-    }
-    await paper.incrementViews();
-    res.json({ message: "View counted successfully" });
+  const { paperId } = req.params;
+  const paper = await PastPaperItem.findById(paperId);
+  if (!paper) {
+    return res.status(404).json({ message: "Paper not found" });
+  }
+  await paper.incrementViews();
+  res.json({ message: "View counted successfully" });
 }));
 
 // Track paper download
 router.post('/download/:paperId', asyncHandler(async (req, res) => {
-    const { paperId } = req.params;
-    const paper = await PastPaperItem.findById(paperId);
-    if (!paper) {
-        return res.status(404).json({ message: "Paper not found" });
-    }
-    await paper.incrementDownloads();
-    res.json({ message: "Download counted successfully" });
+  const { paperId } = req.params;
+  const paper = await PastPaperItem.findById(paperId);
+  if (!paper) {
+    return res.status(404).json({ message: "Paper not found" });
+  }
+  await paper.incrementDownloads();
+  res.json({ message: "Download counted successfully" });
 }));
 
 module.exports = router;

@@ -21,7 +21,7 @@ const fileSchema = new Schema({
 
 // PastPaperItem Schema - Optimized for querying
 const pastPaperItemSchema = new Schema({
-    
+
     academicYear: {
         type: Number,
         required: true,
@@ -74,7 +74,7 @@ const pastPaperItemSchema = new Schema({
         uppercase: true
     },
 
-    
+
     files: [fileSchema],
 
     references: {
@@ -130,7 +130,25 @@ pastPaperItemSchema.statics = {
         return this.find({
             subjectId,
             type: type.toUpperCase()
-        }).sort({ academicYear: -1 });
+        }).populate(
+            [
+                {
+                    path: 'files.teachers', select: '_id name imageUrl userAttached userAttachedBool email department rating hasLeft onLeave feedbackSummary',
+                    populate: [{
+                        path: 'campusOrigin',
+                        select: '_id name'
+                    },{
+                        path: 'department',
+                        select: "name _id"
+                    }, {
+                        path: 'userAttached',
+                        select: '_id name username universityEmail personalEmail'
+                    }]
+                },
+                { path: 'files.uploadedBy', select: '_id name username universityEmail personalEmail' }
+            ]
+
+        ).sort({ academicYear: -1 });
     },
 
     // Find papers by subject and year

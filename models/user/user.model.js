@@ -36,6 +36,9 @@ const userSchema = new mongoose.Schema({
 
 
   profile: {
+    papersUploaded:[{
+      type: mongoose.Schema.Types.ObjectId, ref: "PastPaperItem"
+    }],
     preferences: {
       allowRepost: { type: Boolean, default: true },
     },

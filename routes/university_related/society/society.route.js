@@ -107,13 +107,13 @@ router.post("/create", async (req, res) => {
 
         const user = await User.findByIdAndUpdate(
             { _id: userId },
-       {     
-    $addToSet: {
-      'profile.moderatorTo.society': newSociety._id ,
-      subscribedSocities: newSociety._id ,
-    },
-},
-    {new: true}
+            {
+                $addToSet: {
+                    'profile.moderatorTo.society': newSociety._id,
+                    subscribedSocities: newSociety._id,
+                },
+            },
+            { new: true }
         );
 
         const postsCollectionRef = new PostsCollection({
@@ -151,6 +151,41 @@ router.post("/create", async (req, res) => {
     } catch (error) {
         console.error("Error creating society: ", error);
         res.status(500).json("Internal Server Error");
+    }
+});
+
+
+router.delete('/delete', async (req, res) => {
+    try {
+        const { societyId } = req.query;
+
+        const nowDeletedSociety = await Society.findByIdAndUpdate(
+            societyId,
+            { isDeleted: true },
+            { new: true }
+        );
+
+        if (!nowDeletedSociety) {
+            return res.status(400).json({ error: "Couldn't delete society" });
+        }
+
+        const users = nowDeletedSociety.moderators;
+
+        // Update all moderators to remove society reference
+        await Promise.all(users.map((usr) =>
+            User.findByIdAndUpdate(usr._id, {
+                $pull: {
+                    'profile.moderatorTo.society': nowDeletedSociety._id,
+                    subscribedSocities: nowDeletedSociety._id
+                }
+            })
+        ));
+
+        return res.status(200).json({ message: "Society deleted successfully" });
+
+    } catch (error) {
+        console.error("Error deleting society: ", error);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
@@ -289,9 +324,10 @@ router.get("/types", async (req, res) => {
 router.get("/:id", async (req, res) => {
     const { id } = req.params;
     const { page = 1, limit = 10 } = req.query; // Default to page 1 and 10 posts per page
+    const { userId } = getUserDetails(req);
 
-    const cacheKeySociety = `society_${id}`;
-    const cacheKeyPosts = `society_${id}_posts_page_${page}`;
+    // const cacheKeySociety = `society_${id}`;
+    // const cacheKeyPosts = `society_${id}_posts_page_${page}`;
 
 
 
@@ -300,18 +336,18 @@ router.get("/:id", async (req, res) => {
     try {
 
         // Try fetching cached society data
-        const cachedSociety = await redisClient.get(cacheKeySociety);
-        if (cachedSociety) {
-            const society = JSON.parse(cachedSociety);
-            // Fetch cached posts if available
-            const cachedPosts = await redisClient.get(cacheKeyPosts);
-            if (cachedPosts) {
-                return res.status(200).json({ society, posts: JSON.parse(cachedPosts) });
-            }
-        }
+        // const cachedSociety = await redisClient.get(cacheKeySociety);
+        // if (cachedSociety) {
+        //     const society = JSON.parse(cachedSociety);
+        //     // Fetch cached posts if available
+        //     const cachedPosts = await redisClient.get(cacheKeyPosts);
+        //     if (cachedPosts) {
+        //         return res.status(200).json({ society, posts: JSON.parse(cachedPosts) });
+        //     }
+        // }
 
 
-        const society = await Society.findOne({ _id: id }).populate([
+        const society = await Society.findOne({ _id: id, isDeleted: false }).populate([
             'moderators',
             'president',
             'members',
@@ -325,7 +361,7 @@ router.get("/:id", async (req, res) => {
 
         if (!society) return res.status(404).json("No society found");
 
-        await redisClient.set(cacheKeySociety, JSON.stringify(society), 'EX', 3600);
+        // await redisClient.set(cacheKeySociety, JSON.stringify(society), 'EX', 3600);
 
 
         const postsCollection = Array.isArray(society.postsCollectionRef?.posts)
@@ -349,10 +385,32 @@ router.get("/:id", async (req, res) => {
                 { path: 'voteId', model: 'SocietyPostAndCommentVote' },
             ]);
 
-        await redisClient.set(cacheKeyPosts, JSON.stringify(posts), 'EX', 600); // Shorter expiry for posts
+
+        // await redisClient.set(cacheKeyPosts, JSON.stringify(posts), 'EX', 600); // Shorter expiry for posts
+
+
+        const isMod = await Society.exists({
+            _id: id,
+            isDeleted: false,
+            moderators: userId
+        });
+
+        let isMember = false;
+
+        if (!isMod) {
+            const memberRef = await Society.findById(id).select('members').lean();
+            if (memberRef && memberRef.members) {
+                const memberDoc = await Members.findById(memberRef.members).select('members').lean();
+                isMember = memberDoc?.members?.some(uid => uid.toString() === userId);
+            }
+        }
+
+        const isJoined = !!(isMod || isMember);
+
+
 
         // console.log("\n\n\n\nsocity",society, "\n\nposts", posts )
-        res.status(200).json({ society: society, posts: posts });
+        res.status(200).json({ society: society, posts: posts, isJoined: isJoined });
     } catch (error) {
         console.error("Error in society.route.js /:id", error);
         res.status(500).json("Internal Server Error");
@@ -360,15 +418,15 @@ router.get("/:id", async (req, res) => {
 });
 
 router.get('/search', async (req, res) => {
-    const {societyName}= req.query;
+    const { societyName } = req.query;
     try {
         const { userId, role } = getUserDetails(req)
 
-        if(!societyName){
+        if (!societyName) {
             return res.status(404).json("societyName required for searching")
         }
 
-        const user = await Society.find({role: role, name: societyName})
+        const user = await Society.find({ role: role, name: societyName, isDeleted: false })
 
         res.status(200).json(user.subscribedSocities)
     } catch (error) {
@@ -406,9 +464,11 @@ router.get("/universities/all", async (req, res) => {
 
         // Fetch random societies using aggregation
         const randomSocieties = await Society.aggregate([
+
             {
                 $match: {
-                    "references.role": role
+                    "references.role": role,
+                    isDeleted: false
                 }
             },
             {
@@ -420,15 +480,15 @@ router.get("/universities/all", async (req, res) => {
         const societyIds = randomSocieties.map(society => society._id);
 
         // Use the IDs to fetch and populate society data
-        const societies = await Society.find({ _id: { $in: societyIds } }).populate([
+        const societies = await Society.find({ _id: { $in: societyIds }, isDeleted: false }).populate([
             {
                 path: 'references',
                 populate: {
                     path: 'universityOrigin campusOrigin',
                     select: 'name location'
                 },
-            }, 
-                            
+            },
+
         ]).select('-users').limit(5);
 
         if (!societies || societies.length === 0) {
@@ -457,6 +517,7 @@ router.get("/campuses/all", async (req, res) => {
 
         // console.log("hey", role);
         const society = await Society.find({
+            isDeleted: false,
             "references.role": role,
             "references.universityOrigin": universityOrigin,
         }).populate([
@@ -489,6 +550,7 @@ router.get("/campus/all", async (req, res) => {
         const { universityOrigin, campusOrigin, role } = getUserDetails(req)
 
         const society = await Society.find({
+            isDeleted: false,
             "references.role": role,
             "references.universityOrigin": universityOrigin,
             "references.campusOrigin": campusOrigin,
@@ -604,14 +666,16 @@ router.get("/with-company/all", async (req, res) => {
         const { role, universityOrigin, campusOrigin } = getUserDetails(req)
 
         const society = await Society.find(
+
             role === "ext_org"
-                ? { companyReference: { isCompany: true } }
+                ? { companyReference: { isCompany: true }, isDeleted: false, }
                 : {
                     references: {
                         role: role,
                         universityOrigin,
                         campusOrigin
                     },
+                    isDeleted: false,
                 }
         );
 
@@ -661,7 +725,7 @@ router.post("/request-verification", async (req, res) => {
 router.get("/sub-societies/:societyId", async (req, res) => {
     const societyId = req.params.societyId;
     try {
-        const society = await SubSociety.find({ societyId: societyId });
+        const society = await SubSociety.find({ societyId: societyId, isDeleted: false, });
 
         if (!society) return res.status(404).json("no sub society found");
         res.status(200).json(society);
@@ -682,7 +746,7 @@ router.post("/role-based/:id", async (req, res) => {
         const { role } = getUserDetails(req);
         const society = await Society.findOne(
             { _id: id },
-            { "references.role": role }
+            { "references.role": role, isDeleted: false, }
         );
 
         if (!society)
@@ -704,7 +768,7 @@ router.get("/ext-org/:id", async (req, res) => {
         // if (!(req.session.user.role === 'ext_org')) return res.status(404).json("role mismatch error")
         const society = await Society.findOne(
             { _id: id },
-            { "companyReference.isCompany": true }
+            { "companyReference.isCompany": true, isDeleted: false, }
         );
 
         if (!society) return res.status(404).json("no society found in ");
@@ -724,7 +788,7 @@ router.get("/ext-org/:companyId", async (req, res) => {
         // if (!(req.session.user.role === 'ext_org')) return res.status(404).json("role mismatch error")
         const society = await Society.findOne(
             { "companyReference.companyOrigin": companyId },
-            { "companyReference.isCompany": true }
+            { "companyReference.isCompany": true, isDeleted: false, }
         );
 
         if (!society) return res.status(404).json("no society found in " + type);
@@ -744,7 +808,7 @@ router.get("/join/:societyId", async (req, res) => {
 
         console.log(role, userId, "/;hhh", societyId)
         // Fetch the society and validate the role
-        const society = await Society.findOne({ _id: societyId });
+        const society = await Society.findOne({ _id: societyId, isDeleted: false, });
         if (!society) return res.status(404).json({ error: "Society not found" });
         if (!society.allows.includes(role) && !society.allows.includes("all"))
             return res.status(403).json({ message: `Society does not allow role: ${role}` });
@@ -766,7 +830,7 @@ router.get("/join/:societyId", async (req, res) => {
 
         // Update the society atomically
         const updatedSociety = await Society.findOneAndUpdate(
-            { _id: societyId },
+            { _id: societyId, },
             {
                 // $addToSet: { 'members.members': userId }, //{} Avoid duplicate members
                 $inc: { totalMembers: 1 },
@@ -841,6 +905,7 @@ router.get("/leave/:societyId", async (req, res) => {
             { _id: userId },
             {
                 $pull: {
+                    'profile.moderatorTo.society': updatedSociety._id,
                     subscribedSocities: updatedSociety._id,
                 },
             }
@@ -891,6 +956,7 @@ router.get('/public/societies', async (req, res) => {
     try {
 
         const societies = await Society.find({
+            isDeleted: false,
             "references.role": role,
             "references.universityOrigin": universityOrigin,
             "references.campusOrigin": campusOrigin
@@ -925,7 +991,7 @@ router.get("/paginated/universities/all", async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
-        const match = { "references.role": role };
+        const match = { "references.role": role, isDeleted: false, };
         console.log("[/paginated/universities/all] match:", match, "page:", page, "limit:", limit, "skip:", skip);
         const total = await Society.countDocuments(match);
         const societies = await Society.find(match)
@@ -966,6 +1032,7 @@ router.get("/paginated/campuses/all", async (req, res) => {
         const match = {
             "references.role": role,
             "references.universityOrigin": universityOrigin,
+            isDeleted: false,
         };
         console.log("[/paginated/campuses/all] match:", match, "page:", page, "limit:", limit, "skip:", skip);
         const total = await Society.countDocuments(match);
@@ -1005,6 +1072,7 @@ router.get("/paginated/campus/all", async (req, res) => {
             "references.role": role,
             "references.universityOrigin": universityOrigin,
             "references.campusOrigin": campusOrigin,
+            isDeleted: false,
         };
         console.log("[/paginated/campus/all] match:", match, "page:", page, "limit:", limit, "skip:", skip);
         const total = await Society.countDocuments(match);
@@ -1043,7 +1111,8 @@ router.get('/paginated/public/societies', async (req, res) => {
         const match = {
             "references.role": role,
             "references.universityOrigin": universityOrigin,
-            "references.campusOrigin": campusOrigin
+            "references.campusOrigin": campusOrigin,
+            isDeleted: false,
         };
         console.log("[/paginated/public/societies] match:", match, "page:", page, "limit:", limit, "skip:", skip);
         const total = await Society.countDocuments(match);
@@ -1069,6 +1138,72 @@ router.get('/paginated/public/societies', async (req, res) => {
 });
 
 
+router.post("/delete/:societyId", async (req, res) => {
+    const { societyId } = req.params;
+    try {
+        const { userId } = getUserDetails(req);
 
+        // Find the society and check if the user is authorized
+        const society = await Society.findOne({ _id: societyId });
+        if (!society) {
+            return res.status(404).json({ error: "Society not found" });
+        }
+
+        // Check if the user is a moderator or creator
+        if (!society.moderators.includes(userId) && society.creator.toString() !== userId) {
+            return res.status(403).json({ error: "You are not authorized to delete this society" });
+        }
+
+        // Delete associated data
+        // 1. Delete members collection
+        await Members.deleteOne({ societyId: societyId });
+
+        // 2. Delete posts collection and individual posts
+        const postsCollection = await PostsCollection.findOne({ societyId: societyId });
+        if (postsCollection) {
+            await Post.deleteMany({ _id: { $in: postsCollection.posts.map(post => post.postId) } });
+            await PostsCollection.deleteOne({ societyId: societyId });
+        }
+
+        // 3. Delete verification requests
+        await VerificationRequest.deleteMany({ society: societyId });
+
+        // 4. Delete sub-societies
+        await SubSociety.deleteMany({ societyId: societyId });
+
+        // 5. Update users' subscribed societies and moderator roles
+        await User.updateMany(
+            { subscribedSocities: societyId },
+            { $pull: { subscribedSocities: societyId } }
+        );
+        await User.updateMany(
+            { 'profile.moderatorTo.society': societyId },
+            { $pull: { 'profile.moderatorTo.society': societyId } }
+        );
+
+        // 6. Delete the society itself
+        await Society.deleteOne({ _id: societyId });
+
+        // Invalidate Redis cache (handle gracefully)
+        try {
+            // Delete specific society cache
+            await redisClient.del(`society_${societyId}`);
+
+            // For node-redis v4+, use SCAN to find and delete post-related keys
+            const pattern = `society_${societyId}_posts_page_*`;
+            for await (const key of redisClient.scanIterator({ MATCH: pattern })) {
+                await redisClient.del(key);
+            }
+        } catch (redisError) {
+            console.error("Error invalidating Redis cache: ", redisError);
+            // Continue execution even if cache invalidation fails
+        }
+
+        return res.status(200).json({ message: "Society deleted successfully" });
+    } catch (error) {
+        console.error("Error in delete-society route: ", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 
 module.exports = router;
