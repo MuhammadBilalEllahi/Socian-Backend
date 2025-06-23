@@ -1206,4 +1206,140 @@ router.post("/delete/:societyId", async (req, res) => {
     }
 });
 
+
+
+router.post('/add-moderator/:societyId', async (req, res) => {
+  try {
+    const { societyId } = req.params;
+    const { userId } = req.body;
+    const { userId: authUserId } = getUserDetails(req); // Assuming getUserDetails extracts authenticated user
+
+    const society = await Society.findOne({ _id: societyId }).populate('moderators');
+    if (!society) {
+      return res.status(404).json({ error: 'Society not found' });
+    }
+
+    // Check if the authenticated user is a moderator
+    const isModerator = society.moderators.some(mod => mod._id.toString() === authUserId);
+    if (!isModerator) {
+      return res.status(403).json({ error: 'Only moderators can add moderators' });
+    }
+
+    // Check if the user is already a moderator
+    if (society.moderators.some(mod => mod._id.toString() === userId)) {
+      return res.status(400).json({ error: 'User is already a moderator' });
+    }
+
+    // Add the user to moderators
+    society.moderators.push(userId);
+    await society.save();
+
+    // Populate moderators for response
+    const updatedSociety = await Society.findOne({ _id: societyId }).populate('moderators');
+    res.status(200).json({ society: updatedSociety });
+  } catch (error) {
+    console.error('Error in add-moderator route:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+
+router.post("/add-role/:societyId", async (req, res) => {
+    try {
+        const { societyId } = req.params;
+        const { role, name, picture } = req.body;
+        const { userId } = getUserDetails(req);
+
+        const society = await Society.findOne({ _id: societyId, isDeleted: false });
+        if (!society) return res.status(404).json({ error: "Society not found" });
+
+        const isModerator = society.moderators.some(mod => mod.toString() === userId);
+        if (!isModerator) return res.status(403).json({ error: "Only moderators can add roles" });
+
+        if (!role || !name) return res.status(400).json({ error: "Role title and name are required" });
+
+        society.roles.push({ role, name, picture: picture || null });
+        await society.save();
+
+        const updatedSociety = await Society.findOne({ _id: societyId }).populate([
+            'moderators',
+            'president',
+            'members',
+            'creator',
+            'societyType',
+            'references.universityOrigin',
+            'references.campusOrigin',
+            'postsCollectionRef'
+        ]);
+
+        try {
+            await redisClient.del(`society_${societyId}`);
+        } catch (redisError) {
+            console.error("Error invalidating Redis cache:", redisError);
+        }
+
+        return res.status(200).json({ message: "Role added successfully", society: updatedSociety });
+    } catch (error) {
+        console.error("Error in add_role route:", error);
+        return res.status.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
+
+
+router.post("/delete-role/:societyId", async (req, res) => {
+    const { societyId } = req.params;
+    const { roleId } = req.body;
+    try {
+        const { userId } = getUserDetails(req);
+
+        const society = await Society.findOne({ _id: societyId, isDeleted: false });
+        if (!society) return res.status(404).json({ error: "Society not found" });
+
+        const isModerator = society.moderators.some(mod => mod.toString() === userId);
+        if (!isModerator) {
+            return res.status(403).json({ error: "Only moderators can delete roles" });
+        }
+
+        const roleExists = society.roles.some(role => role._id.toString() === roleId);
+        if (!roleExists) {
+            return res.status(404).json({ error: "Role not found" });
+        }
+
+        const updatedSociety = await Society.findOneAndUpdate(
+            { _id: societyId },
+            { $pull: { roles: { _id: roleId } } },
+            { new: true }
+        );
+
+        if (!updatedSociety) {
+            return res.status(400).json({ error: "Failed to delete role" });
+        }
+
+        return res.status(200).json({
+            message: "Role deleted successfully",
+            society: updatedSociety,
+        });
+    } catch (error) {
+        console.error("Error in delete-role route: ", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
 module.exports = router;
+
+
+
+
+
+
+
+
+
+
+
+
+
+

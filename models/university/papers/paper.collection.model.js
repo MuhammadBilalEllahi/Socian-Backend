@@ -7,9 +7,9 @@ const PastPaperItem = require("./pastpaper.item.model");
 const pastpapersCollectionByYearSchema = new Schema({
     _id: {
         type: Schema.Types.ObjectId,
-        required: true,
+        // required: true,
         ref: "Subject",
-        index: true
+        // index: true
     },
     references: {
         universityOrigin: {
@@ -40,6 +40,7 @@ const pastpapersCollectionByYearSchema = new Schema({
         lastUpdated: { type: Date, default: Date.now }
     }
 }, {
+    // _id: false,
     timestamps: true,
     indexes: [
         { 'references.subjectId': 1 },

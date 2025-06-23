@@ -9,6 +9,10 @@ const feedbackCommentSchema = new Schema({
     favouritedByTeacher: { type: Boolean, default: false },
 
     hiddenByMod: {type: Boolean, default: false},
+    hiddenBySuper:{
+    type: Boolean,
+    default: false
+  },
     reason: {type: String},
 
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true },

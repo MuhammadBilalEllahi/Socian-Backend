@@ -126,6 +126,10 @@ const teacherSchema = new Schema({
           }
     ], 
     hiddenByMod: { type: Boolean, default: false },
+    hiddenBySuper:{
+    type: Boolean,
+    default: false
+  },
     reason: { type: String},
 
 });

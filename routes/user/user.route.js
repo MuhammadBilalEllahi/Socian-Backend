@@ -1100,4 +1100,46 @@ router.get('/moderated-societies',  async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+router.get('/search-campus-users', async (req, res) => {
+  try {
+    const { query } = req.query;
+    const { campusOrigin, userId } = getUserDetails(req);
+
+    if (!query) {
+      return res.status(400).json({ error: 'Query parameter is required' });
+    }
+
+    const users = await User.find({
+      _id: { $ne: userId }, // Exclude the current user
+      'university.campusId': campusOrigin, // Match campus
+      $or: [
+        { name: { $regex: query, $options: 'i' } }, // Case-insensitive name search
+        { username: { $regex: query, $options: 'i' } }, // Case-insensitive username search
+      ],
+    }).select('name username profilePicture _id');
+
+    res.status(200).json({ users });
+  } catch (error) {
+    console.error('Error in search-campus-users route: ', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+
 module.exports = router;

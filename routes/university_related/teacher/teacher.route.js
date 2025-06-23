@@ -40,11 +40,11 @@ router.get("/campus/teachers", async (req, res) => {
     const findCampus = await Campus.findOne({ _id: campusOrigin });
     if (!findCampus) return res.status(404).json({ error: "Error finding campus" });
 
-    const teachers = await Teacher.find({ campusOrigin: campusOrigin , hiddenByMod: false})
+    const teachers = await Teacher.find({ campusOrigin: campusOrigin , hiddenByMod: false, hiddenBySuper: false })
       .populate({
         path: "ratingsByStudents",
         select: "feedback upvoteCount userId",
-        match: { isDeleted: false, hiddenByMod: false },
+        match: { isDeleted: false, hiddenByMod: false , hiddenBySuper: false},
         options: { sort: { upvoteCount: -1 }, limit: 1 },
       })
       .lean();
@@ -70,41 +70,7 @@ router.get("/campus/teachers", async (req, res) => {
 
 
 
-router.get("/super-teachers-by-campus", async (req, res) => {
-  try {
 
-    const campusOrigin = req.query.campusId
-
-    if (!campusOrigin) return res.status(400).json({ error: "Campus location not provided" });
-
-    const findCampus = await Campus.findOne({ _id: campusOrigin });
-    if (!findCampus) return res.status(404).json({ error: "Error finding campus" });
-
-    const teachers = await Teacher.find({ campusOrigin: campusOrigin })
-      .populate({
-        path: "ratingsByStudents",
-        select: "feedback upvoteCount userId",
-        match: { isDeleted: false },
-        options: { sort: { upvoteCount: -1 }, limit: 1 },
-      })
-      .lean();
-
-
-    const result = teachers.map((teacher) => {
-      const topRating = teacher.ratingsByStudents?.[0] || null;
-      return {
-        ...teacher,
-        topFeedback: topRating ? topRating.feedback : null,
-        topFeedbackUser: topRating ? topRating.userId : null,
-      };
-    });
-
-    res.status(200).json(result);
-  } catch (error) {
-    console.error("Error in teacher:", error);
-    res.status(500).json({ message: error.message });
-  }
-});
 
 // CREATEBYTEACHER a TEACHER modal created by a teacher
 router.post("/by/teacher/create", async (req, res) => {
@@ -255,89 +221,7 @@ router.post("/by/teacher/create", async (req, res) => {
 
 
 
-// CREATE TEACHER
-router.post("/", async (req, res) => {
-  const { name, email, picture, departmentId, universityOrigin, campusOrigin } = req.body;
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const findUni = await University.findOne({ _id: universityOrigin }).session(session);
-    if (!findUni) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ message: "no such University found" });
-    }
-
-    const findCampus = await Campus.findOne({
-      _id: campusOrigin,
-      universityOrigin: universityOrigin,
-    }).session(session);
-    if (!findCampus) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ message: "no such Campus found" });
-    }
-
-    const findDepartment = await Department.findOne({
-      _id: departmentId,
-      "references.campusOrigin": campusOrigin,
-      "references.universityOrigin": universityOrigin,
-    }).session(session);
-    if (!findDepartment) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ message: "no such Department found" });
-    }
-
-    const teacher = await Teacher.create([{
-      name: name,
-      email: email,
-      imageUrl: picture,
-      "department.name": findDepartment.name,
-      "department.departmentId": departmentId,
-      universityOrigin: universityOrigin,
-      campusOrigin: campusOrigin,
-    }], { session });
-
-    if (!teacher || !teacher[0]) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(502).json({ error: "Failed to create teacher" });
-    }
-
-    // Update related collections within the transaction
-    await Promise.all([
-      Department.findByIdAndUpdate(
-        departmentId,
-        { $push: { teachers: teacher[0]._id } },
-        { session }
-      ),
-      Campus.findByIdAndUpdate(
-        campusOrigin,
-        { $push: { teachers: teacher[0]._id } },
-        { session }
-      )
-    ]);
-
-    // Invalidate relevant Redis caches
-    // await Promise.all([
-    //   redisClient.del(`campus_teachers_${campusOrigin}`),
-    //   redisClient.del(`campus_teacher_${teacher[0]._id}`)
-    // ]);
-
-    await session.commitTransaction();
-    session.endSession();
-
-    res.status(200).json(teacher[0]);
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error("Error in teacher:", error);
-    res.status(500).json({ message: error.message });
-  }
-});
 
 router.get("/info", async (req, res) => {
   const { id } = req.query;
@@ -353,7 +237,7 @@ router.get("/info", async (req, res) => {
 
     const teacher = await Teacher.findById(id).populate({
       path: "department.departmentId campusOrigin",
-      match: {hiddenByMod: false}
+      match: {hiddenBySuper: false,hiddenByMod: false, }
     });
     if (!teacher) {
       return res.status(404).json({ message: "Teacher not found" });
@@ -378,7 +262,7 @@ router.get("/reviews/feedbacks", async (req, res) => {
   try {
     const teacher = await Teacher.findById(id).populate({
       path: "ratingsByStudents",
-      match: {hiddenByMod: false},
+      match: {hiddenByMod: false,hiddenBySuper: false,},
       populate: [{
         path: "userId",
         select:
@@ -462,7 +346,7 @@ router.get("/mob/reviews/feedbacks", async (req, res) => {
   try {
     const teacher = await Teacher.findById(id).populate({
       path: "ratingsByStudents",
-              match: { hiddenByMod : false},
+              match: { hiddenByMod : false, hiddenBySuper: false,},
       populate: [{
         path: "userId",
         select: "_id name username profile.picture universityEmailVerified", // Reduced fields
@@ -583,6 +467,7 @@ router.post("/rate", async (req, res) => {
         rating,
         feedback,
         hiddenByMod: false,
+        hiddenBySuper: false,
         hideUser,
         upVotesCount: 0,
         downVotesCount: 0,
@@ -868,7 +753,7 @@ router.get('/reply/feedback', async (req, res) => {
     const { feedbackCommentId } = req.query;
     const getReplies = await TeacherRating.findById(feedbackCommentId).populate([{
       path: 'replies',
-      match: {hiddenByMod: false},
+      match: {hiddenByMod: false, hiddenBySuper: false,},
       populate: {
         path: 'user',
         select: 'username name profile.picture'
@@ -895,7 +780,7 @@ router.get('/reply/reply/feedback', async (req, res) => {
 
     const getReplies = await FeedBackCommentTeacher.findById(feedbackCommentId).populate([{
       path: 'replies',
-      match: {hiddenByMod: false},
+      match: {hiddenByMod: false, hiddenBySuper: false,},
       populate: [{
         path: 'user',
         select: 'username name profile.picture'

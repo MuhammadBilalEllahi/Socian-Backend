@@ -82,7 +82,48 @@ const uploadImage = multer({ storage: ImageStorage, limits: {
     fileSize: 50 * 1024 * 1024 // 50 MB per file
   } });
 
-module.exports = { upload, uploadImage };
+
+
+
+const TeacherImageStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const {email,universityOrigin, campusOrigin,  }=req.body;
+        console.log(universityOrigin, campusOrigin,  )
+
+        const pathCWD = process.cwd();
+        console.log("PATHHH", pathCWD);
+
+
+        const uploadPath = path.join(
+            pathCWD,
+            'temp',
+            "uploads",
+            universityOrigin,
+            campusOrigin,
+            "teacher",
+            email,
+            "pictures"
+        );
+
+        // Create directory if it doesn't exist
+        fs.mkdirSync(uploadPath, { recursive: true });
+
+        console.log("saved to destination", uploadPath)
+
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = `${Date.now()}-${file.originalname}`;
+        cb(null, uniqueName);
+    }
+});
+
+const uploadTeacherImage = multer({ storage: TeacherImageStorage, limits: {
+    fileSize: 50 * 1024 * 1024 // 50 MB per file
+  } });
+
+
+module.exports = { upload, uploadImage,uploadTeacherImage };
 
 
 

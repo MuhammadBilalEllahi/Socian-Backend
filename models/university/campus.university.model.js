@@ -60,6 +60,11 @@ const campusSchema = new Schema({
         index: true,
     }],
 
+    isDeleted: {
+  type: Boolean,
+  default: false,
+},
+
     registered: {
         isRegistered: {
             type: Boolean,
@@ -113,6 +118,20 @@ const campusSchema = new Schema({
 }, { timestamps: true })
 
 
+campusSchema.pre(/^find/, function (next) {
+  // Applies to find, findOne, findOneAndUpdate, etc.
+  if (!this.getFilter().includeDeleted) {
+    this.where({ isDeleted: false });
+  }
+  next();
+});
+
+
+//  Bonus: includeDeleted is a custom flag — if you explicitly want to fetch deleted campuses (admin panel or audit logs), you can still do:
+// Campus.find({ includeDeleted: true }); // bypasses the hook
+
+
 const Campus = mongoose.model("Campus", campusSchema);
+
 
 module.exports = Campus;

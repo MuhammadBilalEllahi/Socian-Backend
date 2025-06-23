@@ -50,6 +50,10 @@ editedTimestamp: { type: Date, default: Date.now },
     isReported: { type: Boolean, default: false },
 
     hiddenByMod: { type: Boolean, default: false },
+    hiddenBySuper:{
+    type: Boolean,
+    default: false
+  },
     reason: { type: String},
     createdAt: { type: Date, default: Date.now },
     editedAt: { type: Date, default: Date.now },

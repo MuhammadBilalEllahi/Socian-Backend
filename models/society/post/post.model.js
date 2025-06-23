@@ -25,7 +25,7 @@ const postSchema = new Schema(
 
     isEdited: { type: Boolean, default: false },
     editedAt: { type: Date },
-    
+
     createdAt: { type: Date, default: Date.now },
     upvotes: { type: Number, default: 0 },
     downvotes: { type: Number, default: 0 },
@@ -49,7 +49,7 @@ const postSchema = new Schema(
             "image/png",
             "image/gif",
             "image/*",
-             "audio/m4a","audio", "audio/opus", "audio/webm", "audio/*"
+            "audio/m4a", "audio", "audio/opus", "audio/webm", "audio/*"
           ], //add youtube url later
           default: "text",
         },
@@ -98,7 +98,16 @@ const postSchema = new Schema(
       type: Boolean,
       default: false
     },
-
+    postByAdmin: {
+      type: Boolean,
+      default: false
+    },
+    adminSetStatus: {
+      isArchived: {
+        type: Boolean,
+        default: false
+      }
+    },
     // Poll Feature
     isPoll: { type: Boolean, default: false },
     pollOptions: [
@@ -147,13 +156,26 @@ const postSchema = new Schema(
   {
     validate: {
       validator: function () {
-        if(this.isPersonalPost) return true; // Skip validation for personal posts
+        if (this.isPersonalPost) return true; // Skip validation for personal posts
         return !(this.society && this.subSociety);
       },
       message: "You cannot set both Society and subSociety. Choose one.",
     },
   }
 );
+
+// Middleware to hide admin posts unless explicitly queried
+postSchema.pre(/^find/, function (next) {
+  if (this.getQuery().hasOwnProperty('postByAdmin')) {
+    // Respect the developer's intent (don't override if postByAdmin was queried)
+    return next();
+  }
+
+  // Add a condition to exclude posts made by admin
+  this.where({ postByAdmin: false });
+  next();
+});
+
 
 const Post = model("Post", postSchema);
 module.exports = Post;

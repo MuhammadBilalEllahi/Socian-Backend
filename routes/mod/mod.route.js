@@ -7,32 +7,33 @@ const Teacher = require('../../models/university/teacher/teacher.model');
 const TeacherRating = require('../../models/university/teacher/rating.teacher.model');
 const mongoose = require('mongoose');
 const FeedBackCommentTeacher = require('../../models/university/teacher/feedback.rating.teacher.model');
+const Society = require('../../models/society/society.model');
 
 
-router.get('/users', async (req, res) => {
-    try {
-        const { campusId } = getUserDetails(req);
-        const { page = 1, limit = 10 } = req.query;
+// router.get('/users', async (req, res) => {
+//     try {
+//         const { campusId } = getUserDetails(req);
+//         const { page = 1, limit = 10 } = req.query;
 
-        const users = await User.find({ campusId })
-            .select("name email role") // Fetch only necessary fields
-            .sort({ createdAt: -1 }) // Sort by latest users first
-            .skip((page - 1) * limit)
-            .limit(parseInt(limit));
+//         const users = await User.find({ campusId })
+//             .select("name email role") // Fetch only necessary fields
+//             .sort({ createdAt: -1 }) // Sort by latest users first
+//             .skip((page - 1) * limit)
+//             .limit(parseInt(limit));
 
-        const totalUsers = await User.countDocuments({ campusId });
+//         const totalUsers = await User.countDocuments({ campusId });
 
-        res.status(200).json({
-            users,
-            totalUsers,
-            totalPages: Math.ceil(totalUsers / limit),
-            currentPage: Number(page),
-        });
-    } catch (error) {
-        console.error("Error fetching users:", error);
-        res.status(500).json({ message: "Internal Server Error" });
-    }
-});
+//         res.status(200).json({
+//             users,
+//             totalUsers,
+//             totalPages: Math.ceil(totalUsers / limit),
+//             currentPage: Number(page),
+//         });
+//     } catch (error) {
+//         console.error("Error fetching users:", error);
+//         res.status(500).json({ message: "Internal Server Error" });
+//     }
+// });
 
 
 
@@ -228,6 +229,21 @@ router.put('/teacher/reply/reply/feedback/hide', async (req, res) => {
   }
 });
 
+
+router.get("/society/hide/:id", async (req, res) => {
+  
+  try {
+    const { id } = req.params;
+  const {reason} = req.body;
+    const society = await Society.findByIdAndUpdate({ _id: id }, {hiddenByMod: true, reason})
+
+    if (!society) return res.status(404).json("no society found")
+    res.status(200).json(society)
+  } catch (error) {
+    console.error("Error in society.route.js ", error);
+    res.status(500).json("Internal Server Error");
+  }
+});
 
 
 module.exports = router;

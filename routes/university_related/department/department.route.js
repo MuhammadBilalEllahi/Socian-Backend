@@ -155,59 +155,7 @@ router.get("/campus/subjects", async (req, res) => {
   }
 });
 
-// TO FIX : get ids from session or jwt
-// TO FIX: GET THESE ALL Functions into schema methods
-router.post("/", async (req, res) => {
-  const { name, universityId, campusId } = req.body;
-  try {
-    if (!name || !universityId || !campusId)
-      return res
-        .status(400)
-        .json({ message: "name, universityId, campusId  are required" });
-    if (name === "" || universityId === "" || campusId === "")
-      return res
-        .status(400)
-        .json({ message: "name, universityId, campusId  are required" });
 
-    const findUni = await University.findOne({ _id: universityId });
-    if (!findUni)
-      return res.status(404).json({ message: "no such University found" });
-
-    const findCampus = await Campus.findOne({
-      _id: campusId,
-      universityOrigin: universityId,
-    });
-    if (!findCampus)
-      return res.status(404).json({ message: "no such Campus found" });
-
-    const department = await Department.findOne({
-      name: name,
-      "references.universityOrigin": universityId,
-      "references.campusOrigin": campusId,
-    });
-    if (department)
-      return res.status(300).json({ message: "Department already exists" });
-
-    const departmentCreated = await Department.create({
-      name: name,
-      "references.universityOrigin": universityId,
-      "references.campusOrigin": campusId,
-    });
-
-    departmentCreated.save();
-
-    findCampus.departments.push(departmentCreated);
-    findCampus.save();
-
-    const cacheKey = `campus_and_subjects-${campusId}`;
-    await redisClient.del(cacheKey);
-
-    res.status(200).json({ message: departmentCreated });
-  } catch (error) {
-    console.error("Error in department:", error);
-    res.status(500).json({ message: error.message });
-  }
-});
 
 router.get("/campus", async (req, res) => {
   try {

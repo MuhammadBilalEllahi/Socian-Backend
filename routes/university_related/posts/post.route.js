@@ -386,6 +386,35 @@ router.post("/create", upload.array('file'), async (req, res) => {
 });
 
 
+router.get('/admin/post', async (req, res) => {
+  try {
+    const { campusOrigin, universityOrigin,  } = getUserDetails(req)
+
+    const query = {
+      postByAdmin: true,
+      "adminSetStatus.isArchived": { $ne: true }, // exclude archived posts
+    };
+
+    // Optional filters
+    if (campusOrigin) query["references.campusOrigin"] = campusOrigin;
+    if (universityOrigin) query["references.universityOrigin"] = universityOrigin;
+
+    const latestPost = await Post.findOne(query)
+      .sort({ createdAt: -1 })
+      .populate("author", "name username")
+      .lean();
+
+    if (!latestPost) {
+      return res.status(404).json({ message: "No active admin post found" });
+    }
+
+    return res.status(200).json({ post: latestPost });
+  } catch (error) {
+    console.error("Error fetching latest admin post:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 
 
 //////////////////////////////////////////////////////////////

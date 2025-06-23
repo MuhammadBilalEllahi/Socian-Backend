@@ -1,12 +1,6 @@
 const mongoose = require("mongoose");
 const { Schema, model } = mongoose;
 
-/**
- *
- * @param {visibilityNone} Boolean sets visibility to None everywher, incase soc-mod doesnot want to
- *  delete the group but wants it to remain their or could use it for sample purpose
- * @param {societyType} SocietyType tells society to be either private, public or restricted
- */
 const societySchema = new Schema({
   name: {
     type: String,
@@ -14,10 +8,9 @@ const societySchema = new Schema({
     unique: true,
     trim: true,
   },
-
   category: {
     type: String,
-    default: "default",
+    default: "",
   },
   description: {
     type: String,
@@ -36,12 +29,10 @@ const societySchema = new Schema({
     ref: "User",
     required: true,
   },
-  president:
-  {
+  president: {
     type: Schema.Types.ObjectId,
     ref: "User",
   },
-
   moderators: [
     {
       type: Schema.Types.ObjectId,
@@ -75,7 +66,6 @@ const societySchema = new Schema({
   members: {
     type: Schema.Types.ObjectId,
     ref: "Members",
-    // required: true
   },
   postsCollectionRef: {
     type: Schema.Types.ObjectId,
@@ -90,6 +80,13 @@ const societySchema = new Schema({
       type: Schema.Types.ObjectId,
       ref: "SubSociety",
       index: true,
+    },
+  ],
+  roles: [
+    {
+      role: { type: String, required: true },
+      name: { type: String, required: true },
+      picture: { type: String },
     },
   ],
   references: {
@@ -123,27 +120,32 @@ const societySchema = new Schema({
   isDeleted: {
     type: Boolean,
     default: false
+  },
+
+  hiddenByMod:{
+    type: Boolean,
+    default: false
+  },
+   hiddenBySuper:{
+    type: Boolean,
+    default: false
+  },
+  reason: {
+    type: String,
+
   }
 });
-
-
 
 societySchema.pre('save', async function (next) {
   if (this.isNew) {
     try {
-      // If 'allows' field is already provided, skip setting it dynamically
       if (this.allows && this.allows.length > 0) {
-        return next(); // Skip the logic if 'allows' is already set
+        return next();
       }
-
-      // Fetch the creator's role if 'allows' is not provided
       const creator = await mongoose.model("User").findById(this.creator);
-
       if (!creator) {
         return next(new Error("Creator not found"));
       }
-
-      // Dynamically set the 'allows' field based on the creator's role
       if (creator.role === 'student') {
         this.allows = ['student'];
       } else if (creator.role === 'teacher') {
@@ -153,20 +155,16 @@ societySchema.pre('save', async function (next) {
       } else if (creator.role === 'ext_org') {
         this.allows = ['alumni'];
       } else {
-        this.allows = ['all']; // Default if role is not found
+        this.allows = ['all'];
       }
-
-      // Proceed to save the society
       next();
     } catch (error) {
       return next(error);
     }
   } else {
-    // If the document isn't new, proceed without modification
     next();
   }
 });
-
 
 const Society = mongoose.model("Society", societySchema);
 module.exports = Society;

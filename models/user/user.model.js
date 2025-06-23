@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["student", "alumni", "teacher", "ext_org", "no_access"],
+    enum: ["student", "alumni", "teacher", "ext_org", "no_access", "super"],
     required: true,
   },
   super_role: {
@@ -295,6 +295,7 @@ const userSchema = new mongoose.Schema({
   restrictions: {
     blocking: {
       isBlocked: { type: Boolean, default: false },
+      reason: {type:String},
       blockedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
@@ -593,6 +594,15 @@ userSchema.pre("save", async function (next) {
   this.updatedAt = Date.now();
   next();
 });
+
+
+
+
+
+
+
+
+
 
 const User = mongoose.model("User", userSchema);
 

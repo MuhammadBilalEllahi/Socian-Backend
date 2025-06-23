@@ -119,7 +119,7 @@ try{
   //   throw new Error("Response object (`res`) is required when `checks` is true");
   // }
 
-  let name, user, userId, role, universityOrigin, campusOrigin, departmentId;
+  let name, user, userId, role, universityOrigin, campusOrigin, departmentId, super_role;
 
   const platform = req.headers["x-platform"];
 
@@ -133,6 +133,9 @@ try{
     user = req.session.user;
     userId = req.session.user._id;
     role = req.session.user.role;
+    if(req.session.user?.super_role){
+      super_role= req.session.user.super_role
+    }
     departmentId = req.session.user.university.departmentId?._id ?? req.session.user.university.departmentId;
     if (role !== "ext_org") {
       universityOrigin = req.session.user.university.universityId?._id ?? req.session.user.university.universityId;
@@ -147,6 +150,9 @@ try{
     user = req.user;
     userId = req.user._id;
     role = req.user.role;
+     if(req.user?.super_role){
+      super_role= req.user.super_role
+    }
     departmentId = req.user.university.departmentId?._id ?? req.user.university.departmentId;
     if (role !== "ext_org") {
       universityOrigin = req.user.university.universityId?._id ?? req.user.university.universityId;
@@ -166,7 +172,7 @@ try{
   //   }
   // }
 
-  return { name, user, userId, role, campusId, universityId, universityOrigin, campusOrigin, departmentId, platform };
+  return { name, user, userId, role, campusId, universityId, universityOrigin, campusOrigin, departmentId, platform, super_role };
 }catch(e){  
   console.error("Error in getUserDetails:", e);
   return {}

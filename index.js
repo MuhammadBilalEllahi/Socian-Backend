@@ -139,8 +139,8 @@ const superRouter = require("./routes/super/super.route.js");
 const adminRouter = require("./routes/admin/admin.route.js");
 const modRouter = require("./routes/mod/mod.route.js");
 
-const universityRouter = require("./routes/university_related/university.route.js");
-const campusRouter = require("./routes/university_related/campus.route.js");
+const universityRouter = require("./routes/super/university.route.js");
+// const campusRouter = require("./routes/university_related/campus.route.js");
 
 const departmentRouter = require("./routes/university_related/department/department.route.js");
 const subjectRouter = require("./routes/university_related/subject/subject.route.js");
@@ -191,8 +191,8 @@ app.use("/api/auth", authRouter);
 app.use('/api/oauth', oAuthRouter);
 // app.use('/api/request', requestRoute);
 // app.use('/email', emailRoute);
-app.use("/api/university", superProtect, universityRouter);
-app.use("/api/campus", superProtect, campusRouter);
+// app.use("/api/university", superProtect, universityRouter);
+// app.use("/api/campus", superProtect, campusRouter);
 
 app.use("/api/teacher", protectRoute, teacherRouter);
 app.use("/api/department", protectRoute, departmentRouter);
