@@ -6,4 +6,10 @@ const UserRoles = {
     system: 'system'
 }
 
-module.exports = UserRoles;
+const UserSuperRoles = {
+    super_admin: 'super_admin',
+    mod: 'mod',
+    none: 'none'
+}
+
+module.exports = {UserRoles,UserSuperRoles};

@@ -387,32 +387,43 @@ router.post("/create", upload.array('file'), async (req, res) => {
 
 
 router.get('/admin/post', async (req, res) => {
-  try {
-    const { campusOrigin, universityOrigin,  } = getUserDetails(req)
+    try {
+        const { requestCampus, requestUniversity, allUniversities } = req.query;
+        const { campusOrigin, universityOrigin } = getUserDetails(req)
 
-    const query = {
-      postByAdmin: true,
-      "adminSetStatus.isArchived": { $ne: true }, // exclude archived posts
-    };
+        const query = {
+            postByAdmin: true,
+            "adminSetStatus.isArchived": { $ne: true }, // exclude archived posts
+        };
+        // for campus
+        // for univeristy
+        // for universities
 
-    // Optional filters
-    if (campusOrigin) query["references.campusOrigin"] = campusOrigin;
-    if (universityOrigin) query["references.universityOrigin"] = universityOrigin;
+        // Optional filters
+        if (requestCampus == true) {
+            query["references.campusOrigin"] = campusOrigin;
+            query["forCampus"] = forCampus
+        };
+        if (requestUniversity == true) {
+            query["references.universityOrigin"] = universityOrigin;
+            query["forUniversity"] = forUniversity
+        };
+        if (allUniversities == true) query['forAllUniversites'] = true;
 
-    const latestPost = await Post.findOne(query)
-      .sort({ createdAt: -1 })
-      .populate("author", "name username")
-      .lean();
+        const latestPost = await Post.findOne(query)
+            .sort({ createdAt: -1 })
+            .populate("author", "name username")
+            .lean();
 
-    if (!latestPost) {
-      return res.status(404).json({ message: "No active admin post found" });
+        if (!latestPost) {
+            return res.status(404).json({ message: "No active admin post found" });
+        }
+
+        return res.status(200).json({ post: latestPost });
+    } catch (error) {
+        console.error("Error fetching latest admin post:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
     }
-
-    return res.status(200).json({ post: latestPost });
-  } catch (error) {
-    console.error("Error fetching latest admin post:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
-  }
 });
 
 

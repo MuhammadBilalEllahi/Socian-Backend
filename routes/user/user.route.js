@@ -15,6 +15,7 @@ const { resendEmailConfirmation } = require('../../utils/email.util');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Department = require('../../models/university/department/department.university.model');
+const ModRequest = require('../../models/mod/mod.request.model');
 
 exports.getUserProfile = async (req, res) => {
     try {
@@ -1140,6 +1141,56 @@ router.get('/search-campus-users', async (req, res) => {
   }
 });
 
+
+router.post("/mod-request/status", async (req, res) => {
+  try {
+    const { userId } = getUserDetails(req);
+
+    const existingUser = await User.findById(userId);
+    if (!existingUser) return res.status(404).json({ error: "User not found" });
+
+    const alreadyRequested = await ModRequest.findOne({ userId });
+    if (!alreadyRequested) {
+      return res.status(300).json({ message: "Mod request Not submitted" });
+    }
+    if(alreadyRequested.status = "approved"){
+        return handlePlatformResponse(alreadyRequested.userId,res,req)
+    }
+
+    res.status(201).json({ message: "Mod request Status", data: newRequest });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to get mod request" });
+  }
+});
+
+router.post("/mod/request", async (req, res) => {
+  try {
+    const { reason } = req.body;
+        const { userId, universityId, campusId } = getUserDetails(req);
+
+
+    const existingUser = await User.findById(userId);
+    if (!existingUser) return res.status(404).json({ error: "User not found" });
+
+    const alreadyRequested = await ModRequest.findOne({ userId });
+    if (alreadyRequested) {
+      return res.status(400).json({ error: "Mod request already submitted" });
+    }
+
+    const newRequest = await ModRequest.create({
+      userId,
+      universityId,
+      campusId,
+      reason,
+    });
+
+    res.status(201).json({ message: "Mod request submitted", data: newRequest });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to submit request" });
+  }
+});
 
 
 module.exports = router;

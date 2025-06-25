@@ -12,23 +12,31 @@ const verificationRequestSchema = new Schema(
     alumni: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      //   required: true,
+      required: function () {
+        return !this.society;
+      },
     },
-    requiredDocuments: {
+    society: {
+      type: Schema.Types.ObjectId,
+      ref: "Society",
+      required: function () {
+        return !this.alumni;
+      },
+    },
+    societySupportingDocments: [{
+        type: String, 
+    }],
+    requiredDocuments: {//for alumni
       busCardImage: { type: String },
       studentCardImage: { type: String },
       livePhoto: { type: String },
     },
     comments: { type: String, default: "" },
-    society: {
-      type: Schema.Types.ObjectId,
-      ref: "Society",
-      //   required: true,
-    },
+
     requestedBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      //   required: true,
+        required: true,
     },
     assignedCampusModerator: {
       type: Schema.Types.ObjectId,
@@ -36,6 +44,10 @@ const verificationRequestSchema = new Schema(
       //   required: true,
     },
     approvedByModerator: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    approvedBySuper: {
       type: Schema.Types.ObjectId,
       ref: "User",
     },

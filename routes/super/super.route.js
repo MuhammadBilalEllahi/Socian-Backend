@@ -7,7 +7,7 @@ const Subject = require("../../models/university/department/subject/subject.depa
 const { PastPaper } = require("../../models/university/papers/pastpaper.model");
 // PastpapersCollectionByYear
 
-const {PastPaperItem} = require("../../models/university/papers/pastpaper.item.model");
+const { PastPaperItem } = require("../../models/university/papers/pastpaper.item.model");
 const router = express.Router();
 const redisClient = require("../../db/reddis");
 const { getUserDetails } = require("../../utils/utils");
@@ -33,93 +33,117 @@ router.use('/campus', campusRouter);
 router.use('/university', univeristyRouter);
 router.use('/societies', societyRouter);
 router.use('/users', usersRouter)
-router.use('/teachers',teachersRouter);
+router.use('/teachers', teachersRouter);
 
 
 router.post("/post/create", upload.array('file'), async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-    try {
-        const { userId,role,super_role   } = getUserDetails(req);
-        
+  try {
+    const { userId, role, super_role } = getUserDetails(req);
 
-        const { title, body, author = userId, campusOrigin, universityOrigin  } = req.body;
-        const files = req.files;
 
-        console.log("/create- post admin ", { title, body, files, author });
+    const { title, body, author = userId, campusOrigin, universityOrigin } = req.body;
+    const forCampus = req.body.forCampus === "true";
+    const forUniversity = req.body.forUniversity === "true";
+    const forAllUniversites = req.body.forAllUniversites === "true";
 
-        if (!title || !author) {
-            return res.status(400).json("Title and author are required");
-        }
-        if (!body && !files) {
-            return res.status(400).json({ message: 'Body or image/video is required' });
-        }
+    const files = req.files;
+    console.log("title", title, "body", body, "userId", userId, "campusOrigin", campusOrigin, "forCampus", forCampus, "forUniversity", forUniversity, "universityOrigin", universityOrigin, forAllUniversites)
 
-        let postContent = {
-            title: title,
-            author: author,
-            postByAdmin: true,
-            "references.role": role,
-            "references.campusOrigin": campusOrigin,
-            "references.universityOrigin": universityOrigin,
-        };
+    console.log("/create- post admin ", { title, body, files, author });
 
-        if (body) {
-            postContent.body = body;
-        }
-        if (files && files.length > 0) {
-            let mediaArray = [];
-            for (let file of files) {
-                const { url, type } = await uploadPostMedia(userId, file, req);
-                mediaArray.push({ type, url });
-            }
-            postContent.media = mediaArray;
-        }
-        postContent.isPersonalPost = true; // Mark as personal post
-
-        const post = new Post(postContent);
-        await post.save({ session });
-
-        const postCommentId = new SocietyPostAndCommentVote({
-            postId: post._id,
-        });
-        await postCommentId.save({ session });
-        post.voteId = postCommentId._id;
-
-        const postCommentCollection = new PostCommentCollection({
-            _id: post._id,
-        });
-        await postCommentCollection.save({ session });
-        post.comments = postCommentCollection._id;
-
-        await post.save({ session });
-
-        const user = await User.findByIdAndUpdate(
-            { _id: userId },
-            { $addToSet: { "profile.posts": post._id } },
-            { new: true, session }
-        );
-        if (!user) return res.status(409).json({ error: "User not found" });
-
-        await session.commitTransaction();
-        session.endSession();
-
-        res.status(200).json({ message: "Post Created", postId: post._id, postTitle: post.title });
-    } catch (error) {
-        console.error("Error in /create-indiv", error);
-        await session.abortTransaction();
-        session.endSession();
-        res.status(500).json("Internal Server Error");
+    if (!forCampus && !forUniversity && !forAllUniversites) {
+      return res.status(400).json({ message: "You must select target option" });
     }
+
+    if (forCampus) {
+      if (!campusOrigin) return res.status(400).json({ message: "You must select target campus" });
+
+    } else if (forUniversity && !universityOrigin) {
+      return res.status(400).json({ message: "You must select target university" });
+    }
+
+    if (!title || !author) {
+      return res.status(400).json({ message: "Title and author are required" });
+    }
+    if (!body && !files) {
+      return res.status(400).json({ message: 'Body or image/video is required' });
+    }
+
+    let postContent = {
+      title: title,
+      author: author,
+      postByAdmin: true,
+      // "references.role": role,
+    };
+    if (campusOrigin && forCampus) {
+      postContent.references = {};
+      postContent.references.campusOrigin = campusOrigin;
+      postContent.forCampus = true;
+    };
+    if (universityOrigin && forUniversity) {
+      postContent.references = {};
+      postContent.references.universityOrigin = universityOrigin;
+      postContent.forUniversity = true;
+    };
+    if (forAllUniversites) { postContent.forAllUniversites = true; }
+    if (body) {
+      postContent.body = body;
+    }
+    if (files && files.length > 0) {
+      let mediaArray = [];
+      for (let file of files) {
+        const { url, type } = await uploadPostMedia(userId, file, req);
+        mediaArray.push({ type, url });
+      }
+      postContent.media = mediaArray;
+    }
+    postContent.isPersonalPost = true; // Mark as personal post
+
+    const post = new Post(postContent);
+    await post.save({ session });
+
+    const postCommentId = new SocietyPostAndCommentVote({
+      postId: post._id,
+    });
+    await postCommentId.save({ session });
+    post.voteId = postCommentId._id;
+
+    const postCommentCollection = new PostCommentCollection({
+      _id: post._id,
+    });
+    await postCommentCollection.save({ session });
+    post.comments = postCommentCollection._id;
+
+    await post.save({ session });
+
+    const user = await User.findByIdAndUpdate(
+      { _id: userId },
+      { $addToSet: { "profile.posts": post._id } },
+      { new: true, session }
+    );
+    if (!user) return res.status(409).json({ error: "User not found" });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({ message: "Post Created", postId: post._id, postTitle: post.title });
+  } catch (error) {
+    console.error("Error in /create-indiv", error);
+    await session.abortTransaction();
+    session.endSession();
+    res.status(500).json("Internal Server Error");
+  }
 });
 
 
 
 router.get('/admin/posts/all', async (req, res) => {
   try {
-   
-    const allPosts = await Post.find(      {postByAdmin: true})
+
+    const allPosts = await Post.find({ postByAdmin: true })
       .sort({ createdAt: -1 })
       .populate("author", "name username")
       .lean();
@@ -138,15 +162,26 @@ router.get('/admin/posts/all', async (req, res) => {
 router.put('/post/archive/:postId', async (req, res) => {
   try {
     const { postId } = req.params;
+    const objectId = new mongoose.Types.ObjectId(postId);
+    console.log("postid", postId)
+    const updatedPost1 = await Post.findOne({
+      _id: objectId,
+      __skipHiddenAdminFilter: true
+    }).lean();
+    console.log("updatedPost1", updatedPost1)
 
-    // Optional: you can check if the user making the request is an admin here
-    // e.g., if (!req.user?.roles.includes("admin")) return res.status(403).json({ message: "Unauthorized" });
+    if (!updatedPost1) {
+      console.log("Post not found (bypass failed)")
+      return res.status(404).json({ message: "Post not found (bypass failed)" });
+    }
 
-    const updatedPost = await Post.findByIdAndUpdate(
-      postId,
-      { $set: { "adminSetStatus.isArchived": true } },
+
+    const updatedPost = await Post.findOneAndUpdate(
+      { _id: objectId, __skipHiddenAdminFilter: true },
+      { "adminSetStatus.isArchived": true },
       { new: true }
     );
+    console.log("POST ", updatedPost)
 
     if (!updatedPost) {
       return res.status(404).json({ message: "Post not found" });
@@ -163,12 +198,9 @@ router.put('/post/unarchive/:postId', async (req, res) => {
   try {
     const { postId } = req.params;
 
-    // Optional: you can check if the user making the request is an admin here
-    // e.g., if (!req.user?.roles.includes("admin")) return res.status(403).json({ message: "Unauthorized" });
-
-    const updatedPost = await Post.findByIdAndUpdate(
-      postId,
-      { $set: { "adminSetStatus.isArchived": false } },
+    const updatedPost = await Post.findOneAndUpdate(
+      {_id: postId, __skipHiddenAdminFilter: true,},
+      {  "adminSetStatus.isArchived": false },
       { new: true }
     );
 
@@ -198,7 +230,7 @@ router.get("/all-users", async (req, res) => {
 router.get("/all-campuses", async (req, res) => {
   try {
     const campus = await Campus.find().populate("universityOrigin users departments society subSociety");
-console.log("DATA", JSON.stringify(campus, null, 2))
+    console.log("DATA", JSON.stringify(campus, null, 2))
     return res.status(200).json(campus);
   } catch (error) {
     console.error("Error in ", error.message);
@@ -310,10 +342,10 @@ router.get("/:id", async (req, res) => {
 
 
 router.post("/pastpaper/upload/types", async (req, res) => {
-  const {universityOrigin, campusOrigin, userId,year, type, term, termMode, paperName, pdfUrl, teachers, subjectId, departmentId, sessionType } = req.body;
+  const { universityOrigin, campusOrigin, userId, year, type, term, termMode, paperName, pdfUrl, teachers, subjectId, departmentId, sessionType } = req.body;
   // const { universityOrigin, campusOrigin, userId } = getUserDetails(req);
 
-  console.log("Data: ",universityOrigin, campusOrigin, userId, departmentId, subjectId, year, type, term, termMode, paperName, pdfUrl, teachers, sessionType)
+  console.log("Data: ", universityOrigin, campusOrigin, userId, departmentId, subjectId, year, type, term, termMode, paperName, pdfUrl, teachers, sessionType)
   // return res.status(200).json({message: "success"})
   try {
     const session = await mongoose.startSession();
@@ -359,29 +391,29 @@ router.post("/pastpaper/upload/types", async (req, res) => {
         term: term ? term.toUpperCase() : undefined,
         category: termMode ? termMode.toUpperCase() : undefined,
         sessionType: sessionType ? sessionType : undefined
-      }, 
-    {
-      $push: {
-        files:{
-          teachers: teachers || [],
-          uploadedBy: userId,
-          url: pdfUrl,
-          uploadedAt: new Date()
+      },
+        {
+          $push: {
+            files: {
+              teachers: teachers || [],
+              uploadedBy: userId,
+              url: pdfUrl,
+              uploadedAt: new Date()
+            }
+          }
+        },
+      ).session(session);
+      if (paperItemExistsAndAdded) {
+        // Paper item already exists, just update the files array
+        await session.commitTransaction();
+        return res.status(200).json({
+          message: `file added* successfully to ${type} that already exists`,
+          pastPaperItem: paperItemExistsAndAdded,
+          pastPaper,
+          collection: null
         }
+        )
       }
-    },
-  ).session(session);
-  if(paperItemExistsAndAdded) {
-    // Paper item already exists, just update the files array
-    await session.commitTransaction();
-    return res.status(200).json({
-      message: `file added* successfully to ${type} that already exists`,
-      pastPaperItem: paperItemExistsAndAdded,
-      pastPaper,
-      collection: null
-    }
-  )
-}
       // Create new PastPaperItem with paperId
       const pastPaperItem = new PastPaperItem({
         sessionType: sessionType ? sessionType : undefined,
@@ -392,19 +424,19 @@ router.post("/pastpaper/upload/types", async (req, res) => {
         category: termMode ? termMode.toUpperCase() : undefined,
         term: term ? term.toUpperCase() : undefined,
         academicYear: parseInt(year),
-        
+
         // file: {
         //   uploadedBy: userId,
         //   url: pdfUrl,
         //   uploadedAt: new Date()
         // },
         // $push: {
-          files:[{
-            teachers: teachers || [],
-            uploadedBy: userId,
-            url: pdfUrl,
-            uploadedAt: new Date()
-          }],
+        files: [{
+          teachers: teachers || [],
+          uploadedBy: userId,
+          url: pdfUrl,
+          uploadedAt: new Date()
+        }],
         // },
         references: {
           universityOrigin,

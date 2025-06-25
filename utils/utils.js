@@ -123,7 +123,7 @@ try{
 
   const platform = req.headers["x-platform"];
 
-  console.log("this is the platform", platform, req.headers["x-platform"], req.user);
+  // console.log("this is the platform", platform, req.headers["x-platform"], req.user);
   if (platform === "web") {
     if(!req?.session?.user) {
       console.error("Session user is not defined");

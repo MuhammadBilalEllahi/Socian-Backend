@@ -108,6 +108,9 @@ const postSchema = new Schema(
         default: false
       }
     },
+    forAllUniversites: { type: Boolean, default: false },
+    forCampus: { type: Boolean, default: false },
+    forUniversity: { type: Boolean, default: false },
     // Poll Feature
     isPoll: { type: Boolean, default: false },
     pollOptions: [
@@ -139,12 +142,16 @@ const postSchema = new Schema(
       universityOrigin: {
         type: Schema.ObjectId,
         ref: "University",
-        index: true,
+        index: function () {
+          return !(this.forCampus || this.forAllUniversites);
+        },
       },
       campusOrigin: {
         type: Schema.Types.ObjectId,
         ref: "Campus",
-        required: true,
+        required: function () {
+          return !(this.forUniversity || this.forAllUniversites);
+        },
       },
       role: {
         type: String,
@@ -166,15 +173,26 @@ const postSchema = new Schema(
 
 // Middleware to hide admin posts unless explicitly queried
 postSchema.pre(/^find/, function (next) {
+
+  const query = this.getQuery();
+
+  if (query.__skipHiddenAdminFilter) {
+    // Remove it so Mongo doesn't choke on unknown field
+    delete query.__skipHiddenAdminFilter;
+    return next();
+  }
+
+
   if (this.getQuery().hasOwnProperty('postByAdmin')) {
     // Respect the developer's intent (don't override if postByAdmin was queried)
     return next();
   }
 
   // Add a condition to exclude posts made by admin
-  this.where({ postByAdmin: false });
+  this.where({ postByAdmin: false, 'adminSetStatus.isArchived': false });
   next();
 });
+
 
 
 const Post = model("Post", postSchema);

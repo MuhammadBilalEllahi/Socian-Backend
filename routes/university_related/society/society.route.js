@@ -2,7 +2,7 @@ const express = require("express");
 const SocietyType = require("../../../models/society/society.type.model");
 const Society = require("../../../models/society/society.model");
 const Members = require("../../../models/society/members.collec.model");
-const VerificationRequest = require("../../../models/verification/society.verify.model");
+const VerificationRequest = require("../../../models/verification/verfication.model");
 const SubSociety = require("../../../models/society/sub.society.model");
 const PostsCollection = require("../../../models/society/post/collection/post.collection.model");
 const User = require("../../../models/user/user.model");
@@ -10,32 +10,15 @@ const { getUserDetails } = require("../../../utils/utils");
 const Post = require("../../../models/society/post/post.model");
 const UserRoles = require("../../../models/userRoles");
 const router = express.Router();
-const redisClient = require('../../../db/reddis')
+const redisClient = require('../../../db/reddis');
+const { uploadSocietyImage } = require("../../../utils/multer.utils");
+const { uploadSocietyIcon, uploadSocietyBanner } = require("../../../utils/aws.bucket.utils");
 
-router.post("/types/create", async (req, res) => {
-    try {
-        const type = req.body.type;
 
-        const societyTypeIdExists = await SocietyType.findOne({
-            societyType: type,
-        });
-        if (societyTypeIdExists) return res.status(302).json("Type Exists Already");
-
-        const societyType = await SocietyType.create({
-            societyType: type,
-        });
-        await societyType.save();
-        if (!societyType) return res.status(302).json("error createing type");
-        res.status(200).json({ message: "Type Created", societyType });
-    } catch (error) {
-        console.error("Error in society routes", error);
-        res.status(500).json("Internal Server Error");
-    }
-});
 /**
  * @param {icon,banner} url_link
  */
-router.post("/create", async (req, res) => {
+router.post("/create", uploadSocietyImage.array('files'), async (req, res) => {
     try {
 
         let companyId;
@@ -68,8 +51,8 @@ router.post("/create", async (req, res) => {
             name,
             description,
             category,
-            icon,
-            banner,
+            // icon,
+            // banner,
             president: president ? president : userId,
             creator: userId,
             moderators: [userId],
@@ -144,6 +127,22 @@ router.post("/create", async (req, res) => {
         newSociety.members = memberCollection._id;
 
         await newSociety.save();
+
+        if(req.files[0] || req.files[1]){
+
+            if(req.files[0]){
+                const {url,type} = uploadSocietyBanner(req.files[0],req,newSociety._id)
+                newSociety.banner= url;
+                newSociety.bannerType= type;
+            }
+            if(req.files[1]){
+                const {url:iconUrl,type:iconType} = uploadSocietyIcon(req.files[1],req,newSociety._id)
+                newSociety.icon= iconUrl;
+                newSociety.iconType= iconType;
+            }
+                    await newSociety.save();
+        }
+        
 
         return res
             .status(201)
@@ -689,14 +688,15 @@ router.get("/with-company/all", async (req, res) => {
 
 router.post("/request-verification", async (req, res) => {
     try {
-        const { societyId, campusModeratorId, requestedBy, documentObject } =
+        const { userId: requestedBy } = getUserDetails(req)
+        const { societyId, campusModeratorId, documentObject } =
             req.body;
 
         const newRequest = new VerificationRequest({
             society: societyId,
             campusModerator: campusModeratorId,
             requestedBy,
-            requiredDocuments: {
+            societySupportingDocments: {
                 busCardImage: documentObject.busCardImage,
                 studentCardImage: documentObject.studentCardImage,
                 livePhoto: documentObject.livePhoto,
@@ -1209,38 +1209,38 @@ router.post("/delete/:societyId", async (req, res) => {
 
 
 router.post('/add-moderator/:societyId', async (req, res) => {
-  try {
-    const { societyId } = req.params;
-    const { userId } = req.body;
-    const { userId: authUserId } = getUserDetails(req); // Assuming getUserDetails extracts authenticated user
+    try {
+        const { societyId } = req.params;
+        const { userId } = req.body;
+        const { userId: authUserId } = getUserDetails(req); // Assuming getUserDetails extracts authenticated user
 
-    const society = await Society.findOne({ _id: societyId }).populate('moderators');
-    if (!society) {
-      return res.status(404).json({ error: 'Society not found' });
+        const society = await Society.findOne({ _id: societyId }).populate('moderators');
+        if (!society) {
+            return res.status(404).json({ error: 'Society not found' });
+        }
+
+        // Check if the authenticated user is a moderator
+        const isModerator = society.moderators.some(mod => mod._id.toString() === authUserId);
+        if (!isModerator) {
+            return res.status(403).json({ error: 'Only moderators can add moderators' });
+        }
+
+        // Check if the user is already a moderator
+        if (society.moderators.some(mod => mod._id.toString() === userId)) {
+            return res.status(400).json({ error: 'User is already a moderator' });
+        }
+
+        // Add the user to moderators
+        society.moderators.push(userId);
+        await society.save();
+
+        // Populate moderators for response
+        const updatedSociety = await Society.findOne({ _id: societyId }).populate('moderators');
+        res.status(200).json({ society: updatedSociety });
+    } catch (error) {
+        console.error('Error in add-moderator route:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
-
-    // Check if the authenticated user is a moderator
-    const isModerator = society.moderators.some(mod => mod._id.toString() === authUserId);
-    if (!isModerator) {
-      return res.status(403).json({ error: 'Only moderators can add moderators' });
-    }
-
-    // Check if the user is already a moderator
-    if (society.moderators.some(mod => mod._id.toString() === userId)) {
-      return res.status(400).json({ error: 'User is already a moderator' });
-    }
-
-    // Add the user to moderators
-    society.moderators.push(userId);
-    await society.save();
-
-    // Populate moderators for response
-    const updatedSociety = await Society.findOne({ _id: societyId }).populate('moderators');
-    res.status(200).json({ society: updatedSociety });
-  } catch (error) {
-    console.error('Error in add-moderator route:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
 });
 
 
@@ -1327,6 +1327,78 @@ router.post("/delete-role/:societyId", async (req, res) => {
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
+
+
+
+router.post('/banner/upload',uploadSocietyImage.single('file'), async (req,res) => {
+    try {
+        const { societyId } = req.body;
+        const { userId } = getUserDetails(req);
+
+        const user = await User.findById(userId)
+        if (!user) return res.status(404).json({ error: "No User found" })
+
+        const society = await Society.findById(societyId);
+
+        if (!society) return res.status(404).json({ error: "No society found" })
+
+        const isModeratorOfThisSociety = user.profile.moderatorTo.society.includes(society._id.toString());
+        if (!isModeratorOfThisSociety) {
+            return res.status(404).json({ error: "You are not moderator or allowed to edit this" })
+        }
+        const { url, type } = await uploadSocietyBanner(req.file,req,society._id)
+        console.log("URL AND TYPE",url,type)
+        const societyUploadBanner = await Society.findByIdAndUpdate(society._id, {
+            banner: url,
+            bannerMediaType: type
+        })
+        if(!societyUploadBanner) {return  res.status(404).json({ error: "error uploading file" })}
+        // iconMediaType
+         res.status(200).json({ message: "File uploaded Successfully", url: url}); 
+
+
+    } catch (error) {
+        console.error("Error in banner/update", error)
+        res.status(500).json({ error: "Internal Server Error" })
+    }
+})
+
+router.post('/icon/upload',uploadSocietyImage.single('file'), async (req,res) => {
+    try {
+        console.log("REq", req.body)
+        console.log("FILE", req.file)
+        console.log("FILES", req.files)
+        const {societyId} = req.body;
+        console.log("Socety", societyId)
+        const { userId } = getUserDetails(req);
+
+        const user = await User.findById(userId)
+        if (!user) return res.status(404).json({ error: "No User found" })
+
+        const society = await Society.findById(societyId);
+
+        if (!society) return res.status(404).json({ error: "No society found" })
+
+        const isModeratorOfThisSociety = user.profile.moderatorTo.society.includes(society._id.toString());
+        if (!isModeratorOfThisSociety) {
+            return res.status(404).json({ error: "You are not moderator or allowed to edit this" })
+        }
+        const { url, type } = await uploadSocietyIcon(req.file,req,society._id)
+        console.log("URL AND TYPE",url,type)
+        const societyUploadIcon = await Society.findByIdAndUpdate(society._id, {
+            icon: url,
+            iconMediaType: type
+        })
+        if(!societyUploadIcon) {return  res.status(404).json({ error: "error uploading file" })}
+        // iconMediaType
+         res.status(200).json({ message: "File uploaded Successfully", url: url}); 
+
+
+    } catch (error) {
+        console.error("Error in icon/update", error)
+        res.status(500).json({ error: "Internal Server Error" })
+    }
+})
 
 module.exports = router;
 

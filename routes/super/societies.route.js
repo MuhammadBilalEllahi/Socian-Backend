@@ -3,7 +3,8 @@ const Society = require('../../models/society/society.model');
 const router = require('express').Router();
 const mongoose= require('mongoose');
 
-const Members = require('../../models/society/members.collec.model')
+const Members = require('../../models/society/members.collec.model');
+const SocietyType = require('../../models/society/society.type.model');
 
 router.get('/', async (req,res)=>{
     try{
@@ -164,6 +165,81 @@ router.get('/filter', async (req, res) => {
   }
 });
 
+router.post("/types/create", async (req, res) => {
+    try {
+        const type = req.body.type;
+
+        const societyTypeIdExists = await SocietyType.findOne({
+            societyType: type,
+        });
+        if (societyTypeIdExists) return res.status(302).json("Type Exists Already");
+
+        const societyType = await SocietyType.create({
+            societyType: type,
+        });
+        await societyType.save();
+        if (!societyType) return res.status(302).json("error createing type");
+        res.status(200).json({ message: "Type Created", societyType });
+    } catch (error) {
+        console.error("Error in society routes", error);
+        res.status(500).json("Internal Server Error");
+    }
+});
+// ✅ GET All Types
+router.get("/types", async (req, res) => {
+  try {
+    const types = await SocietyType.find();
+    res.status(200).json({ types });
+  } catch (error) {
+    console.error("Error fetching types:", error);
+    res.status(500).json("Internal Server Error");
+  }
+});
+
+// ✅ GET Type by ID
+router.get("/types/:id", async (req, res) => {
+  try {
+    const type = await SocietyType.findById(req.params.id);
+    if (!type) return res.status(404).json({ error: "Type not found" });
+    res.status(200).json({ type });
+  } catch (error) {
+    console.error("Error fetching type by ID:", error);
+    res.status(500).json("Internal Server Error");
+  }
+});
+
+// ✅ PUT / Update a Type
+router.put("/types/:id", async (req, res) => {
+  try {
+    const { type, totalCount } = req.body;
+
+    const updated = await SocietyType.findByIdAndUpdate(
+      req.params.id,
+      { societyType: type, totalCount },
+      { new: true, runValidators: true }
+    );
+
+    if (!updated) return res.status(404).json({ error: "Type not found" });
+
+    res.status(200).json({ message: "Type updated", updated });
+  } catch (error) {
+    console.error("Error updating type:", error);
+    res.status(500).json("Internal Server Error");
+  }
+});
+
+// ✅ DELETE a Type
+router.delete("/types/:id", async (req, res) => {
+  try {
+    const deleted = await SocietyType.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Type not found" });
+
+    res.status(200).json({ message: "Type deleted", deleted });
+  } catch (error) {
+    console.error("Error deleting type:", error);
+    res.status(500).json("Internal Server Error");
+  }
+});
 
 router.get('/society/members', async (req, res) => {
   try {

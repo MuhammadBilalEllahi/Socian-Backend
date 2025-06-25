@@ -52,7 +52,9 @@ const societySchema = new Schema({
     },
   ],
   banner: { type: String },
+  bannerMediaType: {type: String},
   icon: { type: String },
+  iconMediaType: {type: String},
   topics: [{ type: String }],
   societyType: {
     type: Schema.Types.ObjectId,
