@@ -11,36 +11,36 @@ const Post = require("../../../models/society/post/post.model");
 const UserRoles = require("../../../models/userRoles");
 const router = express.Router();
 const redisClient = require('../../../db/reddis');
-const { uploadSocietyImage } = require("../../../utils/multer.utils");
+const { uploadSocietyImage, uploadCreateSocietyImage } = require("../../../utils/multer.utils");
 const { uploadSocietyIcon, uploadSocietyBanner } = require("../../../utils/aws.bucket.utils");
 
 
 /**
  * @param {icon,banner} url_link
  */
-router.post("/create", uploadSocietyImage.array('files'), async (req, res) => {
+router.post("/create", uploadCreateSocietyImage.array('files'), async (req, res) => {
     try {
 
         let companyId;
         // get societyTypes from cache later on
-        const { name, description, societyTypeId, category, icon, banner, allows, president } = req.body;
+        const { name, description, societyTypeId, category, allows, president } = req.body;
         const { userId, role, universityOrigin, campusOrigin, departmentId } = getUserDetails(req)
 
 
-        const alreadyExists = await Society.findOne(
-            { name: name },
-            role === UserRoles.ext_org
-                ? { companyReference: { isCompany: true } }
-                : {
-                    references: {
-                        role,
-                        universityOrigin,
-                        campusOrigin,
-                    },
-                }
-        );
-        // console.log("ss", alreadyExists);
-        if (alreadyExists) return res.status(302).json("Society already Exists");
+        // const alreadyExists = await Society.findOne(
+        //     { name: name },
+        //     role === UserRoles.ext_org
+        //         ? { companyReference: { isCompany: true } }
+        //         : {
+        //             references: {
+        //                 role,
+        //                 universityOrigin,
+        //                 campusOrigin,
+        //             },
+        //         }
+        // );
+        // // console.log("ss", alreadyExists);
+        // if (alreadyExists) return res.status(302).json("Society already Exists");
 
         const societyTypeIdExists = await SocietyType.findById(societyTypeId);
         if (!societyTypeIdExists)
@@ -127,22 +127,26 @@ router.post("/create", uploadSocietyImage.array('files'), async (req, res) => {
         newSociety.members = memberCollection._id;
 
         await newSociety.save();
+        console.log("REQ FILE", req.files)
 
-        if(req.files[0] || req.files[1]){
+        if (req?.files[0] || req?.files[1]) {
+            const updateNewSociety = await Society.findById(newSociety._id)
+            
+            if (req.files[0]) {
+                const { url, type } = await uploadSocietyBanner(req.files[0], req, updateNewSociety._id);
 
-            if(req.files[0]){
-                const {url,type} = uploadSocietyBanner(req.files[0],req,newSociety._id)
-                newSociety.banner= url;
-                newSociety.bannerType= type;
+                console.log("uploadSocietyBanner", url, type)
+                updateNewSociety.banner = url;
+                updateNewSociety.bannerType = type;
             }
-            if(req.files[1]){
-                const {url:iconUrl,type:iconType} = uploadSocietyIcon(req.files[1],req,newSociety._id)
-                newSociety.icon= iconUrl;
-                newSociety.iconType= iconType;
+            if (req.files[1]) {
+                const { url, type } = await uploadSocietyIcon(req.files[1], req, updateNewSociety._id)
+                console.log("uploadSocietyIcon", url, type)
+                updateNewSociety.icon = url;
+                updateNewSociety.iconType = type;
             }
-                    await newSociety.save();
+            await updateNewSociety.save();
         }
-        
 
         return res
             .status(201)
@@ -1330,7 +1334,7 @@ router.post("/delete-role/:societyId", async (req, res) => {
 
 
 
-router.post('/banner/upload',uploadSocietyImage.single('file'), async (req,res) => {
+router.post('/banner/upload', uploadSocietyImage.single('file'), async (req, res) => {
     try {
         const { societyId } = req.body;
         const { userId } = getUserDetails(req);
@@ -1346,15 +1350,15 @@ router.post('/banner/upload',uploadSocietyImage.single('file'), async (req,res) 
         if (!isModeratorOfThisSociety) {
             return res.status(404).json({ error: "You are not moderator or allowed to edit this" })
         }
-        const { url, type } = await uploadSocietyBanner(req.file,req,society._id)
-        console.log("URL AND TYPE",url,type)
+        const { url, type } = await uploadSocietyBanner(req.file, req, society._id)
+        console.log("URL AND TYPE", url, type)
         const societyUploadBanner = await Society.findByIdAndUpdate(society._id, {
             banner: url,
             bannerMediaType: type
         })
-        if(!societyUploadBanner) {return  res.status(404).json({ error: "error uploading file" })}
+        if (!societyUploadBanner) { return res.status(404).json({ error: "error uploading file" }) }
         // iconMediaType
-         res.status(200).json({ message: "File uploaded Successfully", url: url}); 
+        res.status(200).json({ message: "File uploaded Successfully", url: url });
 
 
     } catch (error) {
@@ -1363,12 +1367,12 @@ router.post('/banner/upload',uploadSocietyImage.single('file'), async (req,res) 
     }
 })
 
-router.post('/icon/upload',uploadSocietyImage.single('file'), async (req,res) => {
+router.post('/icon/upload', uploadSocietyImage.single('file'), async (req, res) => {
     try {
         console.log("REq", req.body)
         console.log("FILE", req.file)
         console.log("FILES", req.files)
-        const {societyId} = req.body;
+        const { societyId } = req.body;
         console.log("Socety", societyId)
         const { userId } = getUserDetails(req);
 
@@ -1383,15 +1387,15 @@ router.post('/icon/upload',uploadSocietyImage.single('file'), async (req,res) =>
         if (!isModeratorOfThisSociety) {
             return res.status(404).json({ error: "You are not moderator or allowed to edit this" })
         }
-        const { url, type } = await uploadSocietyIcon(req.file,req,society._id)
-        console.log("URL AND TYPE",url,type)
+        const { url, type } = await uploadSocietyIcon(req.file, req, society._id)
+        console.log("URL AND TYPE", url, type)
         const societyUploadIcon = await Society.findByIdAndUpdate(society._id, {
             icon: url,
             iconMediaType: type
         })
-        if(!societyUploadIcon) {return  res.status(404).json({ error: "error uploading file" })}
+        if (!societyUploadIcon) { return res.status(404).json({ error: "error uploading file" }) }
         // iconMediaType
-         res.status(200).json({ message: "File uploaded Successfully", url: url}); 
+        res.status(200).json({ message: "File uploaded Successfully", url: url });
 
 
     } catch (error) {
