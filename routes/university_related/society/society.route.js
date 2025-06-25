@@ -11,14 +11,17 @@ const Post = require("../../../models/society/post/post.model");
 const UserRoles = require("../../../models/userRoles");
 const router = express.Router();
 const redisClient = require('../../../db/reddis');
-const { uploadSocietyImage, uploadCreateSocietyImage } = require("../../../utils/multer.utils");
-const { uploadSocietyIcon, uploadSocietyBanner } = require("../../../utils/aws.bucket.utils");
+const { uploadSocietyImage, uploadCreateSocietyImage, uploadVerifySocietyImage } = require("../../../utils/multer.utils");
+const { uploadSocietyIcon, uploadSocietyBanner, uploadVerifySocietyImageAws } = require("../../../utils/aws.bucket.utils");
 
 
 /**
  * @param {icon,banner} url_link
  */
-router.post("/create", uploadCreateSocietyImage.array('files'), async (req, res) => {
+router.post("/create", uploadCreateSocietyImage.fields([
+    { name: 'icon', maxCount: 1 },
+    { name: 'banner', maxCount: 1 }
+]), async (req, res) => {
     try {
 
         let companyId;
@@ -129,24 +132,34 @@ router.post("/create", uploadCreateSocietyImage.array('files'), async (req, res)
         await newSociety.save();
         console.log("REQ FILE", req.files)
 
-        if (req?.files[0] || req?.files[1]) {
-            const updateNewSociety = await Society.findById(newSociety._id)
-            
-            if (req.files[0]) {
-                const { url, type } = await uploadSocietyBanner(req.files[0], req, updateNewSociety._id);
+        if (req?.files['icon'] || req?.files['banner']) {
+            const updateNewSociety = await Society.findById(newSociety._id);
 
-                console.log("uploadSocietyBanner", url, type)
-                updateNewSociety.banner = url;
-                updateNewSociety.bannerType = type;
-            }
-            if (req.files[1]) {
-                const { url, type } = await uploadSocietyIcon(req.files[1], req, updateNewSociety._id)
-                console.log("uploadSocietyIcon", url, type)
+            if (req.files['icon']) {
+                const { url, type } = await uploadSocietyIcon(
+                    req.files['icon'][0],  // ✅ Corrected
+                    req,
+                    updateNewSociety._id
+                );
+                console.log("uploadSocietyIcon", url, type);
                 updateNewSociety.icon = url;
                 updateNewSociety.iconType = type;
             }
+
+            if (req.files['banner']) {
+                const { url, type } = await uploadSocietyBanner(
+                    req.files['banner'][0], // ✅ Corrected
+                    req,
+                    updateNewSociety._id
+                );
+                console.log("uploadSocietyBanner", url, type);
+                updateNewSociety.banner = url;
+                updateNewSociety.bannerType = type;
+            }
+
             await updateNewSociety.save();
         }
+
 
         return res
             .status(201)
@@ -690,32 +703,173 @@ router.get("/with-company/all", async (req, res) => {
     }
 });
 
-router.post("/request-verification", async (req, res) => {
+router.post("/verification-request", uploadVerifySocietyImage.fields([
+    { name: 'registrationCertificate', maxCount: 1 },
+    { name: 'eventPicture', maxCount: 1 },
+    { name: 'advisorEmailScreenshot', maxCount: 1 },
+    { name: 'customDocuments', maxCount: 5 }
+]), async (req, res) => {
     try {
-        const { userId: requestedBy } = getUserDetails(req)
-        const { societyId, campusModeratorId, documentObject } =
-            req.body;
+        const { userId: requestedBy } = getUserDetails(req);
+        const { 
+            societyId, 
+            moderatorId, 
+            communityVoting, 
+            comments, 
+            requirements,
+            customDocumentNames
+        } = req.body;
 
+
+
+        // Parse JSON strings if needed with error handling
+        let parsedRequirements = {};
+        if (typeof requirements === 'string') {
+            try {
+                parsedRequirements = JSON.parse(requirements);
+            } catch (error) {
+                console.error("Error parsing requirements JSON:", error);
+                console.log("Requirements value:", requirements);
+                return res.status(400).json({ error: "Invalid requirements format" });
+            }
+        } else {
+            parsedRequirements = requirements || {};
+        }
+        
+        let parsedCustomDocNames = [];
+        if (typeof customDocumentNames === 'string') {
+            try {
+                console.log("customDocumentNames",customDocumentNames)
+                parsedCustomDocNames = customDocumentNames;
+            } catch (error) {
+                console.error("Error parsing customDocumentNames JSON:", error);
+                console.log("CustomDocumentNames value:", customDocumentNames);
+                return res.status(400).json({ error: "Invalid custom document names format" });
+            }
+        } else {
+            parsedCustomDocNames = customDocumentNames || [];
+        }
+
+        // Validate society exists and user has permission
+        const society = await Society.findById(societyId);
+        if (!society) {
+            return res.status(404).json({ error: "Society not found" });
+        }
+
+        // Check if user is moderator or creator of the society
+        const isModerator = society.moderators.includes(requestedBy);
+        const isCreator = society.creator.toString() === requestedBy;
+        
+        if (!isModerator && !isCreator) {
+            return res.status(403).json({ error: "Only society moderators or creators can request verification" });
+        }
+
+        // Check if verification request already exists (excluding rejected requests)
+        const existingRequest = await VerificationRequest.findOne({ 
+            society: societyId, 
+            status: { $in: ['pending', 'under_review', 'moderator_approved'] }
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ error: "Verification request already exists for this society. Please wait for the current request to be processed." });
+        }
+
+        // Prepare society documents object
+        const societyDocuments = {
+            customDocuments: []
+        };
+
+        // Handle file uploads
+        if (req.files) {
+            console.log("Files received:", Object.keys(req.files));
+
+            // Upload registration certificate
+            if (req.files.registrationCertificate && req.files.registrationCertificate[0]) {
+                console.log("Uploading registration certificate...");
+                const file = req.files.registrationCertificate[0];
+                const uploadResult = await uploadVerifySocietyImageAws(file, req, societyId);
+                societyDocuments.registrationCertificate = {
+                    url: uploadResult.url,
+                    fileName: file.originalname,
+                    uploadedAt: new Date()
+                };
+                console.log("Registration certificate uploaded:", uploadResult.url);
+            }
+
+            // Upload event picture
+            if (req.files.eventPicture && req.files.eventPicture[0]) {
+                console.log("Uploading event picture...");
+                const file = req.files.eventPicture[0];
+                const uploadResult = await uploadVerifySocietyImageAws(file, req, societyId);
+                societyDocuments.eventPicture = {
+                    url: uploadResult.url,
+                    fileName: file.originalname,
+                    uploadedAt: new Date()
+                };
+                console.log("Event picture uploaded:", uploadResult.url);
+            }
+
+            // Upload advisor email screenshot
+            if (req.files.advisorEmailScreenshot && req.files.advisorEmailScreenshot[0]) {
+                console.log("Uploading advisor email screenshot...");
+                const file = req.files.advisorEmailScreenshot[0];
+                const uploadResult = await uploadVerifySocietyImageAws(file, req, societyId);
+                societyDocuments.advisorEmailScreenshot = {
+                    url: uploadResult.url,
+                    fileName: file.originalname,
+                    uploadedAt: new Date()
+                };
+                console.log("Advisor email screenshot uploaded:", uploadResult.url);
+            }
+
+            // Upload custom documents
+            if (req.files.customDocuments && req.files.customDocuments.length > 0) {
+                console.log(`Uploading ${req.files.customDocuments.length} custom documents...`);
+                for (let i = 0; i < req.files.customDocuments.length; i++) {
+                    const file = req.files.customDocuments[i];
+                    const documentName = parsedCustomDocNames[i] || `Custom Document ${i + 1}`;
+                    const uploadResult = await uploadVerifySocietyImageAws(file, req, societyId);
+                    
+                    societyDocuments.customDocuments.push({
+                        name: documentName,
+                        url: uploadResult.url,
+                        fileName: file.originalname,
+                        uploadedAt: new Date()
+                    });
+                    console.log(`Custom document ${i + 1} uploaded:`, uploadResult.url);
+                }
+            }
+        }
+
+        // Create new verification request
         const newRequest = new VerificationRequest({
             society: societyId,
-            campusModerator: campusModeratorId,
             requestedBy,
-            societySupportingDocments: {
-                busCardImage: documentObject.busCardImage,
-                studentCardImage: documentObject.studentCardImage,
-                livePhoto: documentObject.livePhoto,
-            },
+            assignedCampusModerator: moderatorId || null,
+            communityVoting: communityVoting === 'true' || communityVoting === true,
+            comments: comments || "",
+            requirements: parsedRequirements,
+            societyDocuments,
+            status: "pending",
+            priority: "medium"
         });
-        // TODO chat schema when implemented
 
         await newRequest.save();
 
-        return res
-            .status(201)
-            .json({ message: "Verification request sent", request: newRequest });
+        // Populate the request for response
+        const populatedRequest = await VerificationRequest.findById(newRequest._id)
+            .populate('society', 'name description icon banner')
+            .populate('requestedBy', 'name universityEmail')
+            .populate('assignedCampusModerator', 'name universityEmail');
+
+        return res.status(201).json({ 
+            message: "Verification request submitted successfully", 
+            request: populatedRequest 
+        });
+
     } catch (error) {
         console.error("Error in verification request: ", error);
-        res.status(500).json("Internal Server Error");
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
@@ -1403,6 +1557,260 @@ router.post('/icon/upload', uploadSocietyImage.single('file'), async (req, res) 
         res.status(500).json({ error: "Internal Server Error" })
     }
 })
+
+/**
+ * GET verification request status for a society
+ * Returns the current verification request status if user has applied
+ */
+router.get("/verification-status/:societyId", async (req, res) => {
+    try {
+        const { societyId } = req.params;
+        const { userId } = getUserDetails(req);
+
+        // Validate society exists
+        const society = await Society.findById(societyId).select('name verified');
+        if (!society) {
+            return res.status(404).json({ error: "Society not found" });
+        }
+
+        // Find existing verification request by this user for this society
+        const existingRequest = await VerificationRequest.findOne({
+            society: societyId,
+            requestedBy: userId
+        })
+        .populate('assignedCampusModerator', 'name universityEmail')
+        .populate('approvedBySuper', 'name universityEmail')
+        .populate('rejectedBySuper', 'name universityEmail')
+        .sort({ submittedAt: -1 }); // Get the most recent request
+
+        if (!existingRequest) {
+            return res.status(200).json({
+                hasRequest: false,
+                societyVerified: society.verified,
+                canSubmitNew: true,
+                message: "No verification request found for this society"
+            });
+        }
+
+        // If the latest request is rejected, user can submit a new one
+        const canSubmitNew = existingRequest.status === 'rejected';
+
+        // Calculate processing time
+        const processingTime = Math.floor((new Date() - existingRequest.submittedAt) / (1000 * 60 * 60 * 24));
+
+        return res.status(200).json({
+            hasRequest: true,
+            societyVerified: society.verified,
+            canSubmitNew: canSubmitNew,
+            request: {
+                id: existingRequest._id,
+                status: existingRequest.status,
+                priority: existingRequest.priority,
+                submittedAt: existingRequest.submittedAt,
+                lastUpdated: existingRequest.lastUpdated,
+                processingTime: `${processingTime} day${processingTime !== 1 ? 's' : ''}`,
+                communityVoting: existingRequest.communityVoting,
+                comments: existingRequest.comments,
+                requirements: existingRequest.requirements,
+                assignedCampusModerator: existingRequest.assignedCampusModerator,
+                adminReview: existingRequest.adminReview,
+                moderatorReview: existingRequest.moderatorReview
+            }
+        });
+
+    } catch (error) {
+        console.error("Error fetching verification status: ", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+/**
+ * PUT update/strengthen existing verification request
+ * Allows adding more documents and updating uninitialized fields
+ */
+router.put("/verification-request/:requestId", uploadVerifySocietyImage.fields([
+    { name: 'registrationCertificate', maxCount: 1 },
+    { name: 'eventPicture', maxCount: 1 },
+    { name: 'advisorEmailScreenshot', maxCount: 1 },
+    { name: 'customDocuments', maxCount: 5 }
+]), async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const { userId } = getUserDetails(req);
+        const {
+            customDocumentNames = [],
+            comments,
+            communityVoting,
+            requirements = {}
+        } = req.body;
+
+        // Find existing request
+        const existingRequest = await VerificationRequest.findOne({
+            _id: requestId,
+            requestedBy: userId
+        });
+
+        if (!existingRequest) {
+            return res.status(404).json({ error: "Verification request not found or you don't have permission to update it" });
+        }
+
+        // Don't allow updates to approved or rejected requests
+        if (existingRequest.status === 'approved' || existingRequest.status === 'rejected') {
+            return res.status(400).json({ error: "Cannot update approved or rejected requests" });
+        }
+
+        // Prepare update object - only update fields that are not already set or are being strengthened
+        const updateData = {};
+
+        // Update comments only if not already set or if adding more content
+        if (comments && (!existingRequest.comments || existingRequest.comments.trim() === '')) {
+            updateData.comments = comments;
+        } else if (comments && comments.length > existingRequest.comments.length) {
+            // Allow expanding comments
+            updateData.comments = comments;
+        }
+
+        // Update community voting only if not already set
+        if (typeof communityVoting === 'boolean' && existingRequest.communityVoting !== communityVoting) {
+            updateData.communityVoting = communityVoting;
+            updateData['requirements.communityVoting'] = communityVoting;
+        }
+
+        // Update requirements - only allow setting from false to true (strengthening)
+        if (requirements && typeof requirements === 'object') {
+            Object.keys(requirements).forEach(key => {
+                if (existingRequest.requirements && !existingRequest.requirements[key] && requirements[key]) {
+                    updateData[`requirements.${key}`] = true;
+                }
+            });
+        }
+
+        // Handle file uploads for strengthening the request
+        if (req.files) {
+            console.log("Update request - Files received:", Object.keys(req.files));
+            
+            // Upload registration certificate if not already uploaded
+            if (req.files.registrationCertificate && req.files.registrationCertificate[0] && 
+                !existingRequest.societyDocuments?.registrationCertificate?.url) {
+                console.log("Uploading new registration certificate...");
+                const file = req.files.registrationCertificate[0];
+                const uploadResult = await uploadVerifySocietyImageAws(file, req, existingRequest.society);
+                updateData['societyDocuments.registrationCertificate'] = {
+                    url: uploadResult.url,
+                    fileName: file.originalname,
+                    uploadedAt: new Date()
+                };
+            }
+
+            // Upload event picture if not already uploaded
+            if (req.files.eventPicture && req.files.eventPicture[0] && 
+                !existingRequest.societyDocuments?.eventPicture?.url) {
+                console.log("Uploading new event picture...");
+                const file = req.files.eventPicture[0];
+                const uploadResult = await uploadVerifySocietyImageAws(file, req, existingRequest.society);
+                updateData['societyDocuments.eventPicture'] = {
+                    url: uploadResult.url,
+                    fileName: file.originalname,
+                    uploadedAt: new Date()
+                };
+            }
+
+            // Upload advisor email screenshot if not already uploaded
+            if (req.files.advisorEmailScreenshot && req.files.advisorEmailScreenshot[0] && 
+                !existingRequest.societyDocuments?.advisorEmailScreenshot?.url) {
+                console.log("Uploading new advisor email screenshot...");
+                const file = req.files.advisorEmailScreenshot[0];
+                const uploadResult = await uploadVerifySocietyImageAws(file, req, existingRequest.society);
+                updateData['societyDocuments.advisorEmailScreenshot'] = {
+                    url: uploadResult.url,
+                    fileName: file.originalname,
+                    uploadedAt: new Date()
+                };
+            }
+
+            // Upload additional custom documents
+            if (req.files.customDocuments && req.files.customDocuments.length > 0) {
+                console.log(`Uploading ${req.files.customDocuments.length} additional custom documents...`);
+                const existingCustomDocs = existingRequest.societyDocuments?.customDocuments || [];
+                const newCustomDocs = [];
+                
+                const parsedCustomDocNames = typeof customDocumentNames === 'string'
+                    ? JSON.parse(customDocumentNames)
+                    : customDocumentNames || [];
+
+                for (let i = 0; i < req.files.customDocuments.length; i++) {
+                    const file = req.files.customDocuments[i];
+                    const documentName = parsedCustomDocNames[i] || `Additional Document ${i + 1}`;
+                    const uploadResult = await uploadVerifySocietyImageAws(file, req, existingRequest.society);
+                    
+                    newCustomDocs.push({
+                        name: documentName,
+                        url: uploadResult.url,
+                        fileName: file.originalname,
+                        uploadedAt: new Date()
+                    });
+                    console.log(`Additional custom document ${i + 1} uploaded:`, uploadResult.url);
+                }
+                
+                updateData['societyDocuments.customDocuments'] = [...existingCustomDocs, ...newCustomDocs];
+            }
+        }
+
+        // Update last modified timestamp
+        updateData.lastUpdated = new Date();
+
+        // If no updates to make, return current request
+        if (Object.keys(updateData).length === 0) {
+            return res.status(200).json({
+                message: "No new updates to apply",
+                request: existingRequest
+            });
+        }
+
+        // Apply updates
+        const updatedRequest = await VerificationRequest.findByIdAndUpdate(
+            requestId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        ).populate('society', 'name description icon banner')
+         .populate('requestedBy', 'name universityEmail')
+         .populate('assignedCampusModerator', 'name universityEmail');
+
+        return res.status(200).json({
+            message: "Verification request updated successfully",
+            request: updatedRequest,
+            updatedFields: Object.keys(updateData)
+        });
+
+    } catch (error) {
+        console.error("Error updating verification request: ", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+/**
+ * GET campus moderators for verification requests
+ */
+router.get("/campus-moderators", async (req, res) => {
+    try {
+        const { universityOrigin, campusOrigin } = getUserDetails(req);
+        
+        // Find campus moderators (assuming they have a specific role)
+        const moderators = await User.find({
+            role: 'mod',
+            'university.campusId': campusOrigin,
+            'university.universityId': universityOrigin
+        }).select('name universityEmail personalEmail profile');
+
+        return res.status(200).json({
+            moderators: moderators || []
+        });
+
+    } catch (error) {
+        console.error("Error fetching campus moderators: ", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 
 module.exports = router;
 

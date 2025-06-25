@@ -1142,6 +1142,26 @@ router.get('/search-campus-users', async (req, res) => {
 });
 
 
+router.get('/campus-moderators', async (req, res) => {
+  try {
+    const { campusOrigin } = getUserDetails(req);
+
+    
+
+    const mods = await User.find({
+      
+      'university.campusId': campusOrigin, // Match campus
+      super_role: 'mod'
+    }).select('name username profilePicture _id');
+
+    res.status(200).json({moderators: mods });
+  } catch (error) {
+    console.error('Error in search-campus-mods route: ', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
 router.post("/mod-request/status", async (req, res) => {
   try {
     const { userId } = getUserDetails(req);
@@ -1191,6 +1211,9 @@ router.post("/mod/request", async (req, res) => {
     res.status(500).json({ error: "Failed to submit request" });
   }
 });
+
+
+
 
 
 module.exports = router;

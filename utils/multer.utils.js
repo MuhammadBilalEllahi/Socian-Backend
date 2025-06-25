@@ -208,13 +208,61 @@ const CreateSocietyStorage = multer.diskStorage({
     }
 });
 
-const uploadCreateSocietyImage = multer({ storage: CreateSocietyStorage, limits: {
+const uploadCreateSocietyImage = multer({ storage: CreateSocietyStorage,  limits: {
     fileSize: 50 * 1024 * 1024 // 50 MB per file
   } });
 
 
 
-module.exports = { upload, uploadImage,uploadTeacherImage, uploadSocietyImage ,uploadCreateSocietyImage};
+  const VerifySocietyStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const { universityOrigin, campusOrigin, role, userId } = getUserDetails(req);
+        console.log("REq", req.body)
+        console.log("FILE", req.file)
+        console.log("FILES", req.files)
+        console.log("FILE-", file)
+        const {societyId} = req.body;
+        console.log("Socety", societyId)
+        console.log(universityOrigin, campusOrigin, role, userId, societyId, "societyId")
+
+        const pathCWD = process.cwd();
+        console.log("PATHHH", pathCWD);
+
+
+        const uploadPath = path.join(
+            pathCWD,
+            'temp',
+            "uploads",
+            universityOrigin,
+            campusOrigin,
+            role,
+            "society",
+            societyId
+
+        );
+
+        // Create directory if it doesn't exist
+        fs.mkdirSync(uploadPath, { recursive: true });
+
+        console.log("saved to destination", uploadPath)
+
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = `${Date.now()}-${file.originalname}`;
+        cb(null, uniqueName);
+    }
+});
+
+const uploadVerifySocietyImage = multer({ storage: VerifySocietyStorage, limits: {
+    fileSize: 50 * 1024 * 1024 // 50 MB per file
+  } });
+
+
+
+
+
+module.exports = { upload, uploadImage,uploadTeacherImage, uploadSocietyImage ,uploadCreateSocietyImage,uploadVerifySocietyImage};
 
 
 

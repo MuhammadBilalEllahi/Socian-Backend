@@ -5,6 +5,7 @@ const mongoose= require('mongoose');
 
 const Members = require('../../models/society/members.collec.model');
 const SocietyType = require('../../models/society/society.type.model');
+const VerificationRequest = require('../../models/verification/verfication.model');
 
 router.get('/', async (req,res)=>{
     try{
@@ -320,6 +321,365 @@ router.get('/society/search', async (req, res) => {
   } catch (error) {
     console.error('Error searching members by name:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+// ===============================
+// VERIFICATION REQUEST ROUTES
+// ===============================
+
+/**
+ * GET all verification requests with pagination and filtering
+ */
+router.get('/verification-requests', async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 10, 
+      status = 'all',
+      priority = 'all',
+      type = 'all',
+      search = ''
+    } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Build query
+    const query = {};
+    
+    if (status !== 'all') {
+      query.status = status;
+    }
+    
+    if (priority !== 'all') {
+      query.priority = priority;
+    }
+    
+    if (type === 'society') {
+      query.society = { $exists: true };
+    } else if (type === 'alumni') {
+      query.alumni = { $exists: true };
+    }
+
+    // Add search functionality
+    let searchQuery = {};
+    if (search) {
+      searchQuery = {
+        $or: [
+          { comments: { $regex: search, $options: 'i' } },
+          { 'adminReview.reviewNotes': { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+
+    const finalQuery = { ...query, ...searchQuery };
+
+    const total = await VerificationRequest.countDocuments(finalQuery);
+    
+    const requests = await VerificationRequest.find(finalQuery)
+      .populate({
+        path: 'society',
+        select: 'name description icon banner totalMembers verified',
+        populate: {
+          path: 'references.campusOrigin references.universityOrigin',
+          select: 'name location'
+        }
+      })
+      .populate('requestedBy', 'name universityEmail personalEmail profile')
+      .populate('assignedCampusModerator', 'name universityEmail')
+      .populate('approvedBySuper', 'name universityEmail')
+      .populate('rejectedBySuper', 'name universityEmail')
+      .sort({ submittedAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    return res.status(200).json({
+      requests,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / parseInt(limit)),
+        hasNextPage: skip + parseInt(limit) < total,
+        hasPrevPage: page > 1
+      },
+      stats: {
+        pending: await VerificationRequest.countDocuments({ status: 'pending' }),
+        underReview: await VerificationRequest.countDocuments({ status: 'under_review' }),
+        approved: await VerificationRequest.countDocuments({ status: 'approved' }),
+        rejected: await VerificationRequest.countDocuments({ status: 'rejected' })
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching verification requests:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/**
+ * GET single verification request by ID
+ */
+router.get('/verification-requests/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+
+    const request = await VerificationRequest.findById(id)
+      .populate({
+        path: 'society',
+        select: 'name description icon banner totalMembers verified moderators creator',
+        populate: [
+          {
+            path: 'references.campusOrigin references.universityOrigin',
+            select: 'name location'
+          },
+          {
+            path: 'moderators creator',
+            select: 'name universityEmail personalEmail profile'
+          }
+        ]
+      })
+      .populate('requestedBy', 'name universityEmail personalEmail profile')
+      .populate('assignedCampusModerator', 'name universityEmail profile')
+      .populate('approvedBySuper', 'name universityEmail')
+      .populate('rejectedBySuper', 'name universityEmail');
+
+    if (!request) {
+      return res.status(404).json({ error: 'Verification request not found' });
+    }
+
+    return res.status(200).json({ request });
+
+  } catch (error) {
+    console.error('Error fetching verification request:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/**
+ * PUT approve verification request
+ */
+router.put('/verification-requests/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reviewNotes } = req.body;
+    // Assuming admin user ID is available in req.user or similar
+    const adminUserId = req.user?.id || req.session?.user?._id;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+
+    const request = await VerificationRequest.findById(id);
+    if (!request) {
+      return res.status(404).json({ error: 'Verification request not found' });
+    }
+
+    if (request.status === 'approved') {
+      return res.status(400).json({ error: 'Request already approved' });
+    }
+
+    // Update verification request
+    const updatedRequest = await VerificationRequest.findByIdAndUpdate(
+      id,
+      {
+        status: 'approved',
+        approvedBySuper: adminUserId,
+        'adminReview.reviewedAt': new Date(),
+        'adminReview.reviewNotes': reviewNotes || '',
+        lastUpdated: new Date()
+      },
+      { new: true }
+    ).populate('society', 'name _id');
+
+    // Update society verification status
+    if (updatedRequest.society) {
+      await Society.findByIdAndUpdate(
+        updatedRequest.society._id,
+        { verified: true },
+        { new: true }
+      );
+    }
+
+    // Populate the response
+    const populatedRequest = await VerificationRequest.findById(id)
+      .populate('society', 'name description icon banner verified')
+      .populate('requestedBy', 'name universityEmail')
+      .populate('approvedBySuper', 'name universityEmail');
+
+    return res.status(200).json({
+      message: 'Verification request approved successfully',
+      request: populatedRequest
+    });
+
+  } catch (error) {
+    console.error('Error approving verification request:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/**
+ * PUT reject verification request
+ */
+router.put('/verification-requests/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rejectionReason, reviewNotes } = req.body;
+    // Assuming admin user ID is available in req.user or similar
+    const adminUserId = req.user?.id || req.session?.user?._id;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+
+    if (!rejectionReason) {
+      return res.status(400).json({ error: 'Rejection reason is required' });
+    }
+
+    const request = await VerificationRequest.findById(id);
+    if (!request) {
+      return res.status(404).json({ error: 'Verification request not found' });
+    }
+
+    if (request.status === 'rejected') {
+      return res.status(400).json({ error: 'Request already rejected' });
+    }
+
+    // Update verification request
+    const updatedRequest = await VerificationRequest.findByIdAndUpdate(
+      id,
+      {
+        status: 'rejected',
+        rejectedBySuper: adminUserId,
+        'adminReview.reviewedAt': new Date(),
+        'adminReview.reviewNotes': reviewNotes || '',
+        'adminReview.rejectionReason': rejectionReason,
+        lastUpdated: new Date()
+      },
+      { new: true }
+    );
+
+    // Populate the response
+    const populatedRequest = await VerificationRequest.findById(id)
+      .populate('society', 'name description icon banner verified')
+      .populate('requestedBy', 'name universityEmail')
+      .populate('rejectedBySuper', 'name universityEmail');
+
+    return res.status(200).json({
+      message: 'Verification request rejected',
+      request: populatedRequest
+    });
+
+  } catch (error) {
+    console.error('Error rejecting verification request:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/**
+ * PUT update verification request status to under review
+ */
+router.put('/verification-requests/:id/review', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reviewNotes } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+
+    const updatedRequest = await VerificationRequest.findByIdAndUpdate(
+      id,
+      {
+        status: 'under_review',
+        'adminReview.reviewNotes': reviewNotes || '',
+        lastUpdated: new Date()
+      },
+      { new: true }
+    ).populate('society', 'name description icon banner')
+      .populate('requestedBy', 'name universityEmail');
+
+    if (!updatedRequest) {
+      return res.status(404).json({ error: 'Verification request not found' });
+    }
+
+    return res.status(200).json({
+      message: 'Verification request marked as under review',
+      request: updatedRequest
+    });
+
+  } catch (error) {
+    console.error('Error updating verification request:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/**
+ * PUT update verification request priority
+ */
+router.put('/verification-requests/:id/priority', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { priority } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+
+    if (!['low', 'medium', 'high', 'urgent'].includes(priority)) {
+      return res.status(400).json({ error: 'Invalid priority level' });
+    }
+
+    const updatedRequest = await VerificationRequest.findByIdAndUpdate(
+      id,
+      { priority, lastUpdated: new Date() },
+      { new: true }
+    ).populate('society', 'name description')
+      .populate('requestedBy', 'name universityEmail');
+
+    if (!updatedRequest) {
+      return res.status(404).json({ error: 'Verification request not found' });
+    }
+
+    return res.status(200).json({
+      message: 'Priority updated successfully',
+      request: updatedRequest
+    });
+
+  } catch (error) {
+    console.error('Error updating priority:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/**
+ * DELETE verification request (admin only)
+ */
+router.delete('/verification-requests/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
+
+    const deletedRequest = await VerificationRequest.findByIdAndDelete(id);
+
+    if (!deletedRequest) {
+      return res.status(404).json({ error: 'Verification request not found' });
+    }
+
+    return res.status(200).json({
+      message: 'Verification request deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting verification request:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
