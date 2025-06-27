@@ -12,6 +12,7 @@ const protectRoute = async (req, res, next) => {
      *  you cant access the code without it 
      */
     const platform = req.headers["x-platform"];
+    const x_device_id = req.headers["x-device-id"];
     // console.log("pltfomr", platform)
 
     if (!platform)

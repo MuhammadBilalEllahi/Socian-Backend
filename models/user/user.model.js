@@ -291,6 +291,13 @@ const userSchema = new mongoose.Schema({
     default: false
   },
 
+  // map  { deviceid: true } e.g 1231241:true
+  user_devices: {
+    type: Map,
+    of: Boolean,
+    default: {}
+  },
+
   // ## Restrictions
   restrictions: {
     blocking: {

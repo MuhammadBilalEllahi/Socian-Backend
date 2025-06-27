@@ -79,6 +79,9 @@ router.post("/login", async (req, res) => {
   try {
     // console.log("login log", universityId, campusId, email, password);
     const platform = req.headers["x-platform"];
+    const x_device_id = req.headers["x-device-id"];
+    const safe_device_id = x_device_id?.replace(/\./g, '_');
+    console.log("x_device_id in login____________", x_device_id)
 
 
     if (!email) return res.status(400).json({ error: "Email is required" });
@@ -189,13 +192,22 @@ router.post("/login", async (req, res) => {
         access_token: accessToken,
         refresh_token: refreshToken,
       };
+      console.log("x_device_id", x_device_id, "user?.user_devices[x_device_id]", user?.user_devices[x_device_id])
+      if (x_device_id && !user?.user_devices?.get(safe_device_id)) {
+        user.user_devices.set(safe_device_id, false);
+
+      }else if (x_device_id && user?.user_devices?.get(safe_device_id)) { // this is bad but anyways who cares
+        user.user_devices.set(safe_device_id, true);
+      }
       await user.save();
       // console.log("in app", token);
 
       // Send JWT to the client
       const name = user.name;
       console.log("User in APP ip", ip);
-      resendAccountLogin({ name, email, iP: ip, val_platform }, req, res)
+      if (!user?.user_devices[x_device_id] && user?.user_devices[x_device_id] !== true) {
+        resendAccountLogin({ name, email, iP: ip, val_platform }, req, res)
+      }
       res.status(200).json({
         access_token: accessToken,
         refresh_token: refreshToken,
@@ -274,6 +286,8 @@ router.post("/register", async (req, res) => {
   let user;
   let query;
 
+  const x_device_id = req.headers["x-device-id"];
+  const safe_device_id = x_device_id?.replace(/\./g, '_');
   // console.log(universityEmail, personalEmail, password, universityId, campusId, role);
   try {
     if (!name) return res.status(302).json({ error: "name is required" });
@@ -408,11 +422,14 @@ router.post("/register", async (req, res) => {
         universityEmail,
         role,
         super_role: "none",
-        agreedToPolicy: agreedToPolicy ?? true
+        agreedToPolicy: agreedToPolicy ?? true,
+        
       });
       role === "alumni"
         && (newUser.personalEmail = personalEmail)
-
+      if (x_device_id) {
+        newUser.user_devices.set(safe_device_id, true);
+      }
       await newUser.save();
 
       if (role === 'alumni') {
@@ -445,7 +462,10 @@ router.post("/register", async (req, res) => {
         agreedToPolicy: agreedToPolicy ?? true
       });
       await newUser.save();
-
+      if (x_device_id) {
+        newUser.user_devices.set(safe_device_id, true);
+      }
+      await newUser.save();
       // console.log("here3");
     } else return res.status(400).json({ error: "Role not found in dictionary" })
 
