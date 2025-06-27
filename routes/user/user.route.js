@@ -1116,6 +1116,98 @@ router.get('/moderated-societies',  async (req, res) => {
 
 
 
+router.get('/campus-users', async (req, res) => {
+  try {
+    const { search = '', role = '', page = 1, limit = 20 } = req.query;
+    const { campusOrigin, userId } = getUserDetails(req);
+
+    const skip = (page - 1) * limit;
+
+    // Build query conditions
+    let query = {
+      _id: { $ne: userId }, // Exclude current user
+      'university.campusId': campusOrigin, // Match campus
+      'restrictions.blocking.isBlocked': { $ne: true }, // Exclude blocked users
+    };
+
+    // Add role filter
+    if (role && role !== 'all') {
+      query.role = role;
+    }
+
+    // Add search filter
+    if (search.trim()) {
+      query.$or = [
+        { name: { $regex: search.trim(), $options: 'i' } },
+        { username: { $regex: search.trim(), $options: 'i' } },
+      ];
+    }
+
+    // Get total count for pagination
+    const totalUsers = await User.countDocuments(query);
+
+    // Fetch users with populated data
+    const users = await User.find(query)
+      .select('name username role profile.picture profile.bio profile.graduationYear university')
+      .populate([
+        { path: 'university.departmentId', select: 'name' },
+        { path: 'university.universityId', select: 'name' },
+        { path: 'university.campusId', select: 'name' },
+      ])
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    // Check friend status for each user
+    const usersWithFriendStatus = await Promise.all(
+      users.map(async (user) => {
+        let friendStatus = 'connect';
+        
+        const friendRequest = await FriendRequest.findOne({
+          $or: [
+            { user: user._id, requestedBy: userId },
+            { user: userId, requestedBy: user._id }
+          ]
+        });
+
+        if (friendRequest) {
+          if (friendRequest.status === 'accepted') {
+            friendStatus = 'friends';
+          } else if (friendRequest.status === 'requested') {
+            if (friendRequest.requestedBy.toString() === userId) {
+              friendStatus = 'canCancel';
+            } else {
+              friendStatus = 'accept/reject';
+            }
+          }
+        }
+
+        return {
+          ...user,
+          friendStatus,
+          graduationYear: user.profile?.graduationYear ? new Date(user.profile.graduationYear).getFullYear() : null,
+        };
+      })
+    );
+
+    res.status(200).json({
+      users: usersWithFriendStatus,
+      pagination: {
+        total: totalUsers,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(totalUsers / limit),
+        hasNextPage: page * limit < totalUsers,
+        hasPrevPage: page > 1,
+      },
+    });
+  } catch (error) {
+    console.error('Error in campus-users route:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 router.get('/search-campus-users', async (req, res) => {
   try {
     const { query } = req.query;
