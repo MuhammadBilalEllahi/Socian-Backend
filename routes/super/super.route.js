@@ -13,6 +13,8 @@ const redisClient = require("../../db/reddis");
 const { getUserDetails } = require("../../utils/utils");
 const mongoose = require("mongoose");
 const { PastpapersCollectionByYear } = require("../../models/university/papers/paper.collection.model");
+const fs = require('fs');
+const path = require('path');
 
 const campusRouter = require('./campus.route');
 const univeristyRouter = require('./university.route');
@@ -634,7 +636,483 @@ router.post("/subject/create", async (req, res) => {
 });
 
 
+// LOG ANALYTICS FUNCTIONALITY
+// Helper function to parse a single log line
+function parseLogLine(line) {
+  try {
+    if (!line || !line.includes(' - ')) return null;
+    
+    const [timestampPart, dataPart] = line.split(' - ', 2);
+    if (!timestampPart || !dataPart) return null;
 
+    const timestamp = new Date(timestampPart);
+    if (isNaN(timestamp.getTime())) return null;
 
+    const data = {
+      timestamp,
+      universityEmail: null,
+      deviceId: null,
+      userId: null,
+      route: null,
+      ip: null,
+      universityId: null,
+      campusId: null
+    };
+
+    // Parse each field
+    const fields = dataPart.split(' | ');
+    fields.forEach(field => {
+      const trimmedField = field.trim();
+      if (trimmedField.startsWith('req.user.universityEmail:')) {
+        data.universityEmail = trimmedField.replace('req.user.universityEmail:', '').trim() || null;
+      } else if (trimmedField.startsWith('x_device_id:')) {
+        data.deviceId = trimmedField.replace('x_device_id:', '').trim() || null;
+      } else if (trimmedField.startsWith('userId:')) {
+        data.userId = trimmedField.replace('userId:', '').trim() || null;
+      } else if (trimmedField.startsWith('route:')) {
+        data.route = trimmedField.replace('route:', '').trim() || null;
+      } else if (trimmedField.startsWith('ip:')) {
+        const ipPart = trimmedField.replace('ip:', '').trim();
+        const ipMatch = ipPart.match(/^([^\s]+)/);
+        data.ip = ipMatch ? ipMatch[1] : null;
+      }
+    });
+
+    // Parse universityId and campusId from the end of the line
+    const universityMatch = dataPart.match(/universtityId\s+([a-f0-9]{24})/i);
+    if (universityMatch) {
+      data.universityId = universityMatch[1];
+    }
+
+    const campusMatch = dataPart.match(/campusId:\s*([a-f0-9]{24})/i);
+    if (campusMatch) {
+      data.campusId = campusMatch[1];
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error parsing log line:', error);
+    return null;
+  }
+}
+
+// Helper function to get available log files
+function getAvailableLogFiles() {
+  const logsDir = path.join(__dirname, '../../logs');
+  const logFiles = [];
+
+  try {
+    if (!fs.existsSync(logsDir)) return [];
+
+    const years = fs.readdirSync(logsDir).filter(item => 
+      fs.statSync(path.join(logsDir, item)).isDirectory()
+    );
+
+    years.forEach(year => {
+      const yearPath = path.join(logsDir, year);
+      const months = fs.readdirSync(yearPath).filter(item =>
+        fs.statSync(path.join(yearPath, item)).isDirectory()
+      );
+
+      months.forEach(month => {
+        const monthPath = path.join(yearPath, month);
+        const files = fs.readdirSync(monthPath).filter(file => 
+          file.startsWith('records-') && file.endsWith('.log')
+        );
+
+        files.forEach(file => {
+          const dateMatch = file.match(/records-(\d{4}-\d{2}-\d{2})\.log/);
+          if (dateMatch) {
+            logFiles.push({
+              date: dateMatch[1],
+              year,
+              month,
+              file,
+              path: path.join(monthPath, file)
+            });
+          }
+        });
+      });
+    });
+
+    return logFiles.sort((a, b) => b.date.localeCompare(a.date));
+  } catch (error) {
+    console.error('Error getting log files:', error);
+    return [];
+  }
+}
+
+// Helper function to read and parse log files with date range
+function readLogData(startDate, endDate, filters = {}) {
+  const logFiles = getAvailableLogFiles();
+  const allData = [];
+
+  const start = startDate ? new Date(startDate) : null;
+  const end = endDate ? new Date(endDate) : null;
+
+  logFiles.forEach(logFile => {
+    const fileDate = new Date(logFile.date);
+    
+    // Filter by date range
+    if (start && fileDate < start) return;
+    if (end && fileDate > end) return;
+
+    try {
+      if (fs.existsSync(logFile.path)) {
+        const content = fs.readFileSync(logFile.path, 'utf8');
+        const lines = content.split('\n').filter(line => line.trim());
+        
+        lines.forEach(line => {
+          const parsed = parseLogLine(line);
+          if (parsed) {
+            // Apply filters
+            if (filters.universityId && parsed.universityId !== filters.universityId) return;
+            if (filters.campusId && parsed.campusId !== filters.campusId) return;
+            if (filters.userId && parsed.userId !== filters.userId) return;
+            if (filters.deviceId && parsed.deviceId !== filters.deviceId) return;
+            if (filters.route && !parsed.route?.includes(filters.route)) return;
+
+            allData.push(parsed);
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Error reading log file ${logFile.path}:`, error);
+    }
+  });
+
+  return allData.sort((a, b) => b.timestamp - a.timestamp);
+}
+
+// Analytics Summary Route
+router.get('/analytics/summary', async (req, res) => {
+  try {
+    const { startDate, endDate, universityId, campusId, userId, deviceId, route } = req.query;
+    
+    const filters = {};
+    if (universityId) filters.universityId = universityId;
+    if (campusId) filters.campusId = campusId;
+    if (userId) filters.userId = userId;
+    if (deviceId) filters.deviceId = deviceId;
+    if (route) filters.route = route;
+
+    const logData = readLogData(startDate, endDate, filters);
+
+    // Calculate summary statistics
+    const summary = {
+      totalRequests: logData.length,
+      uniqueUsers: new Set(logData.map(d => d.userId).filter(Boolean)).size,
+      uniqueDevices: new Set(logData.map(d => d.deviceId).filter(Boolean)).size,
+      uniqueRoutes: new Set(logData.map(d => d.route).filter(Boolean)).size,
+      dateRange: {
+        start: logData.length > 0 ? logData[logData.length - 1].timestamp : null,
+        end: logData.length > 0 ? logData[0].timestamp : null
+      }
+    };
+
+    res.status(200).json(summary);
+  } catch (error) {
+    console.error('Error in analytics summary:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// Route Analytics
+router.get('/analytics/routes', async (req, res) => {
+  try {
+    const { startDate, endDate, universityId, campusId, userId, deviceId, route, limit = 10 } = req.query;
+    
+    const filters = {};
+    if (universityId) filters.universityId = universityId;
+    if (campusId) filters.campusId = campusId;
+    if (userId) filters.userId = userId;
+    if (deviceId) filters.deviceId = deviceId;
+    if (route) filters.route = route;
+
+    const logData = readLogData(startDate, endDate, filters);
+
+    // Count route usage
+    const routeStats = {};
+    logData.forEach(entry => {
+      if (entry.route) {
+        if (!routeStats[entry.route]) {
+          routeStats[entry.route] = {
+            count: 0,
+            uniqueUsers: new Set(),
+            uniqueDevices: new Set(),
+            universities: new Set(),
+            campuses: new Set()
+          };
+        }
+        routeStats[entry.route].count++;
+        if (entry.userId) routeStats[entry.route].uniqueUsers.add(entry.userId);
+        if (entry.deviceId) routeStats[entry.route].uniqueDevices.add(entry.deviceId);
+        if (entry.universityId) routeStats[entry.route].universities.add(entry.universityId);
+        if (entry.campusId) routeStats[entry.route].campuses.add(entry.campusId);
+      }
+    });
+
+    // Convert sets to counts and sort
+    const routeData = Object.entries(routeStats)
+      .map(([route, stats]) => ({
+        route,
+        count: stats.count,
+        uniqueUsers: stats.uniqueUsers.size,
+        uniqueDevices: stats.uniqueDevices.size,
+        universities: stats.universities.size,
+        campuses: stats.campuses.size
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, parseInt(limit));
+
+    res.status(200).json(routeData);
+  } catch (error) {
+    console.error('Error in route analytics:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// User Activity Analytics
+router.get('/analytics/users', async (req, res) => {
+  try {
+    const { startDate, endDate, universityId, campusId, userId, deviceId, route, limit = 10 } = req.query;
+    
+    const filters = {};
+    if (universityId) filters.universityId = universityId;
+    if (campusId) filters.campusId = campusId;
+    if (userId) filters.userId = userId;
+    if (deviceId) filters.deviceId = deviceId;
+    if (route) filters.route = route;
+
+    const logData = readLogData(startDate, endDate, filters);
+
+    // Count user activity
+    const userStats = {};
+    logData.forEach(entry => {
+      if (entry.userId) {
+        if (!userStats[entry.userId]) {
+          userStats[entry.userId] = {
+            count: 0,
+            routes: new Set(),
+            devices: new Set(),
+            email: entry.universityEmail,
+            universityId: entry.universityId,
+            campusId: entry.campusId,
+            lastActive: entry.timestamp
+          };
+        }
+        userStats[entry.userId].count++;
+        if (entry.route) userStats[entry.userId].routes.add(entry.route);
+        if (entry.deviceId) userStats[entry.userId].devices.add(entry.deviceId);
+        if (entry.timestamp > userStats[entry.userId].lastActive) {
+          userStats[entry.userId].lastActive = entry.timestamp;
+        }
+      }
+    });
+
+    // Convert sets to counts and sort
+    const userData = Object.entries(userStats)
+      .map(([userId, stats]) => ({
+        userId,
+        email: stats.email,
+        universityId: stats.universityId,
+        campusId: stats.campusId,
+        requestCount: stats.count,
+        uniqueRoutes: stats.routes.size,
+        uniqueDevices: stats.devices.size,
+        lastActive: stats.lastActive
+      }))
+      .sort((a, b) => b.requestCount - a.requestCount)
+      .slice(0, parseInt(limit));
+
+    res.status(200).json(userData);
+  } catch (error) {
+    console.error('Error in user analytics:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// Timeline Analytics
+router.get('/analytics/timeline', async (req, res) => {
+  try {
+    const { startDate, endDate, universityId, campusId, userId, deviceId, route, groupBy = 'hour' } = req.query;
+    
+    const filters = {};
+    if (universityId) filters.universityId = universityId;
+    if (campusId) filters.campusId = campusId;
+    if (userId) filters.userId = userId;
+    if (deviceId) filters.deviceId = deviceId;
+    if (route) filters.route = route;
+
+    const logData = readLogData(startDate, endDate, filters);
+
+    // Group by time periods
+    const timeStats = {};
+    logData.forEach(entry => {
+      let timeKey;
+      const date = new Date(entry.timestamp);
+      
+      switch (groupBy) {
+        case 'minute':
+          timeKey = date.toISOString().substring(0, 16); // YYYY-MM-DDTHH:MM
+          break;
+        case 'hour':
+          timeKey = date.toISOString().substring(0, 13); // YYYY-MM-DDTHH
+          break;
+        case 'day':
+          timeKey = date.toISOString().substring(0, 10); // YYYY-MM-DD
+          break;
+        case 'week':
+          const weekStart = new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay());
+          timeKey = weekStart.toISOString().substring(0, 10);
+          break;
+        case 'month':
+          timeKey = date.toISOString().substring(0, 7); // YYYY-MM
+          break;
+        default:
+          timeKey = date.toISOString().substring(0, 13); // Default to hour
+      }
+
+      if (!timeStats[timeKey]) {
+        timeStats[timeKey] = {
+          requests: 0,
+          uniqueUsers: new Set(),
+          uniqueDevices: new Set(),
+          routes: new Set()
+        };
+      }
+      timeStats[timeKey].requests++;
+      if (entry.userId) timeStats[timeKey].uniqueUsers.add(entry.userId);
+      if (entry.deviceId) timeStats[timeKey].uniqueDevices.add(entry.deviceId);
+      if (entry.route) timeStats[timeKey].routes.add(entry.route);
+    });
+
+    // Convert to array and sort by time
+    const timelineData = Object.entries(timeStats)
+      .map(([time, stats]) => ({
+        time,
+        requests: stats.requests,
+        uniqueUsers: stats.uniqueUsers.size,
+        uniqueDevices: stats.uniqueDevices.size,
+        uniqueRoutes: stats.routes.size
+      }))
+      .sort((a, b) => a.time.localeCompare(b.time));
+
+    res.status(200).json(timelineData);
+  } catch (error) {
+    console.error('Error in timeline analytics:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// Get available filters
+router.get('/analytics/filters', async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const logData = readLogData(startDate, endDate);
+
+    const filters = {
+      universities: [...new Set(logData.map(d => d.universityId).filter(Boolean))],
+      campuses: [...new Set(logData.map(d => d.campusId).filter(Boolean))],
+      routes: [...new Set(logData.map(d => d.route).filter(Boolean))].sort(),
+      users: [...new Set(logData.map(d => d.userId).filter(Boolean))],
+      devices: [...new Set(logData.map(d => d.deviceId).filter(Boolean))],
+      availableDates: getAvailableLogFiles().map(f => f.date)
+    };
+
+    // Get university and campus names
+    if (filters.universities.length > 0) {
+      const universities = await University.find({ 
+        _id: { $in: filters.universities } 
+      }).select('_id name').lean();
+      filters.universitiesWithNames = universities;
+    }
+
+    if (filters.campuses.length > 0) {
+      const campuses = await Campus.find({ 
+        _id: { $in: filters.campuses } 
+      }).select('_id name universityOrigin').populate('universityOrigin', 'name').lean();
+      filters.campusesWithNames = campuses;
+    }
+
+    res.status(200).json(filters);
+  } catch (error) {
+    console.error('Error getting analytics filters:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// Dashboard data route
+router.get('/dashboard', async (req, res) => {
+  try {
+    const { universityId, campusId } = req.query;
+    
+    // Get basic stats
+    const [users, universities, campuses, societies] = await Promise.all([
+      User.countDocuments(),
+      University.countDocuments(),
+      Campus.countDocuments(),
+      Society.countDocuments()
+    ]);
+
+    // Get recent log analytics (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const filters = {};
+    if (universityId) filters.universityId = universityId;
+    if (campusId) filters.campusId = campusId;
+
+    const recentLogs = readLogData(sevenDaysAgo.toISOString().split('T')[0], null, filters);
+    
+    const dashboardData = {
+      stats: {
+        totalUsers: users,
+        totalUniversities: universities,
+        totalCampuses: campuses,
+        totalSocieties: societies,
+        recentActivity: {
+          totalRequests: recentLogs.length,
+          uniqueUsers: new Set(recentLogs.map(d => d.userId).filter(Boolean)).size,
+          uniqueDevices: new Set(recentLogs.map(d => d.deviceId).filter(Boolean)).size,
+          dateRange: '7 days'
+        }
+      },
+      topRoutes: recentLogs.reduce((acc, log) => {
+        if (log.route) {
+          acc[log.route] = (acc[log.route] || 0) + 1;
+        }
+        return acc;
+      }, {}),
+      activityByDay: []
+    };
+
+    // Calculate activity by day for the chart
+    const dailyActivity = {};
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateKey = date.toISOString().split('T')[0];
+      dailyActivity[dateKey] = 0;
+    }
+
+    recentLogs.forEach(log => {
+      const dateKey = log.timestamp.toISOString().split('T')[0];
+      if (dailyActivity.hasOwnProperty(dateKey)) {
+        dailyActivity[dateKey]++;
+      }
+    });
+
+    dashboardData.activityByDay = Object.entries(dailyActivity).map(([date, count]) => ({
+      date,
+      requests: count
+    }));
+
+    res.status(200).json(dashboardData);
+  } catch (error) {
+    console.error('Error in dashboard data:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
 
 module.exports = router;

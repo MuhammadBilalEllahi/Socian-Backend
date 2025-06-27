@@ -36,7 +36,7 @@ function authenticateToken(req, res, next) {
     if (err) return res.sendStatus(403);
     req.user = user;
 
-    const logLine = `req.user.universityEmail:${req?.user?.universityEmail} | x_device_id:${x_device_id} | userId:${user?._id} | route:${req.originalUrl} | ip:${req?.ip || req?.connection?.remoteAddress}`;
+    const logLine = `req.user.universityEmail:${req?.user?.universityEmail} | x_device_id:${x_device_id} | userId:${user?._id} | route:${req.originalUrl} | ip:${req?.ip || req?.connection?.remoteAddress} universtityId ${req.user?.university?.universityId?._id} campusId: ${req.user?.university?.campusId?._id}`;
     logToFile(logLine);
 
     next();
