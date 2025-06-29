@@ -2,8 +2,34 @@ const jwt = require("jsonwebtoken");
 const moment = require('moment');
 const UserRoles = require("../models/userRoles");
 
+
+// function omit(obj, keys = []) {
+//   const copy = { ...obj };
+//   for (const key of keys) {
+//     delete copy[key];
+//   }
+//   return copy;
+// }
+function sanitizeProfile(profile = {}) {
+  const sanitized = { ...profile };
+
+  delete sanitized?.papersUploaded;
+  delete sanitized?.papersUploaded?.pictureList;
+
+  if (sanitized?.studentOrAlumniDocument?.images) {
+    delete sanitized?.studentOrAlumniDocument?.images;
+  }
+
+  return sanitized;
+}
+
+
 // Helper function to generate tokens
 const generateToken = (user) => {
+    // const slimProfile = omit(user?.profile || {}, ['pictureList']);
+  // const slimProfile = sanitizeProfile(user.profile);
+
+
   console.log("\nuser\n", user, "\n\n");
   const payload = {
     _id: user._id,
@@ -36,8 +62,8 @@ const generateToken = (user) => {
     super_role: user.super_role,
     role: user.role,
     joined: moment(user.createdAt).format('MMMM DD, YYYY'),
-    joinedSocieties: user.subscribedSocities,
-    joinedSubSocieties: user.subscribedSubSocities,
+    // joinedSocieties: user.subscribedSocities,
+    // joinedSubSocieties: user.subscribedSubSocities,
     verified: user.universityEmailVerified,
     requiresMoreInformation: user.requiresMoreInformation ?? false,
     // isAlumniAndRequiresDocumentation: user.isAlumniAndRequiresDocumentation ?? false,

@@ -19,7 +19,10 @@ const universitySchema = new Schema({
     type: String,
     default: "",
   },
-
+  pictureType: {
+    type: String,
+    default: "",
+  },
   campuses: [
     {
       // name: String,

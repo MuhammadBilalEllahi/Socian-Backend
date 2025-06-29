@@ -116,7 +116,7 @@ router.post("/login", async (req, res) => {
         username: email
       }
     }
-    user = await User.findOne(query).select('-profile.posts');
+    user = await User.findOne(query).select('-profile.posts -profile.pictureList -profile.papersUploaded -profile.livePicture.images -profile.studentOrAlumniDocument.images -joinedSocieties');
 
     const isPassMatched = await bcryptjs.compare(
       password,

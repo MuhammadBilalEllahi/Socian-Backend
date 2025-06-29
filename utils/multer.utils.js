@@ -78,17 +78,19 @@ const ImageStorage = multer.diskStorage({
     }
 });
 
-const uploadImage = multer({ storage: ImageStorage, limits: {
-    fileSize: 50 * 1024 * 1024 // 50 MB per file
-  } });
+const uploadImage = multer({
+    storage: ImageStorage, limits: {
+        fileSize: 50 * 1024 * 1024 // 50 MB per file
+    }
+});
 
 
 
 
 const TeacherImageStorage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const {email,universityOrigin, campusOrigin,  }=req.body;
-        console.log(universityOrigin, campusOrigin,  )
+        const { email, universityOrigin, campusOrigin, } = req.body;
+        console.log(universityOrigin, campusOrigin,)
 
         const pathCWD = process.cwd();
         console.log("PATHHH", pathCWD);
@@ -118,9 +120,11 @@ const TeacherImageStorage = multer.diskStorage({
     }
 });
 
-const uploadTeacherImage = multer({ storage: TeacherImageStorage, limits: {
-    fileSize: 50 * 1024 * 1024 // 50 MB per file
-  } });
+const uploadTeacherImage = multer({
+    storage: TeacherImageStorage, limits: {
+        fileSize: 50 * 1024 * 1024 // 50 MB per file
+    }
+});
 
 
 
@@ -132,7 +136,7 @@ const SocietyStorage = multer.diskStorage({
         console.log("FILE", req.file)
         console.log("FILES", req.files)
         console.log("FILE-", file)
-        const {societyId} = req.body;
+        const { societyId } = req.body;
         console.log("Socety", societyId)
         console.log(universityOrigin, campusOrigin, role, userId, societyId, "societyId")
 
@@ -165,9 +169,11 @@ const SocietyStorage = multer.diskStorage({
     }
 });
 
-const uploadSocietyImage = multer({ storage: SocietyStorage, limits: {
-    fileSize: 50 * 1024 * 1024 // 50 MB per file
-  } });
+const uploadSocietyImage = multer({
+    storage: SocietyStorage, limits: {
+        fileSize: 50 * 1024 * 1024 // 50 MB per file
+    }
+});
 
 
 const CreateSocietyStorage = multer.diskStorage({
@@ -177,7 +183,7 @@ const CreateSocietyStorage = multer.diskStorage({
         console.log("FILE", req.file)
         console.log("FILES", req.files)
         console.log("FILE-", file)
-        console.log(universityOrigin, campusOrigin, role, userId, )
+        console.log(universityOrigin, campusOrigin, role, userId,)
 
         const pathCWD = process.cwd();
         console.log("PATHHH", pathCWD);
@@ -208,20 +214,22 @@ const CreateSocietyStorage = multer.diskStorage({
     }
 });
 
-const uploadCreateSocietyImage = multer({ storage: CreateSocietyStorage,  limits: {
-    fileSize: 50 * 1024 * 1024 // 50 MB per file
-  } });
+const uploadCreateSocietyImage = multer({
+    storage: CreateSocietyStorage, limits: {
+        fileSize: 50 * 1024 * 1024 // 50 MB per file
+    }
+});
 
 
 
-  const VerifySocietyStorage = multer.diskStorage({
+const VerifySocietyStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         const { universityOrigin, campusOrigin, role, userId } = getUserDetails(req);
         console.log("REq", req.body)
         console.log("FILE", req.file)
         console.log("FILES", req.files)
         console.log("FILE-", file)
-        const {societyId} = req.body;
+        const { societyId } = req.body;
         console.log("Socety", societyId)
         console.log(universityOrigin, campusOrigin, role, userId, societyId, "societyId")
 
@@ -254,15 +262,64 @@ const uploadCreateSocietyImage = multer({ storage: CreateSocietyStorage,  limits
     }
 });
 
-const uploadVerifySocietyImage = multer({ storage: VerifySocietyStorage, limits: {
-    fileSize: 50 * 1024 * 1024 // 50 MB per file
-  } });
+const uploadVerifySocietyImage = multer({
+    storage: VerifySocietyStorage, limits: {
+        fileSize: 50 * 1024 * 1024 // 50 MB per file
+    }
+});
 
 
 
 
 
-module.exports = { upload, uploadImage,uploadTeacherImage, uploadSocietyImage ,uploadCreateSocietyImage,uploadVerifySocietyImage};
+
+const UniversityImageStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+
+        const pathCWD = process.cwd();
+        console.log("PATHHH", pathCWD);
+
+
+        const uploadPath = path.join(
+            pathCWD,
+            'temp',
+            "uploads",
+            "universities",
+            "pictures"
+        );
+
+        // Create directory if it doesn't exist
+        fs.mkdirSync(uploadPath, { recursive: true });
+
+        console.log("saved to destination", uploadPath)
+
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = `${Date.now()}-${file.originalname}`;
+        cb(null, uniqueName);
+    }
+});
+
+const uploadUniversityImage = multer({
+    storage: UniversityImageStorage, limits: {
+        fileSize: 50 * 1024 * 1024 // 50 MB per file
+    }
+});
+
+
+
+
+
+module.exports = {
+    upload,
+    uploadImage,
+    uploadTeacherImage,
+    uploadSocietyImage,
+    uploadCreateSocietyImage,
+    uploadVerifySocietyImage,
+    uploadUniversityImage
+};
 
 
 

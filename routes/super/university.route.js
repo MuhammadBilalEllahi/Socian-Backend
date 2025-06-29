@@ -1,30 +1,60 @@
 const express = require("express");
 const University = require("../../models/university/university.register.model");
+const { uploadUniversityImage } = require("../../utils/multer.utils");
+const { uploadUniversityImageAws } = require("../../utils/aws.bucket.utils");
 const router = express.Router();
 
+const mongoose= require("mongoose")
 
 
-
-router.post("/register", async (req, res) => {
-  const { name, mainLocationAddress } = req.body;
+router.post("/register", uploadUniversityImage.single("file"), async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  console.log("req.body", req.body)
+  console.log("req.file", req.file)
 
   try {
-    // console.log(name);
-    const universityExists = await University.findOne({ name: name });
-    // console.log(universityExists);
-    if (universityExists) return res.status(400).json("Alredy Exists");
+    const { name, mainLocationAddress, adminEmails, telephone } = req.body;
 
-    const newUniversity = new University(req.body);
-    await newUniversity.save();
+    if (!name) return res.status(400).json({ error: "Name is required" });
 
-    // console.log("University created successfully:", newUniversity);
+    const existing = await University.findOne({ name }).session(session);
+    if (existing) {
+      await session.abortTransaction();
+      return res.status(400).json({ error: "University already exists" });
+    }
 
-    res.status(201).json(newUniversity);
+    const newUniversity = await University.create([{
+      name,
+      mainLocationAddress: mainLocationAddress || '',
+      adminEmails: adminEmails || '',
+      telephone: telephone || ''
+    }], { session });
+
+    const createdUniversity = newUniversity[0]; // .create() with array returns an array
+
+    // Upload university picture
+    const { url, type } = await uploadUniversityImageAws(req.file,req, createdUniversity._id);
+
+    // Update picture fields
+    createdUniversity.picture = url;
+    createdUniversity.pictureType = type;
+    await createdUniversity.save({ session });
+
+    // Commit the transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(201).json(createdUniversity);
   } catch (error) {
-    console.error("Error creating university:", error);
-    throw new Error("Unable to create university. Please try again.");
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("University creation failed:", error);
+    return res.status(500).json({ error: "Unable to create university. Please try again." });
   }
 });
+
 
 router.put("/:universityId", async (req, res) => {
   const { universityId } = req.params;
@@ -80,7 +110,7 @@ router.get("/:universityId/campuses", async (req, res) => {
     })
       .populate("campuses");
 
-    res.status(200).json({campuses: university.campuses});
+    res.status(200).json({ campuses: university.campuses });
   } catch (error) {
     console.error("Error creating campus:", error);
     res.status(500).json({ message: error.message }); // Unable to create campus. Please try again.

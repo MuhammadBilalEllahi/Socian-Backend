@@ -11,6 +11,14 @@ env_variables:
   AWS_REGION: "ap-south-1"
   AWS_S3_BUCKET_NAME: "beyondtheclass-bucket-mumbai"
   AWS_S3_IMAGE_BUCKET_NAME: "images-beyondtheclass-bucket-mumbai"
+
+
+  # AWS_S3_BUCKET_NAME: "app.socian.bucket"
+  # AWS_S3_IMAGE_BUCKET_NAME: "app.socian.bucket.data"
+  # MONGO_DB_URI: "mongodb+srv://bilalillahi25:1J5i6aLc7Ouo78tD@cluster0.28el64s.mongodb.net/prod_v1_Socian?retryWrites=true&w=majority&appName=Cluster0"
+  
+
+
   AWS_SECRET_ACCESS_KEY: "IQyLl0e61znMkfxjkSQqc8Vl6IVGdZvhNrykG8Uj"
   BACKEND_URL: "https://api.socian.app"
   CLIENT_ID: "1076027750526-li5gkit9klq06mmocutusfb6ta8e1etc.apps.googleusercontent.com"
