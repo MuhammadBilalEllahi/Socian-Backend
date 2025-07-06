@@ -108,9 +108,24 @@ router.get("/:universityId/campuses", async (req, res) => {
     const university = await University.findOne({
       _id: universityId,
     })
-      .populate("campuses");
+      .populate("campuses").select('-users');
 
     res.status(200).json({ campuses: university.campuses });
+  } catch (error) {
+    console.error("Error creating campus:", error);
+    res.status(500).json({ message: error.message }); // Unable to create campus. Please try again.
+  }
+});
+
+router.get("/:universityId", async (req, res) => {
+  const { universityId } = req.params;
+  // console.log(req.query, "and", req.params);
+  try {
+    const university = await University.findOne({
+      _id: universityId,
+    }).select('-users')
+
+    res.status(200).json({  university: university });
   } catch (error) {
     console.error("Error creating campus:", error);
     res.status(500).json({ message: error.message }); // Unable to create campus. Please try again.

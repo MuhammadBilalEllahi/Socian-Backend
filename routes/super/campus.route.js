@@ -40,6 +40,7 @@ router.post("/register", async (req, res) => {
       name,
       "emailPatterns.regex": regex,
       "emailPatterns.domain": domain,
+      picture: university?.picture || "",
       universityOrigin,
     });
 
@@ -62,6 +63,80 @@ router.post("/register", async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 });
+
+router.put("/:id", async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const campusId = req.params.id;
+    const { universityOrigin, location, name, regex, domain } = req.body;
+
+    if (!campusId) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: "Campus ID is required" });
+    }
+
+    const campus = await Campus.findById(campusId).session(session);
+    if (!campus) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Campus not found" });
+    }
+
+    // 🔁 Handle university change
+    if (universityOrigin && campus.universityOrigin.toString() !== universityOrigin) {
+      const newUniversity = await University.findById(universityOrigin).session(session);
+      if (!newUniversity) {
+        await session.abortTransaction();
+        return res.status(404).json({ message: "New University not found" });
+      }
+
+      // 🛠 Remove campus from old university & add to new one concurrently
+      const [pullResult, pushResult] = await Promise.all([
+        University.findByIdAndUpdate(
+          campus.universityOrigin,
+          { $pull: { campuses: campus._id } },
+          { session }
+        ),
+        University.findByIdAndUpdate(
+          universityOrigin,
+          { $addToSet: { campuses: campus._id } },
+          { session }
+        )
+      ]);
+
+      if (!pullResult || !pushResult) {
+        await session.abortTransaction();
+        return res.status(500).json({ message: "Failed to update university references" });
+      }
+
+      campus.universityOrigin = universityOrigin;
+      campus.picture = newUniversity.picture || campus.picture;
+    }
+
+    // ✏️ Update other fields
+    if (location) campus.location = location;
+    if (name) campus.name = name;
+    if (regex) campus.emailPatterns.regex = regex;
+    if (domain) campus.emailPatterns.domain = domain;
+
+    await campus.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    const cacheKey = "universitiesGroupedCampus";
+    await redisClient.del(cacheKey);
+
+    return res.status(200).json(campus);
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error updating campus:", error);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 
 
 router.delete("/:campusId", async (req, res) => {

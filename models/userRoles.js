@@ -7,7 +7,7 @@ const UserRoles = {
 }
 
 const UserSuperRoles = {
-    super_admin: 'super_admin',
+    super: 'super',
     mod: 'mod',
     none: 'none'
 }

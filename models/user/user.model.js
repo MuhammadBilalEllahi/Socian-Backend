@@ -213,7 +213,9 @@ const userSchema = new mongoose.Schema({
   personalEmail: {
     type: String,
     index: true,
-    unique: true,
+    unique: function () {
+      return !this.universityEmail || this.role==="alumni";
+    },
     required: function () {
       return !this.universityEmail;
     },

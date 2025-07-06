@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const express = require("express");
 const router = express.Router();
 const moment = require("moment");
-
+const {UserSuperRoles} = require('../../models/userRoles.js')
 const {
   resendEmail,
   resendEmailForgotPassword,
@@ -218,8 +218,8 @@ router.post("/login", async (req, res) => {
         name: user.name,
         email:
           user.universityEmail ||
-          user.personalEmail ||
-          user.secondaryPersonalEmail,
+          user?.personalEmail ||
+          user?.secondaryPersonalEmail,
         universityEmail: user?.universityEmail ?? '',
         personalEmail: user?.personalEmail ?? '',
         secondaryPersonalEmail: user?.secondaryPersonalEmail ?? '',
@@ -243,7 +243,8 @@ router.post("/login", async (req, res) => {
 
       // console.log("User in WEB", req.session.user);
 
-      req.session.references = {
+      if(user.super_role !== UserSuperRoles.super){
+        req.session.references = {
         university: {
           name: user.university.universityId.name,
           _id: user.university.universityId._id,
@@ -253,6 +254,7 @@ router.post("/login", async (req, res) => {
           _id: user.university.campusId._id,
         },
       };
+      }
 
       req.session.userId = user._id.toString();
 
