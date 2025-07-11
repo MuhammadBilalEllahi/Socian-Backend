@@ -162,6 +162,7 @@ const accessibleRoutes = require('./routes/accessibles/accessible.route.js');
 
 const userRouter = require('./routes/user/user.route.js');
 const cafeRouter = require('./routes/university_related/cafe/cafe.route.js');
+const reportRouter = require('./routes/university_related/report/report.route.js');
 
 const aiRouter = require('./routes/aiRoutes/ai.routes.js');
 
@@ -229,6 +230,7 @@ app.use("/api/user", protectRoute, userRouter);
 
 // const cafeProtect = require("./middlewares/cafe.protect.js");
 app.use('/api/cafe', protectRoute,cafeRouter);
+app.use('/api/report', protectRoute, reportRouter);
 
 
 
@@ -317,7 +319,7 @@ startServer();
 
 //     for (let i = 0; i < numCPUs; i++) {
 //         cluster.fork();
-//     }
+//     });
 
 //     cluster.on('exit', (worker, code, signal) => {
 //         console.log(`Worker ${worker.process.pid} died`);

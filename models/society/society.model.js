@@ -123,6 +123,11 @@ const societySchema = new Schema({
     type: Boolean,
     default: false
   },
+  isReported: {
+    status: { type: Boolean, default: false },
+    reportId: { type: Schema.Types.ObjectId, ref: "Report", default: null },
+    reason: { type: String, default: null }
+  },
 
   hiddenByMod:{
     type: Boolean,

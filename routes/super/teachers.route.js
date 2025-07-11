@@ -48,6 +48,12 @@ console.log("DATA",name, email, picture, department, universityOrigin, campusOri
       session.endSession();
       return res.status(404).json({ message: "no such Department found" });
     }
+    const teacherAlreadyExists = await Teacher.findOne({email: email})
+if(teacherAlreadyExists)  {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ message: "Teacher with same Email already exists" });
+    }
 
     const teacher = await Teacher.create([{
       name: name,

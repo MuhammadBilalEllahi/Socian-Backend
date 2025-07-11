@@ -233,5 +233,6 @@ pastPaperItemSchema.methods = {
 
 
 const PastPaperItem = mongoose.model("PastPaperItem", pastPaperItemSchema);
+const File = mongoose.model("File", fileSchema);
 
-module.exports = { PastPaperItem, StructuredQuestion }; 
+module.exports = { PastPaperItem, StructuredQuestion, File }; 

@@ -2,35 +2,69 @@ const mongoose = require("mongoose");
 const { Schema, model } = mongoose;
 
 const reportSchema = new Schema({
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    reportedByUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+
+
     postId: { type: Schema.Types.ObjectId, ref: "Post" },
-    commentId: { type: Schema.Types.ObjectId, ref: "Comment" },
-    replyId: { type: Schema.Types.ObjectId, ref: "Reply" },
+    commentId: { type: Schema.Types.ObjectId, ref: "PostComment" },
     //above is for posts and comments
     userReportedId: { type: Schema.Types.ObjectId, ref: "User" },
     //above is for users
     societyId: { type: Schema.Types.ObjectId, ref: "Society" },
-    subSocietyId: { type: Schema.Types.ObjectId, ref: "SubSociety" },
     //above is for societies
 
-    feedbackId: { type: Schema.Types.ObjectId, ref: "Feedback" },
-    feedbackCommentId: { type: Schema.Types.ObjectId, ref: "FeedbackComment" },
-    feedbackReplyId: { type: Schema.Types.ObjectId, ref: "FeedbackReply" },
+    feedbackId: { type: Schema.Types.ObjectId, ref: "TeacherRating" },
+    feedbackCommentId: { type: Schema.Types.ObjectId, ref: "FeedBackCommentTeacher" },
     //above is for feedbacks
 
-    
+    pastPaperItemId: { type: Schema.Types.ObjectId, ref: "PastPaperItem" },
+    fileId: { type: Schema.Types.ObjectId},
+    //above is for past paper items
 
-    // eventId: { type: Schema.Types.ObjectId, ref: "Event" },
-    // eventCommentId: { type: Schema.Types.ObjectId, ref: "EventComment" },
-    // eventReplyId: { type: Schema.Types.ObjectId, ref: "EventReply" },
-    // //above is for events
+    discussionId: { type: Schema.Types.ObjectId, ref: "Discussion" },
+    discussionCommentId: { type: Schema.Types.ObjectId, ref: "DiscussionComment" },
+    //above is for discussions
 
-    reason: { type: String, required: true },
-    description: { type: String, required: true },
-    status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    reportType: {
+        type: Schema.Types.ObjectId,
+        ref: "ReportType",
+        // enum:[
+        //     "spam",
+        //     "inappropriate",
+        //     "illegal",
+        //     "nudity",
+        //     "violence",
+        //     "harassment",
+        //     "discrimination",
+        //     "other",
+        // ],
+        required: true,
+    },
+    reason: { 
+        type: String, 
+        maxlength: 500,
+        trim: true
+    }, // Optional additional context from user
+    status: { type: String, enum: ["pending", "banned", "rejected"], default: "pending" },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
 });
 
+
+const reportTypeSchema = new Schema({
+    name: { type: String, required: true },
+    description: { type: String, required: true },
+    reports: [{ type: Schema.Types.ObjectId, ref: "Report" }],
+});
+
+// const reportModelTypeSchema = new Schema({
+//     name: { type: String, required: true },
+//     description: { type: String, required: true },
+//     model: { type: String, required: true },
+// });
+
+
 const Report = model("Report", reportSchema);
-module.exports = Report;
+const ReportType = model("ReportType", reportTypeSchema);
+// const ReportModelType = model("ReportModelType", reportModelTypeSchema);
+module.exports = { Report, ReportType };

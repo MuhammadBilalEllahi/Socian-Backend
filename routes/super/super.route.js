@@ -20,7 +20,8 @@ const campusRouter = require('./campus.route');
 const univeristyRouter = require('./university.route');
 const societyRouter = require('./societies.route');
 const usersRouter = require('./users.route');
-const teachersRouter = require('./teachers.route')
+const teachersRouter = require('./teachers.route');
+const reportRouter = require("./report.route");
 const Department = require("../../models/university/department/department.university.model");
 const Teacher = require("../../models/university/teacher/teacher.model");
 const FeedBackCommentTeacher = require("../../models/university/teacher/feedback.rating.teacher.model");
@@ -31,11 +32,13 @@ const PostCommentCollection = require("../../models/society/post/comment/post.co
 const Post = require("../../models/society/post/post.model");
 const { upload } = require("../../utils/multer.utils");
 
+
 router.use('/campus', campusRouter);
 router.use('/university', univeristyRouter);
 router.use('/societies', societyRouter);
 router.use('/users', usersRouter)
 router.use('/teachers', teachersRouter);
+router.use('/report', reportRouter);
 
 
 router.post("/post/create", upload.array('file'), async (req, res) => {

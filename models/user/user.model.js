@@ -321,6 +321,14 @@ const userSchema = new mongoose.Schema({
     }, // This is  ref to a user(admin,mod,super admin) or SELF for teacher,student
   },
 
+  // Report and deletion tracking
+  isDeleted: { type: Boolean, default: false },
+  isReported: {
+    status: { type: Boolean, default: false },
+    reportId: { type: mongoose.Schema.Types.ObjectId, ref: "Report", default: null },
+    reason: { type: String, default: null }
+  },
+
   // ## tokens
   //    if using jwt token
   tokens: {

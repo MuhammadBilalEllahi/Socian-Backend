@@ -74,6 +74,11 @@ const postSchema = new Schema(
       isDeleted: { type: Boolean, default: false },
       isArchived: { type: Boolean, default: false },
     },
+    isReported: {
+      status: { type: Boolean, default: false },
+      reportId: { type: Schema.Types.ObjectId, ref: "Report", default: null },
+      reason: { type: String, default: null }
+    },
     editedAt: { type: Date },
     isPromoted: {
       promoted: { type: Boolean, default: false },
