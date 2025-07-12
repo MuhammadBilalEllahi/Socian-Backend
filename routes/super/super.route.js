@@ -26,11 +26,11 @@ const Department = require("../../models/university/department/department.univer
 const Teacher = require("../../models/university/teacher/teacher.model");
 const FeedBackCommentTeacher = require("../../models/university/teacher/feedback.rating.teacher.model");
 const TeacherRating = require("../../models/university/teacher/rating.teacher.model");
-const { uploadPostMedia } = require("../../utils/aws.bucket.utils");
+const { uploadAdminPostMedia } = require("../../utils/aws.bucket.utils");
 const SocietyPostAndCommentVote = require("../../models/society/post/vote/vote.post.community.model");
 const PostCommentCollection = require("../../models/society/post/comment/post.comment.collect.model");
 const Post = require("../../models/society/post/post.model");
-const { upload } = require("../../utils/multer.utils");
+const { adminPostUpload} = require("../../utils/multer.utils");
 
 
 router.use('/campus', campusRouter);
@@ -41,7 +41,7 @@ router.use('/teachers', teachersRouter);
 router.use('/report', reportRouter);
 
 
-router.post("/post/create", upload.array('file'), async (req, res) => {
+router.post("/post/create", adminPostUpload.array('file'), async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -100,7 +100,7 @@ router.post("/post/create", upload.array('file'), async (req, res) => {
     if (files && files.length > 0) {
       let mediaArray = [];
       for (let file of files) {
-        const { url, type } = await uploadPostMedia(userId, file, req);
+        const { url, type } = await uploadAdminPostMedia( file, req);
         mediaArray.push({ type, url });
       }
       postContent.media = mediaArray;

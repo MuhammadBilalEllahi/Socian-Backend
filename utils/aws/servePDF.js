@@ -113,10 +113,10 @@ router.get('/:universityOrigin/:campusOrigin/student/pastpapers/:year/:departmen
 
 
 router.post('/upload/pastpaper/aws', superProtect, upload.single('file'), async (req, res) => {
-    const { departmentId, subjectId, year, type, term, termMode, sessionType } = req.body;
+    const {universityOrigin, campusOrigin, departmentId, subjectId, year, type, term, termMode, sessionType } = req.body;
     const file = req.file;
 
-    const { role, universityOrigin, campusOrigin } = getUserDetails(req);
+    const { role  } = getUserDetails(req);
 
     console.log("Data: ", departmentId, subjectId, year, type, 
         "MORE",

@@ -114,6 +114,42 @@ const uploadPostMedia = async (society_or_subSociety_id, file, req, isSubCommuni
     }
 };
 
+
+const uploadAdminPostMedia = async ( file, req) => {
+    const bucketName = process.env.AWS_S3_IMAGE_BUCKET_NAME;
+    console.log("Bucker", bucketName,)
+    const { userId,  super_role } = getUserDetails(req);
+    const{campusOrigin, universityOrigin}=req.body;
+    console.log("THIS IS MEDIA UL", userId, campusOrigin, universityOrigin, super_role)
+
+    try {
+        let mediaUrl = null;
+
+
+        if (file) {
+            const mediaFile = file;
+            console.log("This is media file: ", mediaFile)
+            const mediaKey = `${universityOrigin}/${campusOrigin}/${super_role}/posts/${Date.now()}-${userId}-${mediaFile.originalname}`;
+            mediaUrl = await uploadToS3(mediaFile.path, bucketName, mediaKey, mediaFile.mimetype);
+            console.log("THIS IS MEDIA BLAH", "\n", mediaFile.path, "\n", bucketName, "\n", mediaKey, "\n", req.body.contentType)
+
+        }
+
+        console.log("THIS IS MEDIA UL", mediaUrl)
+
+        return { url: mediaUrl, type: file.mimetype };
+    } catch (error) {
+        console.error('Error uploading images to S3 by SubCommunityImages:', error);
+        throw error;
+    } finally {
+        if (file) {
+            const mediaFile = file;
+            console.log("UnLinking: ", mediaFile)
+            fs.unlinkSync(mediaFile.path)
+        }
+    }
+};
+
 const uploadCommunityImages = async (communityId, files) => {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
 
@@ -458,6 +494,7 @@ module.exports = {
     uploadCommunityImages,
     uploadSubCommunityImages,
     uploadPostMedia,
+    uploadAdminPostMedia,
     uploadPictureMedia,
     uploadBothCardMedia,
     uploadLivePictureMedia,

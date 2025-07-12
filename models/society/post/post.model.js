@@ -163,6 +163,75 @@ const postSchema = new Schema(
         enum: ['alumni', 'student', 'teacher', 'ext_org']
       }
     },
+
+    // NSFW Detection Fields
+    isNSFW: { 
+      type: Boolean, 
+      default: false,
+      index: true  // Index for fast filtering
+    },
+    
+    // Additional data fields for NSFW detection and content description
+    data: {
+      // Human-readable description for alt text and content info
+      description: { 
+        type: String,
+        default: ""
+      },
+      
+      // Reason for deletion if content is flagged
+      deletionReason: { 
+        type: String,
+        enum: ["NSFW content detected", "reported", "admin action", "user deletion"],
+        default: null
+      },
+      
+      // Detailed NSFW classification results
+      nsfwClassification: {
+        is_nsfw: { type: Boolean, default: false },
+        max_confidence: { type: Number, default: 0 },
+        model: { type: String, default: "NudeNet" },
+        threshold: { type: Number, default: 0.7 },
+        processing_time: { type: Number, default: 0 },
+        
+        // Detailed detection results
+        nsfw_detections: [{
+          class: { type: String },
+          confidence: { type: Number },
+          bbox: [{ type: Number }]  // Bounding box coordinates
+        }],
+        
+        // For videos: frame-by-frame analysis
+        video_analysis: {
+          total_frames: { type: Number },
+          processed_frames: { type: Number },
+          nsfw_frame_count: { type: Number },
+          duration_seconds: { type: Number },
+          nsfw_detections: [{
+            frame_number: { type: Number },
+            timestamp: { type: Number },
+            is_nsfw: { type: Boolean },
+            confidence: { type: Number }
+          }]
+        },
+        
+        // Error information if processing failed
+        error: { type: String, default: null }
+      },
+      
+      // When the content was processed
+      processedAt: { 
+        type: Date,
+        default: null
+      },
+      
+      // Processing status
+      processingStatus: {
+        type: String,
+        enum: ["pending", "processing", "completed", "failed"],
+        default: "pending"
+      }
+    },
   },
   { timestamps: true },
   {
@@ -176,7 +245,7 @@ const postSchema = new Schema(
   }
 );
 
-// Middleware to hide admin posts unless explicitly queried
+// Middleware to hide admin posts and NSFW content unless explicitly queried
 postSchema.pre(/^find/, function (next) {
 
   const query = this.getQuery();
@@ -187,16 +256,43 @@ postSchema.pre(/^find/, function (next) {
     return next();
   }
 
-
   if (this.getQuery().hasOwnProperty('postByAdmin')) {
     // Respect the developer's intent (don't override if postByAdmin was queried)
     return next();
   }
 
-  // Add a condition to exclude posts made by admin
-  this.where({ postByAdmin: false, 'adminSetStatus.isArchived': false });
+  // Add conditions to exclude:
+  // 1. Admin posts (existing)
+  // 2. NSFW content (new)
+  // 3. Deleted posts (existing - NSFW content is marked as deleted)
+  this.where({ 
+    postByAdmin: false, 
+    'adminSetStatus.isArchived': false,
+    'status.isDeleted': false,  // This will exclude NSFW content since they're marked as deleted
+    isNSFW: { $ne: true }       // Extra safety check
+  });
+  
   next();
 });
+
+// Add a method to get safe posts for public API
+postSchema.statics.findSafe = function(conditions = {}) {
+  return this.find({
+    ...conditions,
+    'status.isDeleted': false,
+    'status.isActive': true,
+    isNSFW: false,
+    postByAdmin: false
+  });
+};
+
+// Add a method for admin queries that can see NSFW content
+postSchema.statics.findWithNSFW = function(conditions = {}) {
+  return this.find({
+    ...conditions,
+    __skipHiddenAdminFilter: true
+  });
+};
 
 
 
