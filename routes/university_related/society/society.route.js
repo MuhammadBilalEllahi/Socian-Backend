@@ -337,32 +337,20 @@ router.get("/types", async (req, res) => {
  * @param {number} limit - Number of posts per page (default 10)
  * @todo No_role_Required
  */
+
+
+
+
+
+
+
+
 router.get("/:id", async (req, res) => {
     const { id } = req.params;
     const { page = 1, limit = 10 } = req.query; // Default to page 1 and 10 posts per page
     const { userId } = getUserDetails(req);
 
-    // const cacheKeySociety = `society_${id}`;
-    // const cacheKeyPosts = `society_${id}_posts_page_${page}`;
-
-
-
-
-    console.log("ID-", id)
     try {
-
-        // Try fetching cached society data
-        // const cachedSociety = await redisClient.get(cacheKeySociety);
-        // if (cachedSociety) {
-        //     const society = JSON.parse(cachedSociety);
-        //     // Fetch cached posts if available
-        //     const cachedPosts = await redisClient.get(cacheKeyPosts);
-        //     if (cachedPosts) {
-        //         return res.status(200).json({ society, posts: JSON.parse(cachedPosts) });
-        //     }
-        // }
-
-
         const society = await Society.findOne({ _id: id, isDeleted: false }).populate([
             'moderators',
             'president',
@@ -371,39 +359,30 @@ router.get("/:id", async (req, res) => {
             'societyType',
             'references.universityOrigin',
             'references.campusOrigin',
-            'postsCollectionRef'
+            'postsCollectionRef',
+            { path: 'roles.user', select: 'name username profile.picture' } // Populate user details for roles
         ]);
-        console.log("SOciety", society)
 
-        if (!society) return res.status(404).json("No society found");
-
-        // await redisClient.set(cacheKeySociety, JSON.stringify(society), 'EX', 3600);
-
+        if (!society) return res.status(404).json({ message: "No society found" });
 
         const postsCollection = Array.isArray(society.postsCollectionRef?.posts)
             ? society.postsCollectionRef.posts
             : [];
 
-        if (postsCollection.length === 0) {
-            return res.status(200).json({ society: society, posts: [], message: "Be the first one to post" });
+        let posts = [];
+        if (postsCollection.length > 0) {
+            const skip = (page - 1) * limit; // Calculate how many posts to skip for pagination
+            posts = await Post.find({
+                _id: { $in: postsCollection.map(post => post.postId) },
+            })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(Number(limit))
+                .populate([
+                    { path: 'author', model: 'User', select: 'name username profile.picture' },
+                    { path: 'voteId', model: 'SocietyPostAndCommentVote' },
+                ]);
         }
-
-        const skip = (page - 1) * limit; // Calculate how many posts to skip for pagination
-
-        const posts = await Post.find({
-            _id: { $in: postsCollection.map(post => post.postId) },
-        })
-            .sort({ createdAt: -1 })
-            .skip(skip) // Skip the calculated posts based on page
-            .limit(Number(limit)) // Limit the number of posts per page
-            .populate([
-                { path: 'author', model: 'User' },
-                { path: 'voteId', model: 'SocietyPostAndCommentVote' },
-            ]);
-
-
-        // await redisClient.set(cacheKeyPosts, JSON.stringify(posts), 'EX', 600); // Shorter expiry for posts
-
 
         const isMod = await Society.exists({
             _id: id,
@@ -412,8 +391,7 @@ router.get("/:id", async (req, res) => {
         });
 
         let isMember = false;
-
-        if (!isMod) {
+        if (!isMod && userId) {
             const memberRef = await Society.findById(id).select('members').lean();
             if (memberRef && memberRef.members) {
                 const memberDoc = await Members.findById(memberRef.members).select('members').lean();
@@ -423,15 +401,130 @@ router.get("/:id", async (req, res) => {
 
         const isJoined = !!(isMod || isMember);
 
+        // Cache the society and posts (optional, uncomment if needed)
+        // await redisClient.set(`society_${id}`, JSON.stringify(society), 'EX', 3600);
+        // await redisClient.set(`society_${id}_posts_page_${page}`, JSON.stringify(posts), 'EX', 600);
 
-
-        // console.log("\n\n\n\nsocity",society, "\n\nposts", posts )
-        res.status(200).json({ society: society, posts: posts, isJoined: isJoined });
+        res.status(200).json({
+            society,
+            posts,
+            isJoined,
+            message: posts.length === 0 ? "Be the first one to post" : undefined
+        });
     } catch (error) {
         console.error("Error in society.route.js /:id", error);
-        res.status(500).json("Internal Server Error");
+        res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
+
+// router.get("/:id", async (req, res) => {
+//     const { id } = req.params;
+//     const { page = 1, limit = 10 } = req.query; // Default to page 1 and 10 posts per page
+//     const { userId } = getUserDetails(req);
+
+//     // const cacheKeySociety = `society_${id}`;
+//     // const cacheKeyPosts = `society_${id}_posts_page_${page}`;
+
+
+
+
+//     console.log("ID-", id)
+//     try {
+
+//         // Try fetching cached society data
+//         // const cachedSociety = await redisClient.get(cacheKeySociety);
+//         // if (cachedSociety) {
+//         //     const society = JSON.parse(cachedSociety);
+//         //     // Fetch cached posts if available
+//         //     const cachedPosts = await redisClient.get(cacheKeyPosts);
+//         //     if (cachedPosts) {
+//         //         return res.status(200).json({ society, posts: JSON.parse(cachedPosts) });
+//         //     }
+//         // }
+
+
+//         const society = await Society.findOne({ _id: id, isDeleted: false }).populate([
+//             'moderators',
+//             'president',
+//             'members',
+//             'creator',
+//             'societyType',
+//             'references.universityOrigin',
+//             'references.campusOrigin',
+//             'postsCollectionRef'
+//         ]);
+//         console.log("SOciety", society)
+
+//         if (!society) return res.status(404).json("No society found");
+
+//         // await redisClient.set(cacheKeySociety, JSON.stringify(society), 'EX', 3600);
+
+
+//         const postsCollection = Array.isArray(society.postsCollectionRef?.posts)
+//             ? society.postsCollectionRef.posts
+//             : [];
+
+//         if (postsCollection.length === 0) {
+//             return res.status(200).json({ society: society, posts: [], message: "Be the first one to post" });
+//         }
+
+//         const skip = (page - 1) * limit; // Calculate how many posts to skip for pagination
+
+//         const posts = await Post.find({
+//             _id: { $in: postsCollection.map(post => post.postId) },
+//         })
+//             .sort({ createdAt: -1 })
+//             .skip(skip) // Skip the calculated posts based on page
+//             .limit(Number(limit)) // Limit the number of posts per page
+//             .populate([
+//                 { path: 'author', model: 'User' },
+//                 { path: 'voteId', model: 'SocietyPostAndCommentVote' },
+//             ]);
+
+
+//         // await redisClient.set(cacheKeyPosts, JSON.stringify(posts), 'EX', 600); // Shorter expiry for posts
+
+
+//         const isMod = await Society.exists({
+//             _id: id,
+//             isDeleted: false,
+//             moderators: userId
+//         });
+
+//         let isMember = false;
+
+//         if (!isMod) {
+//             const memberRef = await Society.findById(id).select('members').lean();
+//             if (memberRef && memberRef.members) {
+//                 const memberDoc = await Members.findById(memberRef.members).select('members').lean();
+//                 isMember = memberDoc?.members?.some(uid => uid.toString() === userId);
+//             }
+//         }
+
+//         const isJoined = !!(isMod || isMember);
+
+
+
+//         // console.log("\n\n\n\nsocity",society, "\n\nposts", posts )
+//         res.status(200).json({ society: society, posts: posts, isJoined: isJoined });
+//     } catch (error) {
+//         console.error("Error in society.route.js /:id", error);
+//         res.status(500).json("Internal Server Error");
+//     }
+// });
+
+
+
+
+
+
+
+
+
+
+
+
 
 router.get('/search', async (req, res) => {
     const { societyName } = req.query;
@@ -1403,88 +1496,170 @@ router.post('/add-moderator/:societyId', async (req, res) => {
 
 
 
-router.post("/add-role/:societyId", async (req, res) => {
-    try {
-        const { societyId } = req.params;
-        const { role, name, picture } = req.body;
-        const { userId } = getUserDetails(req);
+// router.post("/add-role/:societyId", async (req, res) => {
+//     try {
+//         const { societyId } = req.params;
+//         const { role, name, picture } = req.body;
+//         const { userId } = getUserDetails(req);
 
-        const society = await Society.findOne({ _id: societyId, isDeleted: false });
-        if (!society) return res.status(404).json({ error: "Society not found" });
+//         const society = await Society.findOne({ _id: societyId, isDeleted: false });
+//         if (!society) return res.status(404).json({ error: "Society not found" });
 
-        const isModerator = society.moderators.some(mod => mod.toString() === userId);
-        if (!isModerator) return res.status(403).json({ error: "Only moderators can add roles" });
+//         const isModerator = society.moderators.some(mod => mod.toString() === userId);
+//         if (!isModerator) return res.status(403).json({ error: "Only moderators can add roles" });
 
-        if (!role || !name) return res.status(400).json({ error: "Role title and name are required" });
+//         if (!role || !name) return res.status(400).json({ error: "Role title and name are required" });
 
-        society.roles.push({ role, name, picture: picture || null });
-        await society.save();
+//         society.roles.push({ role, name, picture: picture || null });
+//         await society.save();
 
-        const updatedSociety = await Society.findOne({ _id: societyId }).populate([
-            'moderators',
-            'president',
-            'members',
-            'creator',
-            'societyType',
-            'references.universityOrigin',
-            'references.campusOrigin',
-            'postsCollectionRef'
-        ]);
+//         const updatedSociety = await Society.findOne({ _id: societyId }).populate([
+//             'moderators',
+//             'president',
+//             'members',
+//             'creator',
+//             'societyType',
+//             'references.universityOrigin',
+//             'references.campusOrigin',
+//             'postsCollectionRef'
+//         ]);
 
-        try {
-            await redisClient.del(`society_${societyId}`);
-        } catch (redisError) {
-            console.error("Error invalidating Redis cache:", redisError);
-        }
+//         try {
+//             await redisClient.del(`society_${societyId}`);
+//         } catch (redisError) {
+//             console.error("Error invalidating Redis cache:", redisError);
+//         }
 
-        return res.status(200).json({ message: "Role added successfully", society: updatedSociety });
-    } catch (error) {
-        console.error("Error in add_role route:", error);
-        return res.status.status(500).json({ error: "Internal Server Error" });
+//         return res.status(200).json({ message: "Role added successfully", society: updatedSociety });
+//     } catch (error) {
+//         console.error("Error in add_role route:", error);
+//         return res.status.status(500).json({ error: "Internal Server Error" });
+//     }
+// });
+
+
+router.post('/add-role/:societyId', async (req, res) => {
+  try {
+    const { societyId } = req.params;
+    const { role, userId } = req.body;
+
+    if (!role || !userId) {
+      return res.status(400).json({ message: 'Role title and user ID are required' });
     }
+
+    const society = await Society.findById(societyId);
+    if (!society) {
+      return res.status(404).json({ message: 'Society not found' });
+    }
+
+    // Verify the user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Add the role
+    society.roles.push({ role, user: userId });
+    await society.save();
+
+    // Populate the user field in roles for the response
+    const updatedSociety = await Society.findById(societyId).populate('roles.user');
+    res.status(200).json({ success: true, message: 'Role added successfully', society: updatedSociety });
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding role', error: error.message });
+  }
 });
 
 
 
 
-router.post("/delete-role/:societyId", async (req, res) => {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// router.post("/delete-role/:societyId", async (req, res) => {
+//     const { societyId } = req.params;
+//     const { roleId } = req.body;
+//     try {
+//         const { userId } = getUserDetails(req);
+
+//         const society = await Society.findOne({ _id: societyId, isDeleted: false });
+//         if (!society) return res.status(404).json({ error: "Society not found" });
+
+//         const isModerator = society.moderators.some(mod => mod.toString() === userId);
+//         if (!isModerator) {
+//             return res.status(403).json({ error: "Only moderators can delete roles" });
+//         }
+
+//         const roleExists = society.roles.some(role => role._id.toString() === roleId);
+//         if (!roleExists) {
+//             return res.status(404).json({ error: "Role not found" });
+//         }
+
+//         const updatedSociety = await Society.findOneAndUpdate(
+//             { _id: societyId },
+//             { $pull: { roles: { _id: roleId } } },
+//             { new: true }
+//         );
+
+//         if (!updatedSociety) {
+//             return res.status(400).json({ error: "Failed to delete role" });
+//         }
+
+//         return res.status(200).json({
+//             message: "Role deleted successfully",
+//             society: updatedSociety,
+//         });
+//     } catch (error) {
+//         console.error("Error in delete-role route: ", error);
+//         res.status(500).json({ error: "Internal Server Error" });
+//     }
+// });
+
+router.post('/delete-role/:societyId', async (req, res) => {
+  try {
     const { societyId } = req.params;
     const { roleId } = req.body;
-    try {
-        const { userId } = getUserDetails(req);
 
-        const society = await Society.findOne({ _id: societyId, isDeleted: false });
-        if (!society) return res.status(404).json({ error: "Society not found" });
-
-        const isModerator = society.moderators.some(mod => mod.toString() === userId);
-        if (!isModerator) {
-            return res.status(403).json({ error: "Only moderators can delete roles" });
-        }
-
-        const roleExists = society.roles.some(role => role._id.toString() === roleId);
-        if (!roleExists) {
-            return res.status(404).json({ error: "Role not found" });
-        }
-
-        const updatedSociety = await Society.findOneAndUpdate(
-            { _id: societyId },
-            { $pull: { roles: { _id: roleId } } },
-            { new: true }
-        );
-
-        if (!updatedSociety) {
-            return res.status(400).json({ error: "Failed to delete role" });
-        }
-
-        return res.status(200).json({
-            message: "Role deleted successfully",
-            society: updatedSociety,
-        });
-    } catch (error) {
-        console.error("Error in delete-role route: ", error);
-        res.status(500).json({ error: "Internal Server Error" });
+    if (!roleId) {
+      return res.status(400).json({ message: 'Role ID is required' });
     }
+
+    const society = await Society.findById(societyId);
+    if (!society) {
+      return res.status(404).json({ message: 'Society not found' });
+    }
+
+    // Remove the role
+    society.roles = society.roles.filter(role => role._id.toString() !== roleId);
+    await society.save();
+
+    // Populate the user field in roles for the response
+    const updatedSociety = await Society.findById(societyId).populate('roles.user');
+    res.status(200).json({ message: 'Role deleted successfully', society: updatedSociety });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting role', error: error.message });
+  }
 });
+
+
+
+
+
 
 
 

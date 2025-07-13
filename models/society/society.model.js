@@ -84,13 +84,29 @@ const societySchema = new Schema({
       index: true,
     },
   ],
+  // roles: [
+  //   {
+  //     role: { type: String, required: true },
+  //     name: { type: String, required: true },
+  //     picture: { type: String },
+  //   },
+  // ],
+
   roles: [
-    {
-      role: { type: String, required: true },
-      name: { type: String, required: true },
-      picture: { type: String },
+  {
+    role: { type: String, required: true }, // e.g., "President", "Secretary"
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
-  ],
+  },
+],
+
+
+
+
+
   references: {
     role: { type: String, enum: ['teacher', 'student', 'alumni'], },
     universityOrigin: {

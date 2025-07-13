@@ -139,6 +139,24 @@ router.put('/user/promote/mod', async (req, res) => {
         const endTime = timePeriod === yearPlan.YEAR
             ? startTime + 365 * 24 * 60 * 60 * 1000 // 1 year in ms
             : startTime + 182 * 24 * 60 * 60 * 1000; // approx. 6 months
+            const modExists = await ModUser.findById(user._id)
+        if(modExists && user.super_role == UserRoles.UserSuperRoles.mod){
+
+            return res.status(400).json({ error: "User is already a moderator" });
+        }
+        if(modExists && user.super_role == UserRoles.UserSuperRoles.none){
+        const findAndUpdate = await ModUser.findByIdAndUpdate(user._id, {
+            endTime,
+            reason,
+            timePeriod,
+            universityOrigin,
+            campusOrigin,
+        });
+        await ModRequest.findOneAndUpdate({userId: userId}, {
+            status: "approved",
+            updatedAt: Date.now(),
+        });
+    }  else{
         await ModUser.create({
             _id: userId,
             startTime,
@@ -148,6 +166,11 @@ router.put('/user/promote/mod', async (req, res) => {
             universityOrigin,
             campusOrigin,
         });
+       await  ModRequest.findOneAndUpdate({userId: userId}, {
+            status: "approved",
+            updatedAt: Date.now(),
+        });
+    }
 
         await User.findByIdAndUpdate(userId, {
             super_role: UserRoles.UserSuperRoles.mod,
@@ -189,7 +212,10 @@ router.put('/user/demote/mod', async (req, res) => {
         const predefinedEndTime = modUserData?.endTime || Date.now();
 
         await ModUser.findByIdAndUpdate(userId, {isNotModAnymore: true, notModAnymoreReason} );
-
+        await ModRequest.findOneAndUpdate({userId: userId}, {
+            status: "rejected",
+            updatedAt: Date.now(),
+        });
         await ModUserCollection.findByIdAndUpdate(
             campusOrigin,
             {
@@ -217,18 +243,22 @@ router.put('/user/demote/mod', async (req, res) => {
 // approve or reject mod request
 router.put("/admin/mod-request/handle", async (req, res) => {
     try {
-        const { requestId, action, rejectionReason, timePlan } = req.body;
-
+        const { requestId, action, reason,rejectionReason, timePlan } = req.body;
+console.log("REQUESTID",requestId, action, rejectionReason, timePlan, req.body)
         const request = await ModRequest.findById(requestId);
+        console.log("REQUEST", request)
         if (!request || request.status !== "pending") {
             return res.status(404).json({ error: "Mod request not found or already processed" });
         }
+        
 
         if (action === "approve") {
 
             request.status = "approved";
             request.reviewedAt = Date.now();
             await request.save();
+
+            
 
             const yearPlan = Object.freeze({
                 YEAR: 'year',
@@ -238,14 +268,15 @@ router.put("/admin/mod-request/handle", async (req, res) => {
             const startTime = Date.now();
             const timePeriod =
                 timePlan?.toLowerCase() === yearPlan.YEAR ? yearPlan.YEAR : yearPlan.SIX_MONTH;
-
+            const endTime = timePeriod === yearPlan.YEAR ? startTime + 365 * 24 * 60 * 60 * 1000 : startTime + 182 * 24 * 60 * 60 * 1000;
             await ModUser.create({
                 _id: request.userId,
                 startTime,
-                
+                endTime,
+                reason: reason,
                 timePeriod,
-                universityOrigin,
-                campusOrigin,
+                universityOrigin:request.universityId,
+                campusOrigin:request.campusId,
             });
 
             await User.findByIdAndUpdate(request.userId, {
@@ -254,7 +285,7 @@ router.put("/admin/mod-request/handle", async (req, res) => {
             const userId= request.userId
 
             await ModUserCollection.findByIdAndUpdate(
-                campusOrigin,
+                request.campusId,
                 {
                     $addToSet: {
                         nowModUsers: userId,
