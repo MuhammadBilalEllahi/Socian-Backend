@@ -413,6 +413,45 @@ router.post("/create", upload.array('file'), async (req, res) => {
     }
 });
 
+router.get('/admin/profile/posts', async (req, res) => {
+    try {
+  
+        const query = {};
+        
+            query["postByAdmin"]= true
+            query["adminSetStatus.isArchived"]= { $ne: true }// exclude archived posts
+      
+        console.log("query", query)
+        const latestPost = await Post.find(query)
+            .sort({ createdAt: -1 })
+            .populate([
+                {
+                    path: "author",
+                    select: 'name username role super_role university profile.picture',
+                    populate: {
+                        path: 'university',
+                        populate: {
+                            path: 'universityId departmentId campusId',
+                            select: 'name'
+                        }
+                    }
+                },
+                // "society",
+                // "subSociety",
+                "voteId"
+            ])
+        console.log("ADMIN POST", JSON.stringify(latestPost, null, 2))
+
+        if (!latestPost) {
+            return res.status(404).json({ message: "No active admin post found" });
+        }
+
+        return res.status(200).json({ posts: latestPost });
+    } catch (error) {
+        console.error("Error fetching latest admin post:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+});
 
 router.get('/admin/post', async (req, res) => {
     try {

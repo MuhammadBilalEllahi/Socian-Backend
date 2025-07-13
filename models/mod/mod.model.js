@@ -1,5 +1,6 @@
 // models/ModUser.js
 const mongoose = require("mongoose");
+const ModActions = require("./modActions");
 
 const modUserSchema = new mongoose.Schema({
   _id: {
@@ -41,6 +42,17 @@ const modUserSchema = new mongoose.Schema({
     ref: 'Campus',
     required: true,
   },
+  actionsDone: {
+    type: [String],
+    enum: Object.values(ModActions),
+    default: [],
+  },
+  actionsDoneCount: {
+    type: Number,
+    default: 0,
+  },
 });
+
+
 
 module.exports = mongoose.model("ModUser", modUserSchema);

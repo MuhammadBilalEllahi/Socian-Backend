@@ -17,6 +17,7 @@ const jwt = require('jsonwebtoken');
 const Department = require('../../models/university/department/department.university.model');
 const ModRequest = require('../../models/mod/mod.request.model');
 const ModModel = require('../../models/mod/mod.model');
+const ModUserCollection = require('../../models/mod/mod.collection.model');
 
 exports.getUserProfile = async (req, res) => {
     try {
@@ -1264,6 +1265,37 @@ router.get('/campus-moderators', async (req, res) => {
     }
 });
 
+
+router.get("/get-all-mods", async (req, res) => {
+    try {
+        const { campusOrigin } = getUserDetails(req);
+        
+        const mods = await ModUserCollection.findById(campusOrigin).populate([{
+            path: "nowModUsers",
+            populate: {
+                path: "_id",
+                model: "User",
+                select: "name username profile.picture _id"
+            },
+        },{
+            path: "prevModUsers",
+            populate: {
+                path: "userId",
+                model: "User",
+                select: "name username profile.picture _id"
+            },
+        }]);
+        console.log(JSON.stringify(mods,null,4));
+        if(!mods){
+            return res.status(200).json({ message: "No mods found", mods: [] });
+        }
+        res.status(200).json({ mods: mods });
+    } catch (error) {
+        console.error('Error in get-all-mods route: ', error);
+        res.status(500).json({ error: 'Internal Server Error' });   
+    }
+});
+
 router.get("/mod-information", async (req, res) => {
     try {
         const { userId } = getUserDetails(req);
@@ -1312,6 +1344,7 @@ router.get("/mod-request/status", async (req, res) => {
         res.status(500).json({ error: "Failed to get mod request" });
     }
 });
+
 
 router.post("/mod/request", async (req, res) => {
     try {

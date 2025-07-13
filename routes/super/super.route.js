@@ -22,6 +22,7 @@ const societyRouter = require('./societies.route');
 const usersRouter = require('./users.route');
 const teachersRouter = require('./teachers.route');
 const reportRouter = require("./report.route");
+const modRouter = require("./mod.route");
 const Department = require("../../models/university/department/department.university.model");
 const Teacher = require("../../models/university/teacher/teacher.model");
 const FeedBackCommentTeacher = require("../../models/university/teacher/feedback.rating.teacher.model");
@@ -39,6 +40,7 @@ router.use('/societies', societyRouter);
 router.use('/users', usersRouter)
 router.use('/teachers', teachersRouter);
 router.use('/report', reportRouter);
+router.use('/mod', modRouter);
 
 
 router.post("/post/create", adminPostUpload.array('file'), async (req, res) => {

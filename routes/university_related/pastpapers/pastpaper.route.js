@@ -151,50 +151,125 @@ router.get('/profile/papers', async (req, res) => {
 
 
 // Get papers by type for a subject
+// router.get('/:type/:subjectId',
+//   // cacheMiddleware(req => CACHE_KEYS.PAPER_BY_TYPE(req.params.subjectId, req.params.type)),
+//   asyncHandler(async (req, res) => {
+//     const { type, subjectId } = req.params;
+
+//     // Get papers using the PastPaperItem model
+//     const papers = await PastPaperItem.findBySubjectAndType(subjectId, type);
+//     console.log("PAPERS", papers[0].files)
+
+//     // Get the subject name
+//     const subject = await Subject.findById(subjectId).select('name');
+//     if (!subject) {
+//       return res.status(404).json({ message: "Subject not found" });
+//     }
+
+//     // Group papers by academic year
+//     const papersByYear = papers.reduce((acc, paper) => {
+//       const year = paper.academicYear;
+//       if (!acc[year]) {
+//         acc[year] = [];
+//       }
+//       acc[year].push(paper);
+//       return acc;
+//     }, {});
+
+//     // Transform the data for the frontend
+//     const response = {
+//       subjectName: subject.name,
+//       papers: Object.entries(papersByYear).map(([year, papers]) => ({
+//         academicYear: parseInt(year),
+//         papers: papers
+//       })).sort((a, b) => b.academicYear - a.academicYear)
+//     };
+
+//     // Cache the response
+//     await redisClient.setex(
+//       CACHE_KEYS.PAPER_BY_TYPE(subjectId, type),
+//       CACHE_TTL,
+//       JSON.stringify(response)
+//     );
+
+//     await PastPaperItem.incrementViews(papers[0]._id);
+
+//     res.json(response);
+//   })
+// );
 router.get('/:type/:subjectId',
-  // cacheMiddleware(req => CACHE_KEYS.PAPER_BY_TYPE(req.params.subjectId, req.params.type)),
   asyncHandler(async (req, res) => {
     const { type, subjectId } = req.params;
 
-    // Get papers using the PastPaperItem model
-    const papers = await PastPaperItem.findBySubjectAndType(subjectId, type);
-    console.log("PAPERS", papers[0].files)
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    // Get the subject name
-    const subject = await Subject.findById(subjectId).select('name');
-    if (!subject) {
-      return res.status(404).json({ message: "Subject not found" });
-    }
-
-    // Group papers by academic year
-    const papersByYear = papers.reduce((acc, paper) => {
-      const year = paper.academicYear;
-      if (!acc[year]) {
-        acc[year] = [];
+    try {
+      const papers = await PastPaperItem.findBySubjectAndType(subjectId, type, session);
+      if (!papers || papers.length === 0) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({ message: "No papers found" });
       }
-      acc[year].push(paper);
-      return acc;
-    }, {});
 
-    // Transform the data for the frontend
-    const response = {
-      subjectName: subject.name,
-      papers: Object.entries(papersByYear).map(([year, papers]) => ({
-        academicYear: parseInt(year),
-        papers: papers
-      })).sort((a, b) => b.academicYear - a.academicYear)
-    };
+      console.log("PAPERS", papers[0].files);
 
-    // Cache the response
-    await redisClient.setex(
-      CACHE_KEYS.PAPER_BY_TYPE(subjectId, type),
-      CACHE_TTL,
-      JSON.stringify(response)
-    );
+      // Increment views for each paper BEFORE preparing response
+      if (papers.length > 0) {
+        await PastPaperItem.findByIdAndUpdate(
+          papers[0]._id,
+          { 
+            $inc: { 'metadata.views': 1 },
+            $set: { 'metadata.lastAccessed': new Date() }
+          },
+          { session }
+        );
+      }
 
-    res.json(response);
+      // Fetch updated papers with incremented views
+      const updatedPapers = await PastPaperItem.findBySubjectAndType(subjectId, type, session);
+
+      const subject = await Subject.findById(subjectId).select('name').session(session);
+      if (!subject) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({ message: "Subject not found" });
+      }
+
+      const papersByYear = updatedPapers.reduce((acc, paper) => {
+        const year = paper.academicYear;
+        if (!acc[year]) acc[year] = [];
+        acc[year].push(paper);
+        return acc;
+      }, {});
+
+      const response = {
+        subjectName: subject.name,
+        papers: Object.entries(papersByYear).map(([year, papers]) => ({
+          academicYear: parseInt(year),
+          papers: papers
+        })).sort((a, b) => b.academicYear - a.academicYear)
+      };
+
+      await redisClient.setex(
+        CACHE_KEYS.PAPER_BY_TYPE(subjectId, type),
+        CACHE_TTL,
+        JSON.stringify(response)
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+
+      res.json(response);
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      console.error("Error in /:type/:subjectId route:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
   })
 );
+
 
 
 router.post("/upload", upload.single('file'), async (req, res) => {

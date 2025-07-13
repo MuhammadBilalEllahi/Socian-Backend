@@ -2,7 +2,10 @@ const cron = require('node-cron');
 const Teacher = require('../models/university/teacher/teacher.model');
 const aiFeedback = require("../services/aifeedback.service");
 const {default: PQueue} = require('p-queue'); // Queue to rate limit AI API calls
-
+const ModUserCollection = require('../models/mod/mod.collection.model');
+const User = require('../models/user/user.model');
+const mongoose = require("mongoose")
+const ModUser = require("../models/mod/mod.model");
 // Initialize the queue with a concurrency limit (e.g., 5 simultaneous API calls)
 const queue = new PQueue({ concurrency: 5 });
 
@@ -47,7 +50,7 @@ async function updateTeacherFeedbackSummary(teacher) {
         console.error("Error updating feedback summary:", error);
     }
 }
-
+// */5 * * * * 
 cron.schedule("35 7 * * *", async () => {
     console.log("Running cron job to update teacher feedback summary... 35 7 * * *");
 
@@ -74,6 +77,157 @@ cron.schedule("35 7 * * *", async () => {
     }
 });
 
+////////////////////////////Moderator updates////////////////////////////////////
+// after every hour we will check if a mod end time is reached and then we will convert him back to super_role none 
+// then remove him from the mod collection nowmodusers and put him to prevmodusers
+
+
+cron.schedule("0 * * * *", async () => {
+  console.log("⏱️1 hr time 0 **** Running cron job to update moderator updates...");
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  let changesMade = false;
+
+  try {
+    console.log("🔍 Fetching ModUserCollections with active moderators...");
+    const mods = await ModUserCollection.find({
+      nowModUsers: { $exists: true, $ne: [] }
+    }).populate({
+      path: "nowModUsers",
+      populate: {
+        path: "_id",
+        model: "User",
+        select: "name _id"
+      }
+    }).session(session);
+
+    console.log("MODS", mods)
+    if (!mods || mods.length === 0) {
+      console.log("❌ No mod collections found with active mods.");
+      await session.commitTransaction();
+      session.endSession();
+      return;
+    }
+
+    console.log(`✅ Found ${mods.length} mod collections to process.`);
+
+    for (const mod of mods) {
+      console.log(`\n📦 Processing Mod Collection: ${mod._id}`);
+      const expiredMods = [];
+
+      console.log("xpired? time",mods )
+      for (const modUser of mod.nowModUsers) {
+        if (modUser.endTime <= new Date()) {
+          console.log(`🔻 Mod expired: ${modUser._id} (${modUser._id.name})`);
+          expiredMods.push({
+            userId: modUser._id,
+            startTime: modUser.startTime,
+            predefinedEndTime: modUser.predefinedEndTime,
+            endTime: modUser.endTime,
+          });
+        }
+      }
+
+      if (expiredMods.length > 0) {
+        changesMade = true;
+        const expiredIds = expiredMods.map(m => m.userId);
+        console.log("👥 Expired mod IDs:", expiredIds);
+
+        console.log("📝 Updating user roles to 'none'...");
+        const user = await User.updateMany(
+          { _id: { $in: expiredIds } },
+          { $set: { super_role: "none" } },
+          { session }
+        );
+
+        console.log("📤 Moving expired mods to prevModUsers...");
+        mod.prevModUsers.push(...expiredMods);
+
+        console.log("🧹 Removing expired mods from nowModUsers...");
+        mod.nowModUsers = mod.nowModUsers.filter(
+          u => !expiredMods.find(e => e.userId.equals(u._id))
+        );
+
+        console.log("💾 Saving updated ModUserCollection...");
+        await mod.save({ session });
+
+        const modUser = await ModUser.findById(user._id);
+        modUser.isNotModAnymore = true;
+        modUser.reason = "Moderation time expired - Cronjob";
+        await modUser.save();
+
+        console.log(`✅ Done: Mod Collection ${mod._id} updated.`);
+      } else {
+        console.log("✅ No expired mods in this collection.");
+      }
+    }
+
+    if (changesMade) {
+      await session.commitTransaction();
+      console.log("🎉 Moderator updates committed.");
+    } else {
+      await session.abortTransaction();
+      console.log("ℹ️ No changes detected. Nothing to commit.");
+    }
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("❗ Cron job failed:", error);
+  } finally {
+    session.endSession();
+    console.log("🛑 Mongo session ended.\n");
+  }
+});
+
+// cron.schedule("* * * * *", async () => {
+//   console.log("Running cron job to update moderator updates... * * * * *");
+
+//   try {
+//     const mods = await ModUserCollection.find({
+//       nowModUsers: { $exists: true, $ne: [] }
+//     }).populate({
+//         path: "nowModUsers",
+//         populate: {
+//             path: "_id",
+//             model: "User",
+//             select: "name _id"
+//         }
+//     });
+
+//     if (!mods || mods.length === 0) {
+//       console.log("No mods found.");
+//       return;
+//     }
+
+//     for (const mod of mods) {
+//       const expiredMods = [];
+
+//       for (const modUser of mod.nowModUsers) {
+//         if (modUser.endTime <= new Date()) {
+//           expiredMods.push({
+//             userId: modUser._id,
+//             startTime: modUser.startTime,
+//             predefinedEndTime: modUser.predefinedEndTime,
+//             endTime: modUser.endTime,
+//           });
+//         }
+//       }
+
+//       if (expiredMods.length > 0) {
+//         mod.prevModUsers.push(...expiredMods);
+//         mod.nowModUsers.pull({_id: {$in: expiredMods.map(mod => mod._id)}});
+//         await mod.save();
+//         await User.findByIdAndUpdate(modUser._id, {super_role: "none"});
+//         console.log(`Updated mod collection: ${mod._id}`);
+//       }
+//     }
+
+//     console.log("Moderator updates updated.");
+//   } catch (error) {
+//     console.error("Cron job failed:", error);
+//   }
+// });
 
 // BELOW COdE is befoer optimazation. So, keep it for future reference
 

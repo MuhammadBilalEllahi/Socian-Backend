@@ -126,30 +126,59 @@ const pastPaperItemSchema = new Schema({
 // Methods for querying
 pastPaperItemSchema.statics = {
     // Find papers by subject and type
-    async findBySubjectAndType(subjectId, type) {
-        return this.find({
-            subjectId,
-            type: type.toUpperCase()
-        }).populate(
-            [
-                {
-                    path: 'files.teachers', select: '_id name imageUrl userAttached userAttachedBool email department rating hasLeft onLeave feedbackSummary',
-                    populate: [{
-                        path: 'campusOrigin',
-                        select: '_id name'
-                    },{
-                        path: 'department',
-                        select: "name _id"
-                    }, {
-                        path: 'userAttached',
-                        select: '_id name username universityEmail personalEmail'
-                    }]
-                },
-                { path: 'files.uploadedBy', select: '_id name username universityEmail personalEmail' }
-            ]
+    // async findBySubjectAndType(subjectId, type) {
+    //     return this.find({
+    //         subjectId,
+    //         type: type.toUpperCase()
+    //     }).populate(
+    //         [
+    //             {
+    //                 path: 'files.teachers', select: '_id name imageUrl userAttached userAttachedBool email department rating hasLeft onLeave feedbackSummary',
+    //                 populate: [{
+    //                     path: 'campusOrigin',
+    //                     select: '_id name'
+    //                 },{
+    //                     path: 'department',
+    //                     select: "name _id"
+    //                 }, {
+    //                     path: 'userAttached',
+    //                     select: '_id name username universityEmail personalEmail'
+    //                 }]
+    //             },
+    //             { path: 'files.uploadedBy', select: '_id name username universityEmail personalEmail' }
+    //         ]
 
-        ).sort({ academicYear: -1 });
-    },
+    //     ).sort({ academicYear: -1 });
+    // },
+    // Inside your statics:
+async findBySubjectAndType(subjectId, type, session = null) {
+    const query = this.find({
+      subjectId,
+      type: type.toUpperCase()
+    }).populate([
+      {
+        path: 'files.teachers',
+        select: '_id name imageUrl userAttached userAttachedBool email department rating hasLeft onLeave feedbackSummary',
+        populate: [{
+          path: 'campusOrigin',
+          select: '_id name'
+        }, {
+          path: 'department',
+          select: "name _id"
+        }, {
+          path: 'userAttached',
+          select: '_id name username universityEmail personalEmail'
+        }]
+      },
+      { path: 'files.uploadedBy', select: '_id name username universityEmail personalEmail' }
+    ]).sort({ academicYear: -1 });
+  
+    if (session) {
+      query.session(session);
+    }
+  
+    return query;
+  },  
 
     // Find papers by subject and year
     async findBySubjectAndYear(subjectId, year) {
@@ -229,7 +258,9 @@ pastPaperItemSchema.methods = {
         this.answerId = answer._id;
         return this.save();
     },
+    
 };
+
 
 
 const PastPaperItem = mongoose.model("PastPaperItem", pastPaperItemSchema);

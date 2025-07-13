@@ -36,6 +36,8 @@ const { attachSocketToApp } = require("./socket/socket.js");
 
 const MongoStore = require("connect-mongo");
 const path = require("path");
+
+const logModActivity = require("./models/mod/modActivityLogs.js");
 // const RedisStore = require('connect-redis').default;
 
 // const Redis = require('ioredis');
@@ -184,7 +186,7 @@ app.use('/api/webhooks', webhooks);
 
 app.use("/api/super", superProtect, superRouter);
 app.use("/api/admin", adminProtect, adminRouter);
-app.use("/api/mod",protectRoute, modProtect, modRouter); // ?
+app.use("/api/mod",protectRoute, modProtect, logModActivity, modRouter); // ?
 app.use("/api/messages", protectRoute, messagesRouter);
 
 app.use("/api/auth", authRouter);
