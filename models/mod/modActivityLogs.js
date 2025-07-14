@@ -24,9 +24,9 @@ const logModActivity = async (req, res, next) => {
     await modActivity.save();
 
     // Save to log file (or send to DB or analytics later)
-    const logFilePath = path.join(__dirname, "../logs/mod-logs.json");
+    // const logFilePath = path.join(__dirname, "../logs/mod-logs.json");
 
-    fs.appendFileSync(logFilePath, JSON.stringify(log) + ",\n");
+    // fs.appendFileSync(logFilePath, JSON.stringify(log) + ",\n");
   } catch (err) {
     console.error("Error logging mod activity:", err);
   }

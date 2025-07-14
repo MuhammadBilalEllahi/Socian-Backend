@@ -28,6 +28,7 @@ router.post('/login', [
         }
 
         const { identifier, password } = req.body;
+        console.log("Cafe user1", identifier, password )
 
         // Find user by username, email or phone
         const user = await CafeUser.findOne({
@@ -41,6 +42,7 @@ router.post('/login', [
             { path: 'references.universityId', select: 'name _id' },
             { path: 'references.campusId', select: 'name _id' }]
         );
+        console.log("Cafe user", user,identifier, password )
 
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
