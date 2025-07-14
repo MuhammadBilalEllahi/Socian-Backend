@@ -113,6 +113,14 @@ const postSchema = new Schema(
         default: false
       }
     },
+    hiddenByMod: {
+      type: Boolean,
+      default: false
+    },
+    reason: {
+      type: String,
+      default: null
+    },
     forAllUniversites: { type: Boolean, default: false },
     forCampus: { type: Boolean, default: false },
     forUniversity: { type: Boolean, default: false },
@@ -269,7 +277,8 @@ postSchema.pre(/^find/, function (next) {
     postByAdmin: false, 
     'adminSetStatus.isArchived': false,
     'status.isDeleted': false,  // This will exclude NSFW content since they're marked as deleted
-    isNSFW: { $ne: true }       // Extra safety check
+    isNSFW: { $ne: true } ,      // Extra safety check
+    hiddenByMod: { $ne: true }
   });
   
   next();

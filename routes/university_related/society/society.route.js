@@ -803,6 +803,7 @@ router.post("/verification-request", uploadVerifySocietyImage.fields([
     { name: 'customDocuments', maxCount: 5 }
 ]), async (req, res) => {
     try {
+
         const { userId: requestedBy } = getUserDetails(req);
         const { 
             societyId, 
@@ -813,6 +814,8 @@ router.post("/verification-request", uploadVerifySocietyImage.fields([
             customDocumentNames
         } = req.body;
 
+
+                console.log("_______FILEs",req.files,"FILE_______", req.file, "BODY__________", req.body)
 
 
         // Parse JSON strings if needed with error handling
@@ -875,6 +878,8 @@ router.post("/verification-request", uploadVerifySocietyImage.fields([
         // Handle file uploads
         if (req.files) {
             console.log("Files received:", Object.keys(req.files));
+                    console.log("_______FILEs",req.files,"FILE_______", req.file, "BODY__________", req.body)
+
 
             // Upload registration certificate
             if (req.files.registrationCertificate && req.files.registrationCertificate[0]) {
@@ -1863,7 +1868,8 @@ router.put("/verification-request/:requestId", uploadVerifySocietyImage.fields([
         // Handle file uploads for strengthening the request
         if (req.files) {
             console.log("Update request - Files received:", Object.keys(req.files));
-            
+                                console.log("_______FILEs",req.files,"FILE_______", req.file, "BODY__________", req.body)
+
             // Upload registration certificate if not already uploaded
             if (req.files.registrationCertificate && req.files.registrationCertificate[0] && 
                 !existingRequest.societyDocuments?.registrationCertificate?.url) {

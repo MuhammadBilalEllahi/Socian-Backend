@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 const FeedBackCommentTeacher = require('../../models/university/teacher/feedback.rating.teacher.model');
 const Society = require('../../models/society/society.model');
 const ModActivity = require('../../models/mod/modActivity.model');
+const Post = require('../../models/society/post/post.model');
 
 // Get moderator's own activities
 router.get('/my-activities', async (req, res) => {
@@ -163,7 +164,7 @@ async function performModUndoAction(activity, session) {
                 teacher.rating = averageRating || 0;
                 await teacher.save({ session });
             }
-            
+
             return { success: true, details: "Teacher review unhidden and rating recalculated" };
         }
         
@@ -469,6 +470,50 @@ router.get("/society/hide/:id", async (req, res) => {
     res.status(500).json("Internal Server Error");
   }
 });
+
+router.put("/posts/hide", async (req, res) => {
+ 
+  try {
+    const { postId } = req.query;
+    const {reason} = req.body;
+    console.log("postId", postId, "reason", reason)
+    if(!postId) return res.status(400).json("postId is required");
+    if(!reason) return res.status(400).json("reason is required");
+
+    const post = await Post.findByIdAndUpdate(postId, {hiddenByMod: true, reason});
+    if (!post) return res.status(404).json("no post found")
+    res.status(200).json(post)
+  } catch (error) {
+    console.error("Error in posts.route.js ", error);
+    res.status(500).json("Internal Server Error");
+  }
+});
+
+router.put("/posts/un-hide", async (req, res) => {
+  
+  try {
+
+    
+    const { postId } = req.query;
+    const {reason} = req.body;
+    console.log("postId", postId, "reason", reason)
+    if(!postId) return res.status(400).json("postId is required");
+    if(!reason) return res.status(400).json("reason is required");
+
+
+    const post = await Post.findByIdAndUpdate(postId, {hiddenByMod: false, reason});
+    if (!post) return res.status(404).json("no post found")
+    res.status(200).json(post)
+  } catch (error) {
+    console.error("Error in posts.route.js ", error);
+    res.status(500).json("Internal Server Error");
+  }
+});
+
+
+
+
+
 
 
 module.exports = router;
