@@ -29,6 +29,8 @@ const protectRoute = async (req, res, next) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+
 module.exports = protectRoute;
 
 // const bypassRoutes = ["/universities-grouped-campus"];

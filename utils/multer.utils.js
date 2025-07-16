@@ -84,6 +84,47 @@ const adminPostUpload = multer({
     }
 });
 
+const cafeFoodItemStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const {universityOrigin, campusOrigin,}= req.body;
+        const {  super_role, userId } = getUserDetails(req);
+        console.log(universityOrigin, campusOrigin, super_role, userId)
+
+        const pathCWD = process.cwd();
+        console.log("PATHHH", pathCWD);
+
+
+        const uploadPath = path.join(
+            pathCWD,
+            'temp',
+            "uploads",
+            ...[universityOrigin, campusOrigin, super_role, userId, 'posts'].filter(Boolean) 
+            // universityOrigin,
+            // campusOrigin,
+            // role,
+            // userId,
+            // "posts"
+        );
+
+        // Create directory if it doesn't exist
+        fs.mkdirSync(uploadPath, { recursive: true });
+
+        console.log("saved to destination", uploadPath)
+
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = `${Date.now()}-${file.originalname}`;
+        cb(null, uniqueName);
+    }
+});
+
+const cafeFoodItemUpload = multer({
+    storage: cafeFoodItemStorage, limits: {
+        fileSize: 50 * 1024 * 1024 // 50 MB per file
+    }
+});
+
 
 
 

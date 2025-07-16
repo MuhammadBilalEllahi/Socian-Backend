@@ -295,29 +295,46 @@ const handlePlatformResponse = async (user, res, req) => {
  * @returns {campusId}
  */
 const getCafeUserDetails = (req) => {
+  try {
+    let cafeUser, cafeUserId, role, universityId, campusId;
 
-  let cafeUser, cafeUserId, role, universityId, campusId;
+    const platform = req.headers["x-platform"];
+    // console.log("REQ>USER in getCafeUserDetails", req.user);
 
-  const platform = req.headers["x-platform"];
-
-  if (platform === "web") {
-    cafeUser = req.session.cafe.user;
-    cafeUserId = req.session.cafe.user._id;
-    role = req.session.cafe.user.role;
-    if (role !== "ext_org") {
-      universityId = req.session.cafe.user.references.universityId?._id ?? req.session.cafe.user.references.universityId;
-      campusId = req.session.cafe.user.references.campusId?._id ?? req.session.cafe.user.references.campusId;
+    if (platform === "web") {
+      if (!req?.session?.cafe?.user) {
+        console.error("Session cafe user is not defined");
+        return {};
+      }
+      cafeUser = req.session.cafe.user;
+      cafeUserId = req.session.cafe.user._id;
+      role = req.session.cafe.user.role;
+      if (role !== "ext_org") {
+        universityId = req.session.cafe.user.references.universityId?._id ?? req.session.cafe.user.references.universityId;
+        campusId = req.session.cafe.user.references.campusId?._id ?? req.session.cafe.user.references.campusId;
+      }
+    } else if (platform === "app") {
+      if (!req?.user) {
+        console.error("JWT user is not defined");
+        return {};
+      }
+      cafeUser = req.user;
+      // JWT payload has 'userId' not '_id'
+      cafeUserId = req.user.userId || req.user._id;
+      role = req.user.role;
+      if (role !== "ext_org") {
+        // JWT payload has 'university' and 'campus' objects directly
+        universityId = req.user.university?._id ?? req.user.university;
+        campusId = req.user.campus?._id ?? req.user.campus;
+      }
     }
-  } else if (platform === "app") {
-    cafeUser = req.cafe.user;
-    cafeUserId = req.cafe.user._id;
-    role = req.cafe.user.role;
-    if (role !== "ext_org") {
-      universityId = req.cafe.user.references.universityId?._id ?? req.cafe.user.references.universityId;
-      campusId = req.cafe.user.references.campusId?._id ?? req.cafe.user.references.campusId;
-    }
+    
+    // console.log("Extracted cafe user details:", { cafeUserId, role, universityId, campusId });
+    return { cafeUser, cafeUserId, role, universityId, campusId };
+  } catch (error) {
+    console.error("Error in getCafeUserDetails:", error);
+    return {};
   }
-  return { cafeUser, cafeUserId, role, universityId, campusId };
 };
 
 module.exports = {

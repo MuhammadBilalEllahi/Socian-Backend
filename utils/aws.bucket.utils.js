@@ -484,6 +484,39 @@ const uploadUniversityImageAws = async (file, req, univeristyId) => {
             }
         }
     };
+
+
+    const uploadCafeFoodItem = async (file, req ) => {
+        const bucketName = process.env.AWS_S3_IMAGE_BUCKET_NAME;
+        console.log("FILE", file)
+    
+        try {
+            let mediaUrl = null;
+    
+    
+            if (file) {
+                const mediaFile = file;
+                // console.log("This is media file: ", mediaFile)
+                const mediaKey = `universities/cafe/fooditem/${Date.now()}-${mediaFile.originalname}`;
+                mediaUrl = await uploadToS3(mediaFile.path, bucketName, mediaKey, mediaFile.mimetype);
+                // console.log("THIS IS MEDIA BLAH", "\n", mediaFile.path, "\n", bucketName, "\n", mediaKey, "\n", req.body.contentType)
+    
+            }
+    
+            console.log("THIS IS MEDIA UL", mediaUrl)
+    
+            return { url: mediaUrl, type: file.mimetype };
+        } catch (error) {
+            console.error('Error uploading images to S3 by SubCommunityImages:', error);
+            throw error;
+        } finally {
+            if (file) {
+                const mediaFile = file;
+                console.log("UnLinking: ", mediaFile)
+                fs.unlinkSync(mediaFile.path)
+            }
+        }
+    };
     
 
 

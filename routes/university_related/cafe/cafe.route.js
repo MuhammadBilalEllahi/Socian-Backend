@@ -12,7 +12,7 @@ const { getUserDetails } = require('../../../utils/utils');
 const FoodItem = require('../../../models/cafes_campus/food.item.model');
 const CafeVote = require('../../../models/cafes_campus/ratings/vote/vote.cafe.model');
 const CafeItemRating = require('../../../models/cafes_campus/ratings/rating.cafe.item.model');
-
+const protectRoute = require("../../../middlewares/protect.route")
 router.use('/user', cafeProtect, cafeProtectedRoutes);
 
 // Login route
@@ -279,7 +279,7 @@ router.get('/', async (req, res) => {
 
 
 // ? BELOW THESE ARE FOR STUDENTS | ALUMNI
-router.get('/campus/cafe/all', async (req, res) => {
+router.get('/campus/cafe/all',protectRoute, async (req, res) => {
     try {
         const { campusId } = getUserDetails(req);
         console.log(campusId);
@@ -303,7 +303,7 @@ router.get('/campus/cafe/all', async (req, res) => {
 );
 
 
-router.get('/campus/cafe/:cafeId/fooditems', async (req, res) => {
+router.get('/campus/cafe/:cafeId/fooditems',protectRoute, async (req, res) => {
     try {
         
         const { cafeId } = req.params;
@@ -329,7 +329,7 @@ router.get('/campus/cafe/:cafeId/fooditems', async (req, res) => {
 }
 );
 
-router.get('/campus/cafe/fooditems/reviews/:fooditemId', async (req, res) => {
+router.get('/campus/cafe/fooditems/reviews/:fooditemId',protectRoute, async (req, res) => {
     try {
       const { fooditemId } = req.params;
     //   CafeItemRating
@@ -384,7 +384,7 @@ router.get('/campus/cafe/fooditems/reviews/:fooditemId', async (req, res) => {
   
 
 
-router.post('/fooditem/rate', async (req, res) => {
+router.post('/fooditem/rate',protectRoute, async (req, res) => {
     const session = await mongoose.startSession();
     try {
         const { foodItemId, cafeId, ratingMessage, rating } = req.body;

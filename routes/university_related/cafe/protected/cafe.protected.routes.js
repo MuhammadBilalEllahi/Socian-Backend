@@ -14,6 +14,44 @@ router.get('/test', async (req, res) => {
         console.error("ERROR")
     }
 })
+
+// Token verification route
+router.get('/verify-token', async (req, res) => {
+    try {
+        const { cafeUserId } = getCafeUserDetails(req);
+        if (cafeUserId) {
+            res.status(200).json({ valid: true, message: 'Token is valid' });
+        } else {
+            res.status(401).json({ valid: false, message: 'Invalid token' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+})
+
+// Get cafe details route
+router.get('/:cafeId', async (req, res) => {
+    try {
+        const { cafeId } = req.params;
+        const { campusId } = getCafeUserDetails(req);
+        
+        const cafe = await Cafe.findOne({ 
+            _id: cafeId, 
+            'references.campusId': campusId 
+        }).populate([
+            { path: 'categories' },
+            { path: 'foodItems' }
+        ]);
+        
+        if (!cafe) {
+            return res.status(404).json({ error: 'Cafe not found' });
+        }
+        
+        res.status(200).json({ cafe });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+})
 // cafeProtect,
 
 
@@ -137,11 +175,33 @@ router.patch('/update/:cafeId/coordinates',
 router.post('/:cafeId/category', async (req, res) => {
     try {
         const { name, description, imageUrl } = req.body;
-        const cafeId = req.params.cafeId;
+        const {cafeId} = req.params;
+        const {} = getCafeUserDetails(req)
+        console.log("cafeId", cafeId)
+        
+        // Debug logging
+        console.log('Create category request:');
+        console.log('- Request URL:', req.url);
+        console.log('- Request method:', req.method);
+        console.log('- Full request path:', req.path);
+        console.log('- cafeId from params:', cafeId);
+        console.log('- req.params:', req.params);
+        console.log('- req.body:', req.body);
+        
+        // Validate cafeId
+        if (!cafeId) {
+            console.error('cafeId is missing from request params');
+            return res.status(400).json({ error: 'cafeId is required' });
+        }
+        
         const { cafeUserId, universityId, campusId } = getCafeUserDetails(req);
-
+        
+        console.log('- cafeUserId:', cafeUserId);
+        console.log('- universityId:', universityId);
+        console.log('- campusId:', campusId);
 
         const newCategory = new FoodCategory({
+            cafeId,
             name,
             description,
             imageUrl: imageUrl || '',
@@ -167,12 +227,13 @@ router.post('/:cafeId/category', async (req, res) => {
                     updatedAt: new Date()
                 }
             },
-
-        })
+        });
 
         await newCategory.save();
+        console.log('Category created successfully:', newCategory._id);
         res.status(201).json(newCategory);
     } catch (error) {
+        console.error('Error creating category:', error);
         res.status(500).json({ error: error.message });
     }
 });
