@@ -7,7 +7,7 @@ const { default: mongoose } = require('mongoose');
 const Society = require('../../models/society/society.model');
 const FriendRequest = require('../../models/user/friend.request.model');
 const Teacher = require('../../models/university/teacher/teacher.model');
-const UserRoles = require('../../models/userRoles');
+const {UserRoles} = require('../../models/userRoles');
 const { upload, uploadImage } = require('../../utils/multer.utils');
 const { uploadPictureMedia } = require('../../utils/aws.bucket.utils');
 const { OTP } = require('../../models/otp/otp');
@@ -592,6 +592,7 @@ router.get('/teacher/attachUser', async (req, res) => {
         const { userId, platform } = getUserDetails(req);
         console.log("CHecking platform ", platform);
         const user = await User.findById(userId);
+        console.log("USER", user)
         const response = await setTeacherModal(req, user, platform);
         console.log("DOG", response);
         if (response?.forwarded) {
@@ -604,7 +605,7 @@ router.get('/teacher/attachUser', async (req, res) => {
 
 
         }
-        res.status(response.status).json({
+        res.status(response?.status).json({
             message: response.message,
             teacher: response.teacher || null,
             attached: response.attached || false,
@@ -621,6 +622,7 @@ router.get('/teacher/attachUser', async (req, res) => {
 const setTeacherModal = async function (req, user, platform) {
     console.log("Platform->", platform);
     console.log("THE USER ,", user)
+    console.log("user.role === UserRoles.teacher", user.role === UserRoles.teacher, user.role ,UserRoles.teacher)
     try {
         if (user.role === UserRoles.teacher) {
             const teacherModalExists = await Teacher.findOne({ email: user.universityEmail });

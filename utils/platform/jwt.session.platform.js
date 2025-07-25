@@ -1,4 +1,4 @@
-const UserRoles = require("../../models/userRoles");
+const {UserRoles} = require("../../models/userRoles");
 const generateToken = require("../generate.token");
 const moment = require('moment');
 

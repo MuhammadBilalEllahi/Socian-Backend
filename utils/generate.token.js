@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const moment = require('moment');
-const UserRoles = require("../models/userRoles");
+const {UserRoles} = require("../models/userRoles");
 
 
 // function omit(obj, keys = []) {

@@ -28,7 +28,7 @@ const University = require("../../models/university/university.register.model.js
 const generateToken = require("../../utils/generate.token.js");
 const { OTP } = require("../../models/otp/otp.js");
 const Department = require("../../models/university/department/department.university.model.js");
-const UserRoles = require("../../models/userRoles.js");
+const {UserRoles} = require("../../models/userRoles.js");
 const { platformSessionOrJwt_CALL_on_glogin_only } = require("../../utils/platform/jwt.session.platform.js");
 const protectRoute = require("../../middlewares/protect.route.js");
 const DeletedUser = require("../../models/user/deleted.user.model.js");
@@ -206,7 +206,7 @@ router.post("/login", async (req, res) => {
       const name = user.name;
       console.log("User in APP ip", ip);
       if (!user?.user_devices[x_device_id] && user?.user_devices[x_device_id] !== true) {
-        resendAccountLogin({ name, email, iP: ip, val_platform }, req, res)
+        // resendAccountLogin({ name, email, iP: ip, val_platform }, req, res)
       }
       res.status(200).json({
         access_token: accessToken,
@@ -400,7 +400,7 @@ router.post("/register", async (req, res) => {
         }
         const regex = new RegExp(campus.emailPatterns.regex);
 
-
+console.log("REgex", regex)
 
         if (regex.test(universityEmail)) {
           return res.status(400).json({

@@ -4,7 +4,7 @@ const moment = require("moment");
 const otpGenerator = require("otp-generator");
 const bcryptjs = require('bcryptjs');
 const generateToken = require("./generate.token");
-const UserRoles = require("../models/userRoles")
+const {UserRoles} = require("../models/userRoles")
 /**
  * Generates a 6-digit OTP.
  * @returns {string} - A 6-digit OTP as a string.
