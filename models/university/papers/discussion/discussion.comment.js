@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const DiscussionCommentVote = require("./vote.comment.discussion");
+const DiscussionCommentVote = require("models/university/papers/discussion/vote.comment.discussion");
 const discussionCommentSchema = new mongoose.Schema({
     content: { type: String, required: true },
     // upvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true }],
@@ -54,7 +54,7 @@ discussionCommentSchema.methods.updateAnswerStatus = async function () {
 
         // If this is an approved answer, link it to the structured question
         if (this.isVotedAnswer && this.structuredQuestionId) {
-            const PastPaperItem = require('../pastpaper.item.model').PastPaperItem;
+            const PastPaperItem = require('pastpaper.item.model').PastPaperItem;
             const paper = await PastPaperItem.findById(this.paperId);
             if (paper) {
                 await paper.linkAnswerToQuestion(this.structuredQuestionId, this._id);

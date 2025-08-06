@@ -1,11 +1,11 @@
-const Society = require('../../models/society/society.model');
+const Society = require('models/society/society.model');
 
 const router = require('express').Router();
 const mongoose= require('mongoose');
 
-const Members = require('../../models/society/members.collec.model');
-const SocietyType = require('../../models/society/society.type.model');
-const VerificationRequest = require('../../models/verification/verfication.model');
+const Members = require('models/society/members.collec.model');
+const SocietyType = require('models/society/society.type.model');
+const VerificationRequest = require('models/verification/verfication.model');
 
 router.get('/', async (req,res)=>{
     try{

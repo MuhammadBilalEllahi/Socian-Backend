@@ -1,10 +1,10 @@
-const ModUserCollection = require('../../models/mod/mod.collection.model');
-const ModUser = require('../../models/mod/mod.model');
-const ModRequest = require('../../models/mod/mod.request.model');
+const ModUserCollection = require('models/mod/mod.collection.model');
+const ModUser = require('models/mod/mod.model');
+const ModRequest = require('models/mod/mod.request.model');
 
-const User = require('../../models/user/user.model');
-const {UserRoles} = require('../../models/userRoles');
-const { getUserDetails } = require('../../utils/utils');
+const User = require('models/user/user.model');
+const {UserRoles} = require('models/userRoles');
+const { getUserDetails } = require('utils/utils');
 
 const router = require('express').Router();
 

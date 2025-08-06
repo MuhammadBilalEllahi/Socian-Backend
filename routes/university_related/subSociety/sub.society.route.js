@@ -1,10 +1,10 @@
 const express = require('express');
-const SocietyType = require('../../../models/society/society.type.model');
-const SubSociety = require('../../../models/society/sub.society.model');
-const Society = require('../../../models/society/society.model');
-const PostsCollection = require('../../../models/society/post/collection/post.collection.model');
-const Members = require('../../../models/society/members.collec.model');
-const User = require('../../../models/user/user.model');
+const SocietyType = require('models/society/society.type.model');
+const SubSociety = require('models/society/sub.society.model');
+const Society = require('models/society/society.model');
+const PostsCollection = require('models/society/post/collection/post.collection.model');
+const Members = require('models/society/members.collec.model');
+const User = require('models/user/user.model');
 const router = express.Router();
 
 

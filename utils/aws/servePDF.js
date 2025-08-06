@@ -5,8 +5,8 @@ const stream = require('stream');
 const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-const { getUserDetails } = require('../utils');
-const superProtect = require('../../middlewares/super.protect');
+const { getUserDetails } = require('utils/utils');
+const superProtect = require('middlewares/super.protect');
 
 const s3Client = new S3Client({
     region: process.env.AWS_REGION,

@@ -1,10 +1,10 @@
 const express = require('express');
-const University = require('../../models/university/university.register.model');
+const University = require('models/university/university.register.model');
 const router = express.Router()
 
 const NodeCache = require("node-cache");
-const User = require('../../models/user/user.model');
-const redisClient = require('../../db/reddis')
+const User = require('models/user/user.model');
+const redisClient = require('db/reddis')
 
 /**
  * In sign up page this route gets the universities with campus as 6757657-87687687 uni-campus

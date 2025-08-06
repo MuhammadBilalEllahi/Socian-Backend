@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 
-const { getUserDetails } = require('../../../utils/utils');
-const FoodCategory = require('../../../models/cafes_campus/category.food.item.model');
-const FoodItem = require('../../../models/cafes_campus/food.item.model');
-const Cafe = require('../../../models/cafes_campus/cafe.model');
-const CafeUser = require('../../../models/cafes_campus/cafe.user.model');
+const { getUserDetails } = require('utils/utils');
+const FoodCategory = require('models/cafes_campus/category.food.item.model');
+const FoodItem = require('models/cafes_campus/food.item.model');
+const Cafe = require('models/cafes_campus/cafe.model');
+const CafeUser = require('models/cafes_campus/cafe.user.model');
 const moment = require('moment')
 
 // Cafe admin might not be able to read and write. translate the reviews to them. or Speak the revies. Or just make app view in URDU(not easy now i know)

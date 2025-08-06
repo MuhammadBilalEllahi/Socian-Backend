@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
-const University = require("../../models/university/university.register.model");
-const Campus = require("../../models/university/campus.university.model");
-const redisClient = require("../../db/reddis");
+const University = require("models/university/university.register.model");
+const Campus = require("models/university/campus.university.model");
+const redisClient = require("db/reddis");
 const mongoose = require('mongoose')
 //  Routes
 router.post("/register", async (req, res) => {

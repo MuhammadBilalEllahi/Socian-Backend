@@ -1,5 +1,5 @@
 const resendProt = require("resend");
-const { createDateTime } = require("./utils");
+const { createDateTime } = require("utils/utils");
 const { Resend } = resendProt;
 const resend = new Resend(process.env.resend);
 

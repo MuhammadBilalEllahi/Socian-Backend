@@ -1,17 +1,17 @@
 const express = require("express");
-const Discussion = require("../../../models/university/papers/discussion/discussion");
-const User = require("../../../models/user/user.model");
-const { getUserDetails } = require("../../../utils/utils");
-const { DiscussionComment } = require("../../../models/university/papers/discussion/discussion.comment");
-const DiscussionCommentVote = require("../../../models/university/papers/discussion/vote.comment.discussion");
-const { PastPaperItem, StructuredQuestion } = require("../../../models/university/papers/pastpaper.item.model");
+const Discussion = require("models/university/papers/discussion/discussion");
+const User = require("models/user/user.model");
+const { getUserDetails } = require("utils/utils");
+const { DiscussionComment } = require("models/university/papers/discussion/discussion.comment");
+const DiscussionCommentVote = require("models/university/papers/discussion/vote.comment.discussion");
+const { PastPaperItem, StructuredQuestion } = require("models/university/papers/pastpaper.item.model");
 const { default: mongoose } = require("mongoose");
-const DiscussionChat = require("../../../models/university/papers/discussion/chat/discussion.chat");
-const StructuredQuestionCollection = require("../../../models/university/papers/structured/structured.collec.file.model");
-const StructuredAnswer = require("../../../models/university/papers/structured/answers.structured.model");
-const StructuredVote = require("../../../models/university/papers/structured/vote.answers.model");
+const DiscussionChat = require("models/university/papers/discussion/chat/discussion.chat");
+const StructuredQuestionCollection = require("models/university/papers/structured/structured.collec.file.model");
+const StructuredAnswer = require("models/university/papers/structured/answers.structured.model");
+const StructuredVote = require("models/university/papers/structured/vote.answers.model");
 const path = require("path");
-const { StructuredComment } = require("../../../models/university/papers/structured/comment.answers.structure.model");
+const { StructuredComment } = require("models/university/papers/structured/comment.answers.structure.model");
 const router = express.Router();
 
 // Error handler middleware

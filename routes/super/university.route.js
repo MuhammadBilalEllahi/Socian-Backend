@@ -1,7 +1,7 @@
 const express = require("express");
-const University = require("../../models/university/university.register.model");
-const { uploadUniversityImage } = require("../../utils/multer.utils");
-const { uploadUniversityImageAws } = require("../../utils/aws.bucket.utils");
+const University = require("models/university/university.register.model");
+const { uploadUniversityImage } = require("utils/multer.utils");
+const { uploadUniversityImageAws } = require("utils/aws.bucket.utils");
 const router = express.Router();
 
 const mongoose= require("mongoose")

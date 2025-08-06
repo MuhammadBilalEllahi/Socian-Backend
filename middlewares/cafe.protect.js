@@ -1,8 +1,8 @@
 
 
 
-const CafeUser = require("../models/cafes_campus/cafe.user.model.js");
-const { getCafeUserDetails } = require("../utils/utils.js");
+const CafeUser = require("models/cafes_campus/cafe.user.model.js");
+const { getCafeUserDetails } = require("utils/utils.js");
 const jwt = require("jsonwebtoken")
 const cafeProtect = async (req, res, next) => {
     try {

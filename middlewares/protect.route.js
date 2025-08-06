@@ -1,7 +1,7 @@
 // const jwt = require("jsonwebtoken");
-const User = require("../models/user/user.model.js");
-const authenticateToken = require("./jwt.protect.js");
-const authenticateSession = require("./session.protect.js");
+const User = require("models/user/user.model.js");
+const authenticateToken = require("middlewares/jwt.protect.js");
+const authenticateSession = require("middlewares/session.protect.js");
 // TODO need to change it to JWT + Session for mobile app
 
 const protectRoute = async (req, res, next) => {

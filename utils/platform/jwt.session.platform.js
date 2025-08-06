@@ -1,5 +1,5 @@
-const {UserRoles} = require("../../models/userRoles");
-const generateToken = require("../generate.token");
+const {UserRoles} = require("models/userRoles");
+const generateToken = require("utils/generate.token");
 const moment = require('moment');
 
 const platformSessionOrJwt_CALL_on_glogin_only = async (user, req, res) => {

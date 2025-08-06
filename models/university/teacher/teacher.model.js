@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const User = require('../../user/user.model');
-const {UserRoles} = require('../../userRoles');
+const User = require('models/user/user.model');
+const {UserRoles} = require('models/userRoles');
 const Schema = mongoose.Schema;
 
 

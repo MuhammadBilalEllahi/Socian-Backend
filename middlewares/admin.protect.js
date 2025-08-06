@@ -1,5 +1,5 @@
-const User = require("../models/user/user.model.js");
-const { getUserDetails } = require("../utils/utils.js");
+const User = require("models/user/user.model.js");
+const { getUserDetails } = require("utils/utils.js");
 
 const adminProtect = async (req, res, next) => {
     ///req res order is must

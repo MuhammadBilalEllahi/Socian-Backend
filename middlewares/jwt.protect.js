@@ -9,7 +9,7 @@ function getLogFilePath() {
   const month = now.toLocaleString('default', { month: 'long' }).toLowerCase(); // 'june'
   const day = now.toISOString().split('T')[0]; // '2025-06-27'
 
-  const logDir = path.join(__dirname, `../logs/${year}/${month}`);
+  const logDir = path.join(__dirname, `logs/${year}/${month}`);
   
   // Create folders if they don’t exist
   fs.mkdirSync(logDir, { recursive: true });
@@ -53,7 +53,7 @@ module.exports = authenticateToken;
 
 // function getLogFilePath() {
 //   const today = new Date().toISOString().split('T')[0]; // e.g. 2025-06-27
-//   const logDir = path.join(__dirname, '../logs');
+//   const logDir = path.join(__dirname, 'logs');
 
 //   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
 

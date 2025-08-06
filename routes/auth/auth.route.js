@@ -1,10 +1,10 @@
-// const generateToken = require("../utils/generate.token.js");
+// const generateToken = require("utils/generate.token.js");
 const jwt = require("jsonwebtoken");
 
 const express = require("express");
 const router = express.Router();
 const moment = require("moment");
-const {UserSuperRoles} = require('../../models/userRoles.js')
+const {UserSuperRoles} = require('models/userRoles.js')
 const {
   resendEmail,
   resendEmailForgotPassword,
@@ -12,7 +12,7 @@ const {
   resendAccountLogin,
   resendEmailAccountDeletion,
   resendEmailIsThisAccountYours
-} = require("../../utils/email.util.js");
+} = require("utils/email.util.js");
 const bcryptjs = require("bcryptjs");
 const {
   generateOtp6Digit,
@@ -20,20 +20,20 @@ const {
   sendOtp,
   getUserDetails,
   handlePlatformResponse,
-} = require("../../utils/utils.js");
+} = require("utils/utils.js");
 
-const User = require("../../models/user/user.model.js");
-const Campus = require("../../models/university/campus.university.model.js");
-const University = require("../../models/university/university.register.model.js");
-const generateToken = require("../../utils/generate.token.js");
-const { OTP } = require("../../models/otp/otp.js");
-const Department = require("../../models/university/department/department.university.model.js");
-const {UserRoles} = require("../../models/userRoles.js");
-const { platformSessionOrJwt_CALL_on_glogin_only } = require("../../utils/platform/jwt.session.platform.js");
-const protectRoute = require("../../middlewares/protect.route.js");
-const DeletedUser = require("../../models/user/deleted.user.model.js");
-const { upload } = require("../../utils/multer.utils.js");
-const { uploadBothCardMedia, uploadLivePictureMedia } = require("../../utils/aws.bucket.utils.js");
+const User = require("models/user/user.model.js");
+const Campus = require("models/university/campus.university.model.js");
+const University = require("models/university/university.register.model.js");
+const generateToken = require("utils/generate.token.js");
+const { OTP } = require("models/otp/otp.js");
+const Department = require("models/university/department/department.university.model.js");
+const {UserRoles} = require("models/userRoles.js");
+const { platformSessionOrJwt_CALL_on_glogin_only } = require("utils/platform/jwt.session.platform.js");
+const protectRoute = require("middlewares/protect.route.js");
+const DeletedUser = require("models/user/deleted.user.model.js");
+const { upload } = require("utils/multer.utils.js");
+const { uploadBothCardMedia, uploadLivePictureMedia } = require("utils/aws.bucket.utils.js");
 
 router.get("/session", async (req, res) => {
   // console.log("Req user:", req.session.user)

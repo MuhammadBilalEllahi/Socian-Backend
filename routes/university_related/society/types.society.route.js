@@ -1,5 +1,5 @@
 const express = require('express');
-const SocietyType = require('../../../models/society/society.type.model');
+const SocietyType = require('models/society/society.type.model');
 
 const router = express.Router();
 

@@ -1,8 +1,8 @@
 const express = require('express');
-const { getCafeUserDetails } = require('../../../../utils/utils');
-const Cafe = require('../../../../models/cafes_campus/cafe.model');
-const FoodCategory = require('../../../../models/cafes_campus/category.food.item.model');
-const FoodItem = require('../../../../models/cafes_campus/food.item.model');
+const { getCafeUserDetails } = require('utils/utils');
+const Cafe = require('models/cafes_campus/cafe.model');
+const FoodCategory = require('models/cafes_campus/category.food.item.model');
+const FoodItem = require('models/cafes_campus/food.item.model');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 

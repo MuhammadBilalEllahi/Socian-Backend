@@ -1,15 +1,15 @@
 const express = require('express');
-const User = require('../../models/user/user.model');
-const { getUserDetails } = require('../../utils/utils');
+const User = require('models/user/user.model');
+const { getUserDetails } = require('utils/utils');
 const router = express.Router();
 const modCafeRouter = require('./cafe/cafe.mod.route');
-const Teacher = require('../../models/university/teacher/teacher.model');
-const TeacherRating = require('../../models/university/teacher/rating.teacher.model');
+const Teacher = require('models/university/teacher/teacher.model');
+const TeacherRating = require('models/university/teacher/rating.teacher.model');
 const mongoose = require('mongoose');
-const FeedBackCommentTeacher = require('../../models/university/teacher/feedback.rating.teacher.model');
-const Society = require('../../models/society/society.model');
-const ModActivity = require('../../models/mod/modActivity.model');
-const Post = require('../../models/society/post/post.model');
+const FeedBackCommentTeacher = require('models/university/teacher/feedback.rating.teacher.model');
+const Society = require('models/society/society.model');
+const ModActivity = require('models/mod/modActivity.model');
+const Post = require('models/society/post/post.model');
 
 // Get moderator's own activities
 router.get('/my-activities', async (req, res) => {

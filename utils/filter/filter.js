@@ -1,4 +1,4 @@
-const User = require("../../models/user/user.model");
+const User = require("models/user/user.model");
 
 /**
  * Searches for a user based on their role and valid email types.

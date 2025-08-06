@@ -1,3 +1,6 @@
+// Register module aliases for absolute imports
+require('module-alias/register');
+
 // const cluster = require('cluster');
 // const os = require('os');
 
@@ -22,14 +25,14 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
-const mongoDB = require("./db/connect.mongodb.js");
+const mongoDB = require("db/connect.mongodb.js");
 const session = require("express-session");
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const csrfProtection = require('@fastify/csrf-protection');
 const compression = require('compression');
 const http = require("http");
-const { attachSocketToApp } = require("./socket/socket.js");
+const { attachSocketToApp } = require("socket/socket.js");
 
 // const sanitizeHtml = require('sanitize-html');
 // const cleanHtml = sanitizeHtml(userInput, { allowedTags: [], allowedAttributes: {} });
@@ -37,17 +40,17 @@ const { attachSocketToApp } = require("./socket/socket.js");
 const MongoStore = require("connect-mongo");
 const path = require("path");
 
-const logModActivity = require("./models/mod/modActivityLogs.js");
+const logModActivity = require("models/mod/modActivityLogs.js");
 // const RedisStore = require('connect-redis').default;
 
 // const Redis = require('ioredis');
 
 
 
-const redisClient = require("./db/reddis.js");
+const redisClient = require("db/reddis.js");
 
 
-const cronjob = require("./cronjob/cronjob.js");
+const cronjob = require("cronjob/cronjob.js");
 
 
 
@@ -125,58 +128,58 @@ app.use((req, res, next) => {
 // const crypto = require('crypto')
 // console.log(crypto.randomBytes(6).toString('hex'))
 
-const authRouter = require("./routes/auth/auth.route.js");
-const oAuthRouter = require('./routes/auth/oAuth/oAuth.route.js');
+const authRouter = require("routes/auth/auth.route.js");
+const oAuthRouter = require('routes/auth/oAuth/oAuth.route.js');
 // const requestRoute = require('./routes/request');
 // const emailRoute = require('./routes/email.route.js');
 
 // const mobAuthRouter = require("./routes/auth/mob.auth.route.js"); // will not use maybe
 
-const protectRoute = require("./middlewares/protect.route.js");
-const superProtect = require("./middlewares/super.protect.js");
-const adminProtect = require("./middlewares/admin.protect.js");
-const modProtect = require("./middlewares/mod.protect.js");
+const protectRoute = require("middlewares/protect.route.js");
+const superProtect = require("middlewares/super.protect.js");
+const adminProtect = require("middlewares/admin.protect.js");
+const modProtect = require("middlewares/mod.protect.js");
 
-const superRouter = require("./routes/super/super.route.js");
-const adminRouter = require("./routes/admin/admin.route.js");
-const modRouter = require("./routes/mod/mod.route.js");
+const superRouter = require("routes/super/super.route.js");
+const adminRouter = require("routes/admin/admin.route.js");
+const modRouter = require("routes/mod/mod.route.js");
 
-const universityRouter = require("./routes/super/university.route.js");
+const universityRouter = require("routes/super/university.route.js");
 // const campusRouter = require("./routes/university_related/campus.route.js");
 
-const departmentRouter = require("./routes/university_related/department/department.route.js");
-const subjectRouter = require("./routes/university_related/subject/subject.route.js");
-const teacherRouter = require("./routes/university_related/teacher/teacher.route.js");
+const departmentRouter = require("routes/university_related/department/department.route.js");
+const subjectRouter = require("routes/university_related/subject/subject.route.js");
+const teacherRouter = require("routes/university_related/teacher/teacher.route.js");
 
-const pastpaperRouter = require("./routes/university_related/pastpapers/pastpaper.route.js");
-const academicRouter = require("./routes/university_related/pastpapers/academic.format.route.js");
-const discussionRouter = require("./routes/university_related/pastpapers/discussion.route.js");
+const pastpaperRouter = require("routes/university_related/pastpapers/pastpaper.route.js");
+const academicRouter = require("routes/university_related/pastpapers/academic.format.route.js");
+const discussionRouter = require("routes/university_related/pastpapers/discussion.route.js");
 
-const uploadsRouter = require('./utils/aws/servePDF.js');
+const uploadsRouter = require('utils/aws/servePDF.js');
 
 
 
-const societyRouter = require("./routes/university_related/society/society.route.js");
+const societyRouter = require("routes/university_related/society/society.route.js");
 // const subSocietyRouter = require("./routes/university_related/subsociety/sub.society.route.js")
-const postsRouter = require('./routes/university_related/posts/post.route.js');
+const postsRouter = require('routes/university_related/posts/post.route.js');
 
-const accessibleRoutes = require('./routes/accessibles/accessible.route.js');
+const accessibleRoutes = require('routes/accessibles/accessible.route.js');
 
-const userRouter = require('./routes/user/user.route.js');
-const cafeRouter = require('./routes/university_related/cafe/cafe.route.js');
-const reportRouter = require('./routes/university_related/report/report.route.js');
+const userRouter = require('routes/user/user.route.js');
+const cafeRouter = require('routes/university_related/cafe/cafe.route.js');
+const reportRouter = require('routes/university_related/report/report.route.js');
 
-const aiRouter = require('./routes/aiRoutes/ai.routes.js');
+const aiRouter = require('routes/aiRoutes/ai.routes.js');
 
-const eventRouter = require('./routes/GPS/event.attendance.route.js')(io);
+const eventRouter = require('routes/GPS/event.attendance.route.js')(io);
 
-const locationRouter= require('./routes/GPS/location.sharing.route.js')
-const gatheringRouter= require('./routes/GPS/gathering.route.js')
+const locationRouter= require('routes/GPS/location.sharing.route.js')
+const gatheringRouter= require('routes/GPS/gathering.route.js')
 
-const webhooks = require('./webhooks/webhooks.route.js');
+const webhooks = require('webhooks/webhooks.route.js');
 
 // Parse raw body for signature verification
-const messagesRouter = require("./routes/1to1messages/messages.routes.js");
+const messagesRouter = require("routes/1to1messages/messages.routes.js");
 
 
 

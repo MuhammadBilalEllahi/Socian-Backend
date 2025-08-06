@@ -1,11 +1,11 @@
 const cron = require('node-cron');
-const Teacher = require('../models/university/teacher/teacher.model');
-const aiFeedback = require("../services/aifeedback.service");
+const Teacher = require('models/university/teacher/teacher.model');
+const aiFeedback = require("services/aifeedback.service");
 const {default: PQueue} = require('p-queue'); // Queue to rate limit AI API calls
-const ModUserCollection = require('../models/mod/mod.collection.model');
-const User = require('../models/user/user.model');
+const ModUserCollection = require('models/mod/mod.collection.model');
+const User = require('models/user/user.model');
 const mongoose = require("mongoose")
-const ModUser = require("../models/mod/mod.model");
+const ModUser = require("models/mod/mod.model");
 // Initialize the queue with a concurrency limit (e.g., 5 simultaneous API calls)
 const queue = new PQueue({ concurrency: 5 });
 
@@ -233,8 +233,8 @@ cron.schedule("0 * * * *", async () => {
 
 
 // const cron = require('node-cron');
-// const Teacher = require('../models/university/teacher/teacher.model');
-// const aiFeedback = require("../services/aifeedback.service")
+// const Teacher = require('models/university/teacher/teacher.model');
+// const aiFeedback = require("services/aifeedback.service")
 
 
 

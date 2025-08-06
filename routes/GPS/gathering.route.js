@@ -1,9 +1,9 @@
 // const express = require("express");
 // const router = express.Router();
-// const Gathering = require("../../models/gps/user.gathering.model");
+// const Gathering = require("models/gps/user.gathering.model");
 // const { check, validationResult } = require("express-validator");
 // const geolib = require('geolib');
-// const User = require("../../models/user/user.model")
+// const User = require("models/user/user.model")
 
 
 
@@ -295,11 +295,11 @@
 
 const express = require("express");
 const router = express.Router();
-const Gathering = require("../../models/gps/user.gathering.model");
-const Society = require("../../models/society/society.model"); // Adjust path as needed
+const Gathering = require("models/gps/user.gathering.model");
+const Society = require("models/society/society.model"); // Adjust path as needed
 const { check, validationResult } = require("express-validator");
 const geolib = require('geolib');
-const User = require("../../models/user/user.model");
+const User = require("models/user/user.model");
 
 router.post("/", [
   check('title', 'Title is required').not().isEmpty(),

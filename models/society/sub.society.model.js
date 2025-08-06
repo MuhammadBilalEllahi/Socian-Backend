@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const Society = require("./society.model");
+const Society = require("models/society/society.model");
 const { Schema, model } = mongoose;
 
 /**

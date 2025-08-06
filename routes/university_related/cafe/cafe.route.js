@@ -4,15 +4,15 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const mongoose = require('mongoose');
-const CafeUser = require('../../../models/cafes_campus/cafe.user.model');
-const Cafe = require('../../../models/cafes_campus/cafe.model');
+const CafeUser = require('models/cafes_campus/cafe.user.model');
+const Cafe = require('models/cafes_campus/cafe.model');
 const cafeProtectedRoutes = require('./protected/cafe.protected.routes');
-const cafeProtect = require('../../../middlewares/cafe.protect');
-const { getUserDetails } = require('../../../utils/utils');
-const FoodItem = require('../../../models/cafes_campus/food.item.model');
-const CafeVote = require('../../../models/cafes_campus/ratings/vote/vote.cafe.model');
-const CafeItemRating = require('../../../models/cafes_campus/ratings/rating.cafe.item.model');
-const protectRoute = require("../../../middlewares/protect.route")
+const cafeProtect = require('middlewares/cafe.protect');
+const { getUserDetails } = require('utils/utils');
+const FoodItem = require('models/cafes_campus/food.item.model');
+const CafeVote = require('models/cafes_campus/ratings/vote/vote.cafe.model');
+const CafeItemRating = require('models/cafes_campus/ratings/rating.cafe.item.model');
+const protectRoute = require("middlewares/protect.route")
 router.use('/user', cafeProtect, cafeProtectedRoutes);
 
 // Login route

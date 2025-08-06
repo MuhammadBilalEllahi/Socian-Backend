@@ -1,9 +1,9 @@
 const express = require('express');
-const Subject = require('../../../models/university/department/subject/subject.department.model');
-const University = require('../../../models/university/university.register.model');
-const Campus = require('../../../models/university/campus.university.model');
-const Department = require('../../../models/university/department/department.university.model');
-const AcademicFormat = require('../../../models/university/academic.format.model');
+const Subject = require('models/university/department/subject/subject.department.model');
+const University = require('models/university/university.register.model');
+const Campus = require('models/university/campus.university.model');
+const Department = require('models/university/department/department.university.model');
+const AcademicFormat = require('models/university/academic.format.model');
 const router = express.Router()
 
 

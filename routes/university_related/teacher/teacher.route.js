@@ -1,18 +1,18 @@
 const express = require("express");
-const Subject = require("../../../models/university/department/subject/subject.department.model");
-const University = require("../../../models/university/university.register.model");
-const Campus = require("../../../models/university/campus.university.model");
-const Department = require("../../../models/university/department/department.university.model");
-const Teacher = require("../../../models/university/teacher/teacher.model");
+const Subject = require("models/university/department/subject/subject.department.model");
+const University = require("models/university/university.register.model");
+const Campus = require("models/university/campus.university.model");
+const Department = require("models/university/department/department.university.model");
+const Teacher = require("models/university/teacher/teacher.model");
 const router = express.Router();
-const TeacherRating = require("../../../models/university/teacher/rating.teacher.model");
+const TeacherRating = require("models/university/teacher/rating.teacher.model");
 const { default: mongoose } = require("mongoose");
-const { getUserDetails } = require("../../../utils/utils");
-const {UserRoles} = require("../../../models/userRoles");
-const User = require("../../../models/user/user.model");
-const { sessionSaveHandler } = require("../../../utils/save.session");
-// const redisClient = require('../../../db/reddis');
-const FeedBackCommentTeacher = require("../../../models/university/teacher/feedback.rating.teacher.model");
+const { getUserDetails } = require("utils/utils");
+const {UserRoles} = require("models/userRoles");
+const User = require("models/user/user.model");
+const { sessionSaveHandler } = require("utils/save.session");
+// const redisClient = require('db/reddis');
+const FeedBackCommentTeacher = require("models/university/teacher/feedback.rating.teacher.model");
 
 const axios = require('axios');
 

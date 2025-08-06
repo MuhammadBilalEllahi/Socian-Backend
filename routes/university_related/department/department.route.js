@@ -1,11 +1,11 @@
 const express = require("express");
-const Department = require("../../../models/university/department/department.university.model");
-const University = require("../../../models/university/university.register.model");
-const Campus = require("../../../models/university/campus.university.model");
-const { getUserDetails } = require("../../../utils/utils");
+const Department = require("models/university/department/department.university.model");
+const University = require("models/university/university.register.model");
+const Campus = require("models/university/campus.university.model");
+const { getUserDetails } = require("utils/utils");
 const router = express.Router();
 
-const redisClient = require('../../../db/reddis');
+const redisClient = require('db/reddis');
 
 
 

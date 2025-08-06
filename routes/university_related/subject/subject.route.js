@@ -1,13 +1,13 @@
 const express = require("express");
-const Subject = require("../../../models/university/department/subject/subject.department.model");
-const University = require("../../../models/university/university.register.model");
-const Campus = require("../../../models/university/campus.university.model");
-const Department = require("../../../models/university/department/department.university.model");
+const Subject = require("models/university/department/subject/subject.department.model");
+const University = require("models/university/university.register.model");
+const Campus = require("models/university/campus.university.model");
+const Department = require("models/university/department/department.university.model");
 const {
   PastPaper,
   PastpapersCollectionByYear,
-} = require("../../../models/university/papers/pastpaper.model");
-const { getUserDetails } = require("../../../utils/utils");
+} = require("models/university/papers/pastpaper.model");
+const { getUserDetails } = require("utils/utils");
 const router = express.Router();
 
 // TODO - create subject as single entity, ref with campus, so that user could attach them to department later

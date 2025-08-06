@@ -1,6 +1,6 @@
 const { Schema } = require("mongoose");
 const mongoose = require("mongoose");
-const PastPaperItem = require("./pastpaper.item.model");
+const PastPaperItem = require("models/university/papers/pastpaper.item.model");
 
 
 // Collection by Year Schema

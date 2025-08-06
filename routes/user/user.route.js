@@ -1,23 +1,23 @@
 const express = require('express');
-const User = require('../../models/user/user.model');
+const User = require('models/user/user.model');
 const router = express.Router();
 const moment = require('moment');
-const { getUserDetails, sendOtp, handlePlatformResponse } = require('../../utils/utils');
+const { getUserDetails, sendOtp, handlePlatformResponse } = require('utils/utils');
 const { default: mongoose } = require('mongoose');
-const Society = require('../../models/society/society.model');
-const FriendRequest = require('../../models/user/friend.request.model');
-const Teacher = require('../../models/university/teacher/teacher.model');
-const {UserRoles} = require('../../models/userRoles');
-const { upload, uploadImage } = require('../../utils/multer.utils');
-const { uploadPictureMedia } = require('../../utils/aws.bucket.utils');
-const { OTP } = require('../../models/otp/otp');
-const { resendEmailConfirmation } = require('../../utils/email.util');
+const Society = require('models/society/society.model');
+const FriendRequest = require('models/user/friend.request.model');
+const Teacher = require('models/university/teacher/teacher.model');
+const {UserRoles} = require('models/userRoles');
+const { upload, uploadImage } = require('utils/multer.utils');
+const { uploadPictureMedia } = require('utils/aws.bucket.utils');
+const { OTP } = require('models/otp/otp');
+const { resendEmailConfirmation } = require('utils/email.util');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Department = require('../../models/university/department/department.university.model');
-const ModRequest = require('../../models/mod/mod.request.model');
-const ModModel = require('../../models/mod/mod.model');
-const ModUserCollection = require('../../models/mod/mod.collection.model');
+const Department = require('models/university/department/department.university.model');
+const ModRequest = require('models/mod/mod.request.model');
+const ModModel = require('models/mod/mod.model');
+const ModUserCollection = require('models/mod/mod.collection.model');
 
 exports.getUserProfile = async (req, res) => {
     try {

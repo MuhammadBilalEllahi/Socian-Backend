@@ -1,9 +1,9 @@
 const express = require("express");
 const geolib = require("geolib");
 
-const Event = require("../../models/gps/event.model"); 
-const EventAttendance = require("../../models/gps/event.attendance.model");
-const UserLocation = require("../../models/gps/user.location.model");
+const Event = require("models/gps/event.model"); 
+const EventAttendance = require("models/gps/event.attendance.model");
+const UserLocation = require("models/gps/user.location.model");
 
 const router = express.Router(); // Ensure you use express.Router()
 

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const Message = require("../../models/1to1messages/messages.model");
-const { sendNotification } = require("../../socket/socket");
+const Message = require("models/1to1messages/messages.model");
+const { sendNotification } = require("socket/socket");
 
 // Fetch messages between two users
 router.get("/:userId", async (req, res) => {

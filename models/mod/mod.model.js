@@ -1,6 +1,6 @@
 // models/ModUser.js
 const mongoose = require("mongoose");
-const ModActions = require("./modActions");
+const ModActions = require("models/mod/modActions");
 
 const modUserSchema = new mongoose.Schema({
   _id: {

@@ -1,8 +1,8 @@
 // middlewares/logModActivity.middleware.js
 const fs = require("fs");
 const path = require("path");
-const ModActivity = require("./modActivity.model");
-const { getUserDetails } = require("../../utils/utils");
+const ModActivity = require("models/mod/modActivity.model");
+const { getUserDetails } = require("utils/utils");
 
 const logModActivity = async (req, res, next) => {
   try {
@@ -24,7 +24,7 @@ const logModActivity = async (req, res, next) => {
     await modActivity.save();
 
     // Save to log file (or send to DB or analytics later)
-    // const logFilePath = path.join(__dirname, "../logs/mod-logs.json");
+    // const logFilePath = path.join(__dirname, "logs/mod-logs.json");
 
     // fs.appendFileSync(logFilePath, JSON.stringify(log) + ",\n");
   } catch (err) {

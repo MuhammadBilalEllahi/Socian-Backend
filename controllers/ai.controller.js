@@ -1,5 +1,5 @@
-aiService = require("../services/ai.service");
-aiFeedbackService = require("../services/aifeedback.service");
+aiService = require("services/ai.service");
+aiFeedbackService = require("services/aifeedback.service");
 
 module.exports.getReview = async (req, res) => {
   const feedback = req.body.feedback;

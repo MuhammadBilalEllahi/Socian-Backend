@@ -1,6 +1,6 @@
-const valkeyClient = require("../db/valkey.pubsub");
-const DiscussionChatMessage = require("../models/university/papers/discussion/chat/discussion.chat.message");
-const DiscussionChat = require("../models/university/papers/discussion/chat/discussion.chat");
+const valkeyClient = require("db/valkey.pubsub");
+const DiscussionChatMessage = require("models/university/papers/discussion/chat/discussion.chat.message");
+const DiscussionChat = require("models/university/papers/discussion/chat/discussion.chat");
 
 class ChatBackupService {
   constructor() {

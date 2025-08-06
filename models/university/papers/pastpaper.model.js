@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
-const Campus = require("../campus.university.model");
+const Campus = require("models/university/campus.university.model");
 const { Schema } = mongoose;
-const PastPaperItem = require("./pastpaper.item.model");
+const PastPaperItem = require("models/university/papers/pastpaper.item.model");
 
 
 // Main PastPaper Schema

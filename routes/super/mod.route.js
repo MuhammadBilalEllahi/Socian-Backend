@@ -1,12 +1,12 @@
 const router = require("express").Router();
-const ModActivity = require("../../models/mod/modActivity.model");
-const { getUserDetails } = require("../../utils/utils");
+const ModActivity = require("models/mod/modActivity.model");
+const { getUserDetails } = require("utils/utils");
 
 // Import models that might need to be updated during undo
-const TeacherRating = require("../../models/university/teacher/rating.teacher.model");
-const Teacher = require("../../models/university/teacher/teacher.model");
-const FeedBackCommentTeacher = require("../../models/university/teacher/feedback.rating.teacher.model");
-const Society = require("../../models/society/society.model");
+const TeacherRating = require("models/university/teacher/rating.teacher.model");
+const Teacher = require("models/university/teacher/teacher.model");
+const FeedBackCommentTeacher = require("models/university/teacher/feedback.rating.teacher.model");
+const Society = require("models/society/society.model");
 const mongoose = require("mongoose");
 
 // Get all mod activities

@@ -1,11 +1,11 @@
 const express = require('express');
 const { OAuth2Client } = require('google-auth-library');
-const User = require('../../../models/user/user.model');
-const { platformSessionOrJwt_CALL_on_glogin_only, platformJwt_CALL_on_glogin_only } = require('../../../utils/platform/jwt.session.platform');
-const Campus = require('../../../models/university/campus.university.model');
-const {UserRoles} = require('../../../models/userRoles');
+const User = require('models/user/user.model');
+const { platformSessionOrJwt_CALL_on_glogin_only, platformJwt_CALL_on_glogin_only } = require('utils/platform/jwt.session.platform');
+const Campus = require('models/university/campus.university.model');
+const {UserRoles} = require('models/userRoles');
 const { json } = require('body-parser');
-const NonUniversityEmail = require('../../../models/non_uni/NonUni.model');
+const NonUniversityEmail = require('models/non_uni/NonUni.model');
 const router = express.Router();
 
 

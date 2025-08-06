@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const StructuredQuestion = require("./structured/structured.question.model");
+const StructuredQuestion = require("models/university/papers/structured/structured.question.model");
 const { Schema } = mongoose;
 
 // File Schema

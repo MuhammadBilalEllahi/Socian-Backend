@@ -1,7 +1,7 @@
 // StructuredComment
 
 const mongoose = require("mongoose");
-const StructuredVote = require("./vote.answers.model");
+const StructuredVote = require("models/university/papers/structured/vote.answers.model");
 
 const structuredCommenSchema = new mongoose.Schema({
     content: { type: String, required: true },

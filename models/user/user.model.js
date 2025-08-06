@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
-const {UserRoles} = require("../userRoles");
-const Teacher = require("../university/teacher/teacher.model");
+const {UserRoles} = require("models/userRoles");
+const Teacher = require("models/university/teacher/teacher.model");
 const moment = require('moment-timezone');
 
 

@@ -1,6 +1,6 @@
 const express = require("express");
-const SocietyType = require("../../../models/society/society.type.model");
-const Society = require("../../../models/society/society.model");
+const SocietyType = require("models/society/society.type.model");
+const Society = require("models/society/society.model");
 const router = express.Router();
 
 // For Alumni

@@ -1,13 +1,13 @@
-const Campus = require('../../models/university/campus.university.model');
-const FeedBackCommentTeacher = require('../../models/university/teacher/feedback.rating.teacher.model');
-const TeacherRating = require('../../models/university/teacher/rating.teacher.model');
-const Teacher = require('../../models/university/teacher/teacher.model');
+const Campus = require('models/university/campus.university.model');
+const FeedBackCommentTeacher = require('models/university/teacher/feedback.rating.teacher.model');
+const TeacherRating = require('models/university/teacher/rating.teacher.model');
+const Teacher = require('models/university/teacher/teacher.model');
 
 const router = require('express').Router();
 const mongoose = require('mongoose');
-const University = require('../../models/university/university.register.model');
-const Department = require('../../models/university/department/department.university.model');
-const { uploadTeacherImage } = require('../../utils/multer.utils');
+const University = require('models/university/university.register.model');
+const Department = require('models/university/department/department.university.model');
+const { uploadTeacherImage } = require('utils/multer.utils');
 
 
 const csv = require("csvtojson");

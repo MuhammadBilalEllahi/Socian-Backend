@@ -1,4 +1,4 @@
-const User = require("../models/user/user.model");
+const User = require("models/user/user.model");
 
 async function authenticateSession(req, res, next) {
   if (req.session.user) {

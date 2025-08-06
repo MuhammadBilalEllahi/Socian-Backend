@@ -3,21 +3,40 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "_moduleAliases": {
+    "app": ".",
+    "models": "./models",
+    "routes": "./routes",
+    "controllers": "./controllers",
+    "middlewares": "./middlewares",
+    "services": "./services",
+    "utils": "./utils",
+    "db": "./db",
+    "socket": "./socket",
+    "webhooks": "./webhooks",
+    "cronjob": "./cronjob"
+  },
   "scripts": {
     "check-git": "node ./utils/git/checkGitStatus.mjs",
     "run": "node ./index.js",
     "redis": "cd ./container/Redis && .\\redis-server.exe",
-    "server": "nodemon ./index.js ",
+    "server-local": "nodemon ./index.js ",
+    "server": "pnpm run pm2:start:prod ",
     "start": "nodemon ./index.js ",
     "railway": "nodemon ./index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:start:prod": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
+    "pm2:restart": "pm2 restart ecosystem.config.js",
+    "pm2:reload": "pm2 reload ecosystem.config.js",
+    "pm2:delete": "pm2 delete ecosystem.config.js",
+    "pm2:logs": "pm2 logs",
+    "pm2:monit": "pm2 monit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "nodemon": "^3.1.7"
-  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.709.0",
     "@aws-sdk/lib-storage": "^3.806.0",
@@ -63,6 +82,7 @@
     "otp-generator": "^4.0.1",
     "p-queue": "^6.6.2",
     "path": "^0.12.7",
+    "pm2": "^6.0.8",
     "redis": "^4.7.0",
     "redis-cli": "^2.1.2",
     "resend": "^4.0.1",
@@ -71,5 +91,9 @@
     "slugify": "^1.6.6",
     "socket.io": "^4.8.1",
     "ua-parser-js": "^2.0.3"
+  },
+  "devDependencies": {
+    "module-alias": "^2.2.3",
+    "nodemon": "^3.1.7"
   }
 }

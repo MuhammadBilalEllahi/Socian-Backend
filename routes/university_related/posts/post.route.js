@@ -1,20 +1,20 @@
 const express = require("express");
-const PostsCollection = require("../../../models/society/post/collection/post.collection.model");
-const Post = require("../../../models/society/post/post.model");
-const indivPost = require("../../../models/society/post/indivPost.model");
-const SocietyPostAndCommentVote = require("../../../models/society/post/vote/vote.post.community.model");
+const PostsCollection = require("models/society/post/collection/post.collection.model");
+const Post = require("models/society/post/post.model");
+const indivPost = require("models/society/post/indivPost.model");
+const SocietyPostAndCommentVote = require("models/society/post/vote/vote.post.community.model");
 const mongoose = require("mongoose");
-const User = require("../../../models/user/user.model");
-const { getUserDetails } = require("../../../utils/utils");
-const { uploadPostMedia } = require("../../../utils/aws.bucket.utils");
-const { upload } = require("../../../utils/multer.utils");
-const PostCommentCollection = require("../../../models/society/post/comment/post.comment.collect.model");
-const PostComment = require("../../../models/society/post/comment/post.comment.model");
-const Society = require("../../../models/society/society.model");
-const DeletedDataCollection = require("../../../models/deleted/deletedmodels");
-const Notification = require("../../../models/notification/notification.model");
-const { sendNotification } = require("../../../socket/socket");
-const AwsQueueService = require("../../../utils/aws/sqs");
+const User = require("models/user/user.model");
+const { getUserDetails } = require("utils/utils");
+const { uploadPostMedia } = require("utils/aws.bucket.utils");
+const { upload } = require("utils/multer.utils");
+const PostCommentCollection = require("models/society/post/comment/post.comment.collect.model");
+const PostComment = require("models/society/post/comment/post.comment.model");
+const Society = require("models/society/society.model");
+const DeletedDataCollection = require("models/deleted/deletedmodels");
+const Notification = require("models/notification/notification.model");
+const { sendNotification } = require("socket/socket");
+const AwsQueueService = require("utils/aws/sqs");
 const router = express.Router();
 
 /**
