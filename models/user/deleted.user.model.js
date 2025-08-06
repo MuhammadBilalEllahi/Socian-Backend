@@ -1,6 +1,7 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
-const deltedUserSchema = new mongoose.Schema({
+const deltedUserSchema = new Schema({
     name: {
         type: String,
     },
@@ -60,26 +61,26 @@ const deltedUserSchema = new mongoose.Schema({
         department: {
             type: String,
         },
-        savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
-        posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
-        personalPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
+        savedPosts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
+        posts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
+        personalPosts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
         connections: {
-            friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "FriendRequest" }],
+            friends: [{ type: Schema.Types.ObjectId, ref: "FriendRequest" }],
 
             // friend: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", }],
-            blocked: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+            blocked: [{ type: Schema.Types.ObjectId, ref: "User" }],
         },
 
         moderatorTo: {
             society: [
                 {
-                    type: mongoose.Schema.Types.ObjectId,
+                    type: Schema.Types.ObjectId,
                     ref: "Society",
                 },
             ],
             subsociety: [
                 {
-                    type: mongoose.Schema.Types.ObjectId,
+                    type: Schema.Types.ObjectId,
                     ref: "SubSociety",
                 },
             ],
@@ -89,25 +90,25 @@ const deltedUserSchema = new mongoose.Schema({
     university: {
         slug: String,
         universityId: {
-            type: mongoose.Schema.Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: "University",
         },
         campusId: {
-            type: mongoose.Schema.Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: "Campus",
 
         },
         departmentId: {
-            type: mongoose.Schema.Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: "Department",
 
         },
     },
     subscribedSocities: [
-        { type: mongoose.Schema.Types.ObjectId, ref: "Society" },
+        { type: Schema.Types.ObjectId, ref: "Society" },
     ],
     subscribedSubSocities: [
-        { type: mongoose.Schema.Types.ObjectId, ref: "SubSociety" },
+        { type: Schema.Types.ObjectId, ref: "SubSociety" },
     ],
     // ##  EMAIL
     universityEmail: {
@@ -166,7 +167,7 @@ const deltedUserSchema = new mongoose.Schema({
     },
     teacherConnectivities: {
         teacherModal: {
-            type: mongoose.Schema.Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: 'Teacher'
         },
         attached: { type: Boolean, default: false },
@@ -182,7 +183,7 @@ const deltedUserSchema = new mongoose.Schema({
         blocking: {
             isBlocked: { type: Boolean, default: false },
             blockedBy: {
-                type: mongoose.Schema.Types.ObjectId,
+                type: Schema.Types.ObjectId,
                 ref: "User",
             },
         },
@@ -191,7 +192,7 @@ const deltedUserSchema = new mongoose.Schema({
         approval: {
             isApproved: { type: Boolean, default: false },
             approvedBy: {
-                type: mongoose.Schema.Types.ObjectId,
+                type: Schema.Types.ObjectId,
                 ref: "User",
             },
         }, // This is  ref to a user(admin,mod,super admin) or SELF for teacher,student
@@ -236,4 +237,4 @@ const deltedUserSchema = new mongoose.Schema({
 
 
 const DeletedUser = mongoose.model("DeletedUser", deltedUserSchema);
-module.exports = DeletedUser;
+export default DeletedUser;

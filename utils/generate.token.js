@@ -1,6 +1,6 @@
-const jwt = require("jsonwebtoken");
-const moment = require('moment');
-const {UserRoles} = require("../models/userRoles");
+import jwt from "jsonwebtoken";
+import moment from 'moment';
+import {UserRoles} from "../models/userRoles.js";
 
 
 // function omit(obj, keys = []) {
@@ -110,4 +110,4 @@ const generateToken = (user) => {
   return { accessToken, refreshToken };
 };
 
-module.exports = generateToken;
+export default generateToken;

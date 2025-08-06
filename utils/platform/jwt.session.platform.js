@@ -1,6 +1,6 @@
-const {UserRoles} = require("../../models/userRoles");
-const generateToken = require("../generate.token");
-const moment = require('moment');
+import {UserRoles} from "../../models/userRoles.js";
+import generateToken from "../generate.token.js";
+import moment from 'moment';
 
 const platformSessionOrJwt_CALL_on_glogin_only = async (user, req, res) => {
     try {
@@ -96,4 +96,4 @@ const platformJwt_CALL_on_glogin_only = async (user, req, res) => {
 
 }
 
-module.exports = { platformSessionOrJwt_CALL_on_glogin_only, platformJwt_CALL_on_glogin_only }
+export { platformSessionOrJwt_CALL_on_glogin_only, platformJwt_CALL_on_glogin_only };

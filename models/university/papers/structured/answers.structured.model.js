@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
-const StructuredVote = require('./vote.answers.model');
-const { Schema } = mongoose;
+import mongoose from "mongoose";
+import   StructuredVote from './vote.answers.model.js';
+const Schema = mongoose.Schema;
 
 
 
@@ -45,5 +45,4 @@ structuredAnswerSchema.pre('save', async function (next) {
 });
 
 const StructuredAnswer = mongoose.model('StructuredAnswer', structuredAnswerSchema);
-
-module.exports = StructuredAnswer;
+export default StructuredAnswer;

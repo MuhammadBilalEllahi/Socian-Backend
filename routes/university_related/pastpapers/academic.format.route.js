@@ -1,9 +1,9 @@
-const express = require('express');
-const Subject = require('../../../models/university/department/subject/subject.department.model');
-const University = require('../../../models/university/university.register.model');
-const Campus = require('../../../models/university/campus.university.model');
-const Department = require('../../../models/university/department/department.university.model');
-const AcademicFormat = require('../../../models/university/academic.format.model');
+import express from 'express';
+import Subject from '../../../models/university/department/subject/subject.department.model.js';
+import University from '../../../models/university/university.register.model.js';
+import Campus from '../../../models/university/campus.university.model.js';
+import Department from '../../../models/university/department/department.university.model.js';
+import AcademicFormat from '../../../models/university/academic.format.model.js';
 const router = express.Router()
 
 
@@ -93,4 +93,4 @@ router.get('/academic-pattern', async (req, res) => {
 
 
 
-module.exports = router;
+export default router;

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const deletedDataSchema = new mongoose.Schema({
   _id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -11,4 +11,4 @@ const deletedDataSchema = new mongoose.Schema({
   }]
 });
 
-module.exports = mongoose.model('DeletedDataCollection', deletedDataSchema);
+export default mongoose.model('DeletedDataCollection', deletedDataSchema);

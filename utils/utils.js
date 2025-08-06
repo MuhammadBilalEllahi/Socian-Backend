@@ -1,10 +1,10 @@
-const { OTP } = require("../models/otp/otp");
-const User = require("../models/user/user.model");
-const moment = require("moment");
-const otpGenerator = require("otp-generator");
-const bcryptjs = require('bcryptjs');
-const generateToken = require("./generate.token");
-const {UserRoles} = require("../models/userRoles")
+import { OTP } from "../models/otp/otp.js";
+import User from "../models/user/user.model.js";
+import moment from "moment";
+import otpGenerator from "otp-generator";
+import bcryptjs from 'bcryptjs';
+import generateToken from "./generate.token.js";
+import {UserRoles} from "../models/userRoles.js";
 /**
  * Generates a 6-digit OTP.
  * @returns {string} - A 6-digit OTP as a string.
@@ -337,12 +337,4 @@ const getCafeUserDetails = (req) => {
   }
 };
 
-module.exports = {
-  generateOtp6Digit,
-  createDateTime,
-  createUniqueUsername,
-  sendOtp,
-  getUserDetails,
-  getCafeUserDetails,
-  handlePlatformResponse
-};
+export { getUserDetails, sendOtp, handlePlatformResponse, getCafeUserDetails, createDateTime, generateOtp6Digit, generateUsername, generateRandomNumber, createUniqueUsername };

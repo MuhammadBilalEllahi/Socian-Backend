@@ -1,5 +1,4 @@
-const { isDecimal } = require("geolib");
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 const societyPostAndCommentVoteSchema = new Schema({
@@ -34,4 +33,4 @@ const SocietyPostAndCommentVote = mongoose.model(
   "SocietyPostAndCommentVote",
   societyPostAndCommentVoteSchema
 );
-module.exports = SocietyPostAndCommentVote;
+export default SocietyPostAndCommentVote;

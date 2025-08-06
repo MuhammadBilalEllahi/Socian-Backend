@@ -1,7 +1,7 @@
-aiService = require("../services/ai.service");
-aiFeedbackService = require("../services/aifeedback.service");
+import aiService from "../services/ai.service.js";
+import aiFeedbackService from "../services/aifeedback.service.js";
 
-module.exports.getReview = async (req, res) => {
+export default async function getReview (req, res) {
   const feedback = req.body.feedback;
 
   if (!feedback) {
@@ -12,3 +12,4 @@ module.exports.getReview = async (req, res) => {
 
   res.send(response);
 };
+

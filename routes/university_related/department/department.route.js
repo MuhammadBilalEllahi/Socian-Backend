@@ -1,11 +1,11 @@
-const express = require("express");
-const Department = require("../../../models/university/department/department.university.model");
-const University = require("../../../models/university/university.register.model");
-const Campus = require("../../../models/university/campus.university.model");
-const { getUserDetails } = require("../../../utils/utils");
+import express from "express";
+import Department from "../../../models/university/department/department.university.model.js";
+import University from "../../../models/university/university.register.model.js";
+import Campus from "../../../models/university/campus.university.model.js";
+import { getUserDetails } from "../../../utils/utils.js";
 const router = express.Router();
 
-const redisClient = require('../../../db/reddis');
+import redisClient from '../../../db/reddis.js';
 
 
 
@@ -218,4 +218,4 @@ router.get("/subjects", async (req, res) => {
 });
 
 
-module.exports = router;
+export default router;

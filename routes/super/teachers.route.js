@@ -1,16 +1,16 @@
-const Campus = require('../../models/university/campus.university.model');
-const FeedBackCommentTeacher = require('../../models/university/teacher/feedback.rating.teacher.model');
-const TeacherRating = require('../../models/university/teacher/rating.teacher.model');
-const Teacher = require('../../models/university/teacher/teacher.model');
+import FeedBackCommentTeacher from '../../models/university/teacher/feedback.rating.teacher.model.js';
+import TeacherRating from '../../models/university/teacher/rating.teacher.model.js';
+import Teacher from '../../models/university/teacher/teacher.model.js';
 
-const router = require('express').Router();
-const mongoose = require('mongoose');
-const University = require('../../models/university/university.register.model');
-const Department = require('../../models/university/department/department.university.model');
-const { uploadTeacherImage } = require('../../utils/multer.utils');
+import express from 'express';
+const router = express.Router();
+import mongoose from 'mongoose';
+import University from '../../models/university/university.register.model.js';
+import Department from '../../models/university/department/department.university.model.js';
+import { uploadTeacherImage } from '../../utils/multer.utils.js';
+import Campus from '../../models/university/campus.university.model.js';
 
-
-const csv = require("csvtojson");
+import csv from "csvtojson";
 
 // CREATE TEACHER
 router.post("/teacher/create", async (req, res) => {
@@ -725,4 +725,4 @@ router.put('/teacher/reply/reply/feedback/hide', async (req, res) => {
 
 
 
-module.exports = router;
+export default router;

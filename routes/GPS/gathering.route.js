@@ -293,13 +293,13 @@
 
 
 
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const Gathering = require("../../models/gps/user.gathering.model");
-const Society = require("../../models/society/society.model"); // Adjust path as needed
-const { check, validationResult } = require("express-validator");
-const geolib = require('geolib');
-const User = require("../../models/user/user.model");
+import Gathering from "../../models/gps/user.gathering.model.js";
+import Society from "../../models/society/society.model.js"; // Adjust path as needed
+import { check, validationResult } from "express-validator";
+import geolib from 'geolib';
+import User from "../../models/user/user.model.js";
 
 router.post("/", [
   check('title', 'Title is required').not().isEmpty(),
@@ -569,4 +569,4 @@ router.post('/:id/update-location', [
   }
 });
 
-module.exports = router;
+export default router;

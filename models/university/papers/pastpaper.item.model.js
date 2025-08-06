@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const StructuredQuestion = require("./structured/structured.question.model");
+import mongoose from "mongoose";
+import StructuredQuestion from "./structured/structured.question.model.js";
 const { Schema } = mongoose;
 
 // File Schema
@@ -265,5 +265,4 @@ pastPaperItemSchema.methods = {
 
 const PastPaperItem = mongoose.model("PastPaperItem", pastPaperItemSchema);
 const File = mongoose.model("File", fileSchema);
-
-module.exports = { PastPaperItem, StructuredQuestion, File }; 
+export {  StructuredQuestion, File, PastPaperItem };

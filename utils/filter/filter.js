@@ -1,4 +1,4 @@
-const User = require("../../models/user/user.model");
+import User from "../../models/user/user.model.js";
 
 /**
  * Searches for a user based on their role and valid email types.
@@ -39,4 +39,4 @@ const searchUser = async (searchQuery, role) => {
 
 // const searchStudents = async (searchQuery) => {};
 
-module.exports = { searchUser };
+export { searchUser };

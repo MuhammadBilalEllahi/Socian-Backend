@@ -1,18 +1,18 @@
-const express = require("express");
-const SocietyType = require("../../../models/society/society.type.model");
-const Society = require("../../../models/society/society.model");
-const Members = require("../../../models/society/members.collec.model");
-const VerificationRequest = require("../../../models/verification/verfication.model");
-const SubSociety = require("../../../models/society/sub.society.model");
-const PostsCollection = require("../../../models/society/post/collection/post.collection.model");
-const User = require("../../../models/user/user.model");
-const { getUserDetails } = require("../../../utils/utils");
-const Post = require("../../../models/society/post/post.model");
-const {UserRoles} = require("../../../models/userRoles");
+import express from "express";
+import SocietyType from "../../../models/society/society.type.model.js";
+import Society from "../../../models/society/society.model.js";
+import Members from "../../../models/society/members.collec.model.js";
+import VerificationRequest from "../../../models/verification/verfication.model.js";
+import SubSociety from "../../../models/society/sub.society.model.js";
+import PostsCollection from "../../../models/society/post/collection/post.collection.model.js";
+import User from "../../../models/user/user.model.js";
+import { getUserDetails } from "../../../utils/utils.js";
+import Post from "../../../models/society/post/post.model.js";
+import { UserRoles } from "../../../models/userRoles.js";
 const router = express.Router();
-const redisClient = require('../../../db/reddis');
-const { uploadSocietyImage, uploadCreateSocietyImage, uploadVerifySocietyImage } = require("../../../utils/multer.utils");
-const { uploadSocietyIcon, uploadSocietyBanner, uploadVerifySocietyImageAws } = require("../../../utils/aws.bucket.utils");
+import redisClient from "../../../db/reddis.js";
+import { uploadSocietyImage, uploadCreateSocietyImage, uploadVerifySocietyImage } from "../../../utils/multer.utils.js";
+import { uploadSocietyIcon, uploadSocietyBanner, uploadVerifySocietyImageAws } from "../../../utils/aws.bucket.utils.js";
 
 
 /**
@@ -1993,7 +1993,7 @@ router.get("/campus-moderators", async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;
 
 
 

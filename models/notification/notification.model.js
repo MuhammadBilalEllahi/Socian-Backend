@@ -1,5 +1,5 @@
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const notificationSchema = new mongoose.Schema({
   type: { type: String, enum: ['comment', 'like', 'follow'], required: true },
@@ -30,5 +30,5 @@ const notificationSchema = new mongoose.Schema({
 //   next();
 // });
 
-module.exports = mongoose.model('Notification', notificationSchema);
+export default mongoose.model('Notification', notificationSchema);
 

@@ -1,7 +1,7 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema, model } = mongoose.Schema;
 
 const schema = new Schema({});
 
 const ExtOrg = model("ExtOrg");
-module.exports = ExtOrg;
+export default ExtOrg;

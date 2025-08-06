@@ -1,6 +1,5 @@
-const mongoose = require('mongoose');
-
-const bcrypt = require('bcryptjs')
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 const Schema = mongoose.Schema;
 
 const cafeUserSchema = new Schema({
@@ -133,4 +132,4 @@ const cafeUserSchema = new Schema({
 
 const CafeUser = mongoose.model('CafeUser', cafeUserSchema);
 
-module.exports = CafeUser;
+export default CafeUser;

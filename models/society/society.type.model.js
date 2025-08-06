@@ -1,4 +1,4 @@
-const { default: mongoose } = require("mongoose");
+import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 const societyTypeSchema = new Schema({
@@ -15,4 +15,4 @@ const societyTypeSchema = new Schema({
 });
 
 const SocietyType = mongoose.model("SocietyType", societyTypeSchema);
-module.exports = SocietyType;
+export default SocietyType;

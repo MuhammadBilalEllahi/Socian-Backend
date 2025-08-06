@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 const feedbackCommentSchema = new Schema({
@@ -27,5 +27,4 @@ const feedbackCommentSchema = new Schema({
 });
 
 const FeedBackCommentTeacher = mongoose.model('FeedBackCommentTeacher', feedbackCommentSchema);
-
-module.exports = FeedBackCommentTeacher;
+export default FeedBackCommentTeacher;

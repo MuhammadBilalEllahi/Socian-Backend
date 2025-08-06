@@ -1,5 +1,8 @@
-const mongoose = require("mongoose");
-const DiscussionCommentVote = require("./vote.comment.discussion");
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
+import DiscussionCommentVote from "./vote.comment.discussion.js";
+import { PastPaperItem } from "../pastpaper.item.model.js";
+
 const discussionCommentSchema = new mongoose.Schema({
     content: { type: String, required: true },
     // upvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true }],
@@ -54,7 +57,7 @@ discussionCommentSchema.methods.updateAnswerStatus = async function () {
 
         // If this is an approved answer, link it to the structured question
         if (this.isVotedAnswer && this.structuredQuestionId) {
-            const PastPaperItem = require('../pastpaper.item.model').PastPaperItem;
+            
             const paper = await PastPaperItem.findById(this.paperId);
             if (paper) {
                 await paper.linkAnswerToQuestion(this.structuredQuestionId, this._id);
@@ -83,4 +86,4 @@ discussionCommentSchema.post("save", async function (doc) {
 
 
 const DiscussionComment = mongoose.model('DiscussionComment', discussionCommentSchema);
-module.exports = { DiscussionComment };
+export default  DiscussionComment ;

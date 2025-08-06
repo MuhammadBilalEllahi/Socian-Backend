@@ -1,6 +1,6 @@
-const { Schema } = require("mongoose");
-const mongoose = require("mongoose");
-const PastPaperItem = require("./pastpaper.item.model");
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
+import {PastPaperItem} from "./pastpaper.item.model.js";
 
 
 // Collection by Year Schema
@@ -59,4 +59,4 @@ pastpapersCollectionByYearSchema.pre('save', function (next) {
 });
 const PastpapersCollectionByYear = mongoose.model("PastpapersCollectionByYear", pastpapersCollectionByYearSchema);
 
-module.exports = { PastpapersCollectionByYear };
+export { PastpapersCollectionByYear };

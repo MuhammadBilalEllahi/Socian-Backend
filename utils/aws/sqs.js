@@ -1,4 +1,4 @@
-const  AWS = require("aws-sdk") ;
+import AWS from "aws-sdk";
 
 class AwsQueueService {
   constructor() {
@@ -7,33 +7,28 @@ class AwsQueueService {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     });
-
-    this.queueUrl = process.env.NSFW_QUEUE_URL;
   }
 
-  async sendNSFWScanMessage(postId, mediaUrl,mediaType) {
-    if (!postId || !mediaUrl || !mediaType) {
-      throw new Error('postId and mediaUrl are required for SQS message');
-    }
-
-    const messageBody = JSON.stringify({
-      postId,
-      mediaUrl,
-      mediaType,
-    });
-
+  async sendNSFWScanMessage(postId, mediaUrl, mediaType) {
     const params = {
-      QueueUrl: this.queueUrl,
-      MessageBody: messageBody,
+      MessageBody: JSON.stringify({
+        postId,
+        mediaUrl,
+        mediaType,
+      }),
+      QueueUrl: process.env.AWS_SQS_QUEUE_URL,
     };
 
     try {
       const result = await this.sqs.sendMessage(params).promise();
-      console.log(`[SQS] NSFW scan message sent: ${result.MessageId}`);
+      console.log("Message sent to SQS:", result.MessageId);
+      return result;
     } catch (error) {
-      console.error('[SQS] Failed to send NSFW scan message:', error);
+      console.error("Error sending message to SQS:", error);
       throw error;
     }
   }
 }
-module.exports=AwsQueueService;
+
+const AwsQueueServiceInstance = new AwsQueueService();
+export default AwsQueueServiceInstance;

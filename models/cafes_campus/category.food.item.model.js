@@ -1,7 +1,6 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import slugify from 'slugify';
 const Schema = mongoose.Schema;
-
-const slugify = require('slugify');
 
 
 const LastChangesSchema = new Schema({
@@ -117,4 +116,4 @@ foodCategorySchema.pre('save', function (next) {
 
 
 const FoodCategory = mongoose.model('FoodCategory', foodCategorySchema);
-module.exports = FoodCategory;
+export default FoodCategory;

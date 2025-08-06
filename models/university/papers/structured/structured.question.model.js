@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
-const StructuredQuestionAnswer = require('./answers.structured.model');
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
+import StructuredQuestionAnswer from './answers.structured.model.js';
 
 
 // Structured Question Schema
@@ -47,5 +47,4 @@ structuredQuestionSchema.pre('save', async function (next) {
 });
 
 const StructuredQuestion = mongoose.model('StructuredQuestion', structuredQuestionSchema);
-
-module.exports = StructuredQuestion;
+export default StructuredQuestion;

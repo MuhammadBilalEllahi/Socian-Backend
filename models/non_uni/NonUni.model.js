@@ -1,5 +1,5 @@
 // models/nonUniversityEmail.model.js
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const nonUniversityEmailSchema = new mongoose.Schema({
     email: { type: String, default: '' },
@@ -15,4 +15,4 @@ const nonUniversityEmailSchema = new mongoose.Schema({
     },
 });
 
-module.exports = mongoose.model('NonUniversityEmail', nonUniversityEmailSchema);
+export default mongoose.model('NonUniversityEmail', nonUniversityEmailSchema);

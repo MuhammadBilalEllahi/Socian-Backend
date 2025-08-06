@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const { Schema, model } = mongoose;
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
 const societySchema = new Schema({
   name: {
@@ -190,4 +190,4 @@ societySchema.pre('save', async function (next) {
 });
 
 const Society = mongoose.model("Society", societySchema);
-module.exports = Society;
+export default Society;

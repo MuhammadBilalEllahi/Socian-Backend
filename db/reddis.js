@@ -1,11 +1,13 @@
-const Redis = require('ioredis');
+import Redis from 'ioredis';
 
 class RedisClient {
     static instance = null;
 
     constructor(multiInstance = false) {
         if (!multiInstance && RedisClient.instance) {
+            console.log("FFFFF", process.env)
             return RedisClient.instance;
+
         }
 
         console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Environment', process.env.NODE_ENV, '                         ║');
@@ -79,7 +81,7 @@ class RedisClient {
         else {
             console.log('║ \x1b[33m%s\x1b[0m: \x1b[36m%s\x1b[0m', 'Initializing Redis', 'in production mode...');
             if (!process.env.VALKEY) {
-                throw new Error('REDIS_URL is not defined in the production environment.');
+                throw new Error('VALKEY is not defined in the production environment.');
             }
             return new Redis(process.env.VALKEY);
         }
@@ -99,4 +101,4 @@ class RedisClient {
 // Create singleton instance
 const redisClient = new RedisClient();
 
-module.exports = redisClient;
+export default redisClient;

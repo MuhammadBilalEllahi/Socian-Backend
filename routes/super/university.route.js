@@ -1,10 +1,10 @@
-const express = require("express");
-const University = require("../../models/university/university.register.model");
-const { uploadUniversityImage } = require("../../utils/multer.utils");
-const { uploadUniversityImageAws } = require("../../utils/aws.bucket.utils");
+import express from "express";
+import University from "../../models/university/university.register.model.js";
+import { uploadUniversityImage } from "../../utils/multer.utils.js";
+import { uploadUniversityImageAws } from "../../utils/aws.bucket.utils.js";
 const router = express.Router();
 
-const mongoose= require("mongoose")
+import mongoose from "mongoose";
 
 
 router.post("/register", uploadUniversityImage.single("file"), async (req, res) => {
@@ -132,4 +132,4 @@ router.get("/:universityId", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,10 +1,10 @@
-const express = require('express');
-const { getCafeUserDetails } = require('../../../../utils/utils');
-const Cafe = require('../../../../models/cafes_campus/cafe.model');
-const FoodCategory = require('../../../../models/cafes_campus/category.food.item.model');
-const FoodItem = require('../../../../models/cafes_campus/food.item.model');
+import express from 'express';
+import { getCafeUserDetails } from '../../../../utils/utils.js';
+import Cafe from '../../../../models/cafes_campus/cafe.model.js';
+import FoodCategory from '../../../../models/cafes_campus/category.food.item.model.js';
+import FoodItem from '../../../../models/cafes_campus/food.item.model.js';
 const router = express.Router();
-const { body, validationResult } = require('express-validator');
+import { body, validationResult } from 'express-validator';
 
 
 router.get('/test', async (req, res) => {
@@ -523,4 +523,4 @@ router.delete('/:cafeId/items/:itemId', async (req, res) => {
 
 
 
-module.exports = router;
+export default router;

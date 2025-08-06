@@ -1,17 +1,17 @@
-const express = require("express");
-const Discussion = require("../../../models/university/papers/discussion/discussion");
-const User = require("../../../models/user/user.model");
-const { getUserDetails } = require("../../../utils/utils");
-const { DiscussionComment } = require("../../../models/university/papers/discussion/discussion.comment");
-const DiscussionCommentVote = require("../../../models/university/papers/discussion/vote.comment.discussion");
-const { PastPaperItem, StructuredQuestion } = require("../../../models/university/papers/pastpaper.item.model");
-const { default: mongoose } = require("mongoose");
-const DiscussionChat = require("../../../models/university/papers/discussion/chat/discussion.chat");
-const StructuredQuestionCollection = require("../../../models/university/papers/structured/structured.collec.file.model");
-const StructuredAnswer = require("../../../models/university/papers/structured/answers.structured.model");
-const StructuredVote = require("../../../models/university/papers/structured/vote.answers.model");
-const path = require("path");
-const { StructuredComment } = require("../../../models/university/papers/structured/comment.answers.structure.model");
+import express from "express";
+import Discussion from "../../../models/university/papers/discussion/discussion.js";
+import User from "../../../models/user/user.model.js";
+import { getUserDetails } from "../../../utils/utils.js";
+import DiscussionComment from "../../../models/university/papers/discussion/discussion.comment.js";
+import DiscussionCommentVote from "../../../models/university/papers/discussion/vote.comment.discussion.js";
+import { PastPaperItem, StructuredQuestion } from "../../../models/university/papers/pastpaper.item.model.js";
+import mongoose from "mongoose";
+import DiscussionChat from "../../../models/university/papers/discussion/chat/discussion.chat.js";
+import StructuredQuestionCollection from "../../../models/university/papers/structured/structured.collec.file.model.js";
+import StructuredAnswer from "../../../models/university/papers/structured/answers.structured.model.js";
+import StructuredVote from "../../../models/university/papers/structured/vote.answers.model.js";
+import path from "path";
+import { StructuredComment } from "../../../models/university/papers/structured/comment.answers.structure.model.js";
 const router = express.Router();
 
 // Error handler middleware
@@ -1244,4 +1244,4 @@ router.get('/comment/reply/:commentId', asyncHandler(async (req, res) => {
 
 
 
-module.exports = router;
+export default router;

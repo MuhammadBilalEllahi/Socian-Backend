@@ -1,6 +1,6 @@
 
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
 const structuredQuestionCollectionSchema = new Schema({
     _id: { type: Schema.Types.ObjectId, required: true, ref: 'PastPaperItem' },
@@ -9,5 +9,4 @@ const structuredQuestionCollectionSchema = new Schema({
 }, { timestamps: true, _id: false, });
 
 const StructuredQuestionCollection = mongoose.model('StructuredQuestionCollection', structuredQuestionCollectionSchema);
-
-module.exports = StructuredQuestionCollection;
+export default StructuredQuestionCollection;

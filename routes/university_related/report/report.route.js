@@ -1,16 +1,17 @@
-const { getUserDetails } = require("../../../utils/utils");
-const { Report, ReportType } = require("../../../models/report/report.model");
-const Post = require("../../../models/society/post/post.model");
-const PostComment = require("../../../models/society/post/comment/post.comment.model");
-const User = require("../../../models/user/user.model");
-const Society = require("../../../models/society/society.model");
-const { PastPaperItem, File } = require("../../../models/university/papers/pastpaper.item.model");
-const FeedBackCommentTeacher = require("../../../models/university/teacher/feedback.rating.teacher.model");
-const TeacherRating = require("../../../models/university/teacher/rating.teacher.model");
-const Discussion = require("../../../models/university/papers/discussion/discussion");
-const { DiscussionComment } = require("../../../models/university/papers/discussion/discussion.comment");
+import { getUserDetails } from "../../../utils/utils.js";
+import { Report, ReportType } from "../../../models/report/report.model.js";
+import Post from "../../../models/society/post/post.model.js";
+import PostComment from "../../../models/society/post/comment/post.comment.model.js";
+import User from "../../../models/user/user.model.js";
+import Society from "../../../models/society/society.model.js";
+import { PastPaperItem, File } from "../../../models/university/papers/pastpaper.item.model.js";
+import FeedBackCommentTeacher from "../../../models/university/teacher/feedback.rating.teacher.model.js";
+import TeacherRating from "../../../models/university/teacher/rating.teacher.model.js";
+import Discussion from "../../../models/university/papers/discussion/discussion.js";
+import DiscussionComment from "../../../models/university/papers/discussion/discussion.comment.js";
+import express from "express";
 
-const router = require("express").Router();
+const router = express.Router();
 
 const reportModelTypes = Object.freeze(
     {
@@ -409,4 +410,4 @@ router.get("/types", async (req, res) => {
 
 
 
-module.exports = router;
+export default router;

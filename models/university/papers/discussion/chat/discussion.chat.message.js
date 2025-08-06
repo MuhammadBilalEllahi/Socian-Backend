@@ -1,6 +1,7 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
-const DiscussionChatMessageSchema = new mongoose.Schema({
+const DiscussionChatMessageSchema = new Schema({
   discussionId: { type: String, required: true },
   userId: { type: String, required: true },
   socketId: { type: String },
@@ -10,4 +11,4 @@ const DiscussionChatMessageSchema = new mongoose.Schema({
   timestamp: { type: Date, required: true },
 });
 
-module.exports = mongoose.model("DiscussionChatMessage", DiscussionChatMessageSchema);
+export default mongoose.model("DiscussionChatMessage", DiscussionChatMessageSchema);

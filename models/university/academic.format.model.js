@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
 const academicFormatSchema = new Schema({
 
@@ -62,5 +62,4 @@ const academicFormatSchema = new Schema({
 
 
 const AcademicFormat = mongoose.model('AcademicFormat', academicFormatSchema);
-
-module.exports = AcademicFormat;
+export default AcademicFormat;

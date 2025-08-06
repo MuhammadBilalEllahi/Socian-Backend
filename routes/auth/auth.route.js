@@ -1,39 +1,39 @@
 // const generateToken = require("../utils/generate.token.js");
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
 
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const moment = require("moment");
-const {UserSuperRoles} = require('../../models/userRoles.js')
-const {
+import moment from "moment";
+import {UserSuperRoles} from '../../models/userRoles.js'
+import {
   resendEmail,
   resendEmailForgotPassword,
   resendEmailAccountConfirmation,
   resendAccountLogin,
   resendEmailAccountDeletion,
   resendEmailIsThisAccountYours
-} = require("../../utils/email.util.js");
-const bcryptjs = require("bcryptjs");
-const {
+} from "../../utils/email.util.js";
+import bcryptjs from "bcryptjs";
+import {
   generateOtp6Digit,
   createUniqueUsername,
   sendOtp,
   getUserDetails,
   handlePlatformResponse,
-} = require("../../utils/utils.js");
+} from "../../utils/utils.js";
 
-const User = require("../../models/user/user.model.js");
-const Campus = require("../../models/university/campus.university.model.js");
-const University = require("../../models/university/university.register.model.js");
-const generateToken = require("../../utils/generate.token.js");
-const { OTP } = require("../../models/otp/otp.js");
-const Department = require("../../models/university/department/department.university.model.js");
-const {UserRoles} = require("../../models/userRoles.js");
-const { platformSessionOrJwt_CALL_on_glogin_only } = require("../../utils/platform/jwt.session.platform.js");
-const protectRoute = require("../../middlewares/protect.route.js");
-const DeletedUser = require("../../models/user/deleted.user.model.js");
-const { upload } = require("../../utils/multer.utils.js");
-const { uploadBothCardMedia, uploadLivePictureMedia } = require("../../utils/aws.bucket.utils.js");
+import User from "../../models/user/user.model.js";
+import Campus from "../../models/university/campus.university.model.js";
+import University from "../../models/university/university.register.model.js";
+import generateToken from "../../utils/generate.token.js";
+import { OTP } from "../../models/otp/otp.js";
+import Department from "../../models/university/department/department.university.model.js";
+import {UserRoles} from "../../models/userRoles.js";
+import { platformSessionOrJwt_CALL_on_glogin_only } from "../../utils/platform/jwt.session.platform.js";
+import protectRoute from "../../middlewares/protect.route.js";
+  import DeletedUser from "../../models/user/deleted.user.model.js";
+import { upload } from "../../utils/multer.utils.js";
+import { uploadBothCardMedia, uploadLivePictureMedia } from "../../utils/aws.bucket.utils.js";
 
 router.get("/session", async (req, res) => {
   // console.log("Req user:", req.session.user)
@@ -1626,7 +1626,7 @@ router.post("/register-resend-otp", async (req, res) => {
 
 
 
-module.exports = router;
+export default router;
 
 
 

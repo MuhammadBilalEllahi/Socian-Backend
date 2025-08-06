@@ -1,7 +1,7 @@
-const mongoose = require("mongoose");
-const Campus = require("../campus.university.model");
-const { Schema } = mongoose;
-const PastPaperItem = require("./pastpaper.item.model");
+import mongoose from "mongoose";
+import Campus from "../campus.university.model.js";
+const Schema = mongoose.Schema;
+import { PastPaperItem } from "./pastpaper.item.model.js";
 
 
 // Main PastPaper Schema
@@ -120,7 +120,7 @@ pastpaperSchema.statics = {
 
 
 const PastPaper = mongoose.model("PastPaper", pastpaperSchema);
-module.exports = { PastPaper };
+export default PastPaper;
 
 
 

@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
-const User = require('../../user/user.model');
-const {UserRoles} = require('../../userRoles');
+import mongoose from "mongoose";
+import User from '../../user/user.model.js';
+import {UserRoles} from '../../userRoles.js';
 const Schema = mongoose.Schema;
 
 
@@ -218,4 +218,4 @@ teacherSchema.statics.findSimilarTeachers = async function (campusId, university
 
 
 const Teacher = mongoose.model('Teacher', teacherSchema);
-module.exports = Teacher;
+export default Teacher;

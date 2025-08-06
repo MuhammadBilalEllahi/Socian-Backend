@@ -1,15 +1,19 @@
-const UserRoles = {
-    teacher: 'teacher',
-    student: 'student',
-    alumni: 'alumni',
-    ext_org: 'ext_org',
-    system: 'system'
-}
+const UserRoles = Object.freeze({
+    STUDENT: "student",
+    TEACHER: "teacher",
+    ALUMNI: "alumni",
+    EXT_ORG: "ext_org",
+    ADMIN: "admin",
+    MOD: "mod",
+    SUPER: "super",
+    NONE: "none"
+});
 
-const UserSuperRoles = {
-    super: 'super',
-    mod: 'mod',
-    none: 'none'
-}
+const UserSuperRoles = Object.freeze({
+    ADMIN: "admin",
+    MOD: "mod",
+    SUPER: "super",
+    NONE: "none"
+});
 
-module.exports = {UserRoles,UserSuperRoles};
+export {UserRoles,UserSuperRoles};

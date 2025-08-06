@@ -1,8 +1,7 @@
-const User = require("../models/user/user.model.js");
-const { getUserDetails } = require("../utils/utils.js");
+import User from "../models/user/user.model.js";
+import { getUserDetails } from "../utils/utils.js";
 
 const modProtect = async (req, res, next) => {
-    ///req res order is must
     try {
         const { userId } = getUserDetails(req)
         if (userId) {
@@ -10,10 +9,8 @@ const modProtect = async (req, res, next) => {
             const user = await User.findOne({ _id }).select("-password");
             if (!user)
                 return res.status(404).json({ error: "User not authenticated" });
-
             if (user.super_role !== "mod")
                 return res.status(404).json({ error: "User has no privilidges" });
-
             next();
         } else {
             res.status(401).json({ error: "Not authenticated" });
@@ -23,4 +20,4 @@ const modProtect = async (req, res, next) => {
         res.status(500).json({ error: "Internal Server Error" });
     }
 };
-module.exports = modProtect;
+export default modProtect;

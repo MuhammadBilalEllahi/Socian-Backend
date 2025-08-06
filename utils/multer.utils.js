@@ -1,7 +1,7 @@
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-const { getUserDetails } = require("./utils");
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { getUserDetails } from "./utils.js";
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -394,15 +394,15 @@ const uploadUniversityImage = multer({
 
 
 
-module.exports = {
-    upload,
-    adminPostUpload,
-    uploadImage,
-    uploadTeacherImage,
-    uploadSocietyImage,
-    uploadCreateSocietyImage,
-    uploadVerifySocietyImage,
-    uploadUniversityImage,
+export {
+  upload,
+  adminPostUpload,
+  uploadImage,
+  uploadTeacherImage,
+  uploadSocietyImage,
+  uploadCreateSocietyImage,
+  uploadVerifySocietyImage,
+  uploadUniversityImage,
 };
 
 

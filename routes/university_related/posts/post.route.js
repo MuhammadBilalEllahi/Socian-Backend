@@ -1,20 +1,20 @@
-const express = require("express");
-const PostsCollection = require("../../../models/society/post/collection/post.collection.model");
-const Post = require("../../../models/society/post/post.model");
-const indivPost = require("../../../models/society/post/indivPost.model");
-const SocietyPostAndCommentVote = require("../../../models/society/post/vote/vote.post.community.model");
-const mongoose = require("mongoose");
-const User = require("../../../models/user/user.model");
-const { getUserDetails } = require("../../../utils/utils");
-const { uploadPostMedia } = require("../../../utils/aws.bucket.utils");
-const { upload } = require("../../../utils/multer.utils");
-const PostCommentCollection = require("../../../models/society/post/comment/post.comment.collect.model");
-const PostComment = require("../../../models/society/post/comment/post.comment.model");
-const Society = require("../../../models/society/society.model");
-const DeletedDataCollection = require("../../../models/deleted/deletedmodels");
-const Notification = require("../../../models/notification/notification.model");
-const { sendNotification } = require("../../../socket/socket");
-const AwsQueueService = require("../../../utils/aws/sqs");
+import express from "express";
+import PostsCollection from "../../../models/society/post/collection/post.collection.model.js";
+import Post from "../../../models/society/post/post.model.js";
+import indivPost from "../../../models/society/post/indivPost.model.js";
+import SocietyPostAndCommentVote from "../../../models/society/post/vote/vote.post.community.model.js";
+import mongoose from "mongoose";
+import User from "../../../models/user/user.model.js";
+import { getUserDetails } from "../../../utils/utils.js";
+import { uploadPostMedia } from "../../../utils/aws.bucket.utils.js";
+import { upload } from "../../../utils/multer.utils.js";
+import PostCommentCollection from "../../../models/society/post/comment/post.comment.collect.model.js";
+import PostComment from "../../../models/society/post/comment/post.comment.model.js";
+import Society from "../../../models/society/society.model.js";
+import DeletedDataCollection from "../../../models/deleted/deletedmodels.js";
+import Notification from "../../../models/notification/notification.model.js";
+import  sendNotification  from "../../../socket/socket.js";
+import AwsQueueService from "../../../utils/aws/sqs.js";
 const router = express.Router();
 
 /**
@@ -1807,4 +1807,4 @@ router.put("/post/edit/:postId", upload.array('file'), async (req, res) => {
 
 
 
-module.exports = router;
+export default router;

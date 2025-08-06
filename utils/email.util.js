@@ -1,6 +1,6 @@
-const resendProt = require("resend");
-const { createDateTime } = require("./utils");
-const { Resend } = resendProt;
+// import resendProt from "resend";
+import { createDateTime } from "./utils.js";
+import { Resend } from "resend";
 const resend = new Resend(process.env.resend);
 
 const resendEmail = async (datas, req, res) => {
@@ -1108,8 +1108,8 @@ const verifyEmailTemplate = (name, otp) => {
 // };
 
 
-const UAParser = require('ua-parser-js');
-const axios = require('axios');
+import {UAParser} from 'ua-parser-js';
+import axios from 'axios';
 
 const resendAccountLogin = async (datas, req, res) => {
   try {
@@ -1622,4 +1622,4 @@ timestamp:    ${timestamp}
 
 
 
-module.exports = { resendEmail, resendEmailForgotPassword, resendEmailAccountConfirmation, resendEmailConfirmation , resendAccountLogin , resendEmailAccountDeletion, resendEmailIsThisAccountYours, resendEmailWhyAlumniReceivedEmailInUniversityEmail};
+export { resendEmail, resendEmailForgotPassword, resendEmailAccountConfirmation, resendEmailConfirmation , resendAccountLogin , resendEmailAccountDeletion, resendEmailIsThisAccountYours, resendEmailWhyAlumniReceivedEmailInUniversityEmail};

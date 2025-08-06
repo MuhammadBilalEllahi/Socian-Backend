@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const { Schema, model } = mongoose;
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
 const postSchema = new Schema(
   {
@@ -305,5 +305,5 @@ postSchema.statics.findWithNSFW = function(conditions = {}) {
 
 
 
-const Post = model("Post", postSchema);
-module.exports = Post;
+const Post = mongoose.model("Post", postSchema);
+export default Post;

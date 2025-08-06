@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const { Schema, model } = mongoose;
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
 const indivPostSchema = new Schema(
   {
@@ -126,5 +126,5 @@ const indivPostSchema = new Schema(
   { timestamps: true }
 );
 
-const IndivPost = model("IndivPost", indivPostSchema);
-module.exports = IndivPost;
+const IndivPost = mongoose.model("IndivPost", indivPostSchema);
+export default IndivPost;

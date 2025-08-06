@@ -1,6 +1,6 @@
 // NOT USING KAFKA FOR NOW. Will use for chats not discussions.
 
-const { Kafka } = require('kafkajs');
+import { Kafka } from 'kafkajs';
 
 const kafka = new Kafka({
   clientId: 'beyond-the-class-node-app',
@@ -74,4 +74,4 @@ async function startConsumer(topic) {
 
 
 
-module.exports = {produceMessage, startConsumer};
+export {produceMessage, startConsumer};

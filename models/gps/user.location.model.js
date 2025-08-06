@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const userLocationSchema = new mongoose.Schema({
     // userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -8,4 +8,4 @@ const userLocationSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("UserLocation", userLocationSchema);
+export default mongoose.model("UserLocation", userLocationSchema);

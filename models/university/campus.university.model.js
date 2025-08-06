@@ -1,4 +1,4 @@
-const mongoose = require('mongoose')
+import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 const campusSchema = new Schema({
@@ -132,6 +132,4 @@ campusSchema.pre(/^find/, function (next) {
 
 
 const Campus = mongoose.model("Campus", campusSchema);
-
-
-module.exports = Campus;
+export default Campus;

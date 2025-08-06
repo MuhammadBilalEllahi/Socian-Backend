@@ -74,6 +74,9 @@ importers:
       express-ejs-layouts:
         specifier: ^2.5.1
         version: 2.5.1
+      express-list-endpoints:
+        specifier: ^7.1.1
+        version: 7.1.1
       express-rate-limit:
         specifier: ^7.4.1
         version: 7.4.1(express@4.21.2)
@@ -1187,6 +1190,10 @@ packages:
 
   express-ejs-layouts@2.5.1:
     resolution: {integrity: sha512-IXROv9n3xKga7FowT06n1Qn927JR8ZWDn5Dc9CJQoiiaaDqbhW5PDmWShzbpAa2wjWT1vJqaIM1S6vJwwX11gA==}
+
+  express-list-endpoints@7.1.1:
+    resolution: {integrity: sha512-SA6YHH1r6DrioJ4fFJNqiwu1FweGFqJZO9KBApMzwPosoSGPOX2AW0wiMepOXjojjEXDuP9whIvckomheErbJA==}
+    engines: {node: '>=18'}
 
   express-rate-limit@7.4.1:
     resolution: {integrity: sha512-KS3efpnpIDVIXopMc65EMbWbUht7qvTCdtCR2dD/IZmi9MIkopYESwyRqLgv8Pfu589+KqDqOdzJWW7AHoACeg==}
@@ -3824,6 +3831,8 @@ snapshots:
   express-async-handler@1.2.0: {}
 
   express-ejs-layouts@2.5.1: {}
+
+  express-list-endpoints@7.1.1: {}
 
   express-rate-limit@7.4.1(express@4.21.2):
     dependencies:

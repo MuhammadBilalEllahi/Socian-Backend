@@ -1,7 +1,9 @@
-const crypto = require('crypto');
-const router = require('express').Router();
-const Emailed = require('./model/bounced.email');
-const { resendEmailWhyAlumniReceivedEmailInUniversityEmail } = require('../utils/email.util');
+import crypto from 'crypto';
+import express from 'express';
+import Emailed from './model/bounced.email.js';
+import { resendEmailWhyAlumniReceivedEmailInUniversityEmail } from '../utils/email.util.js';
+
+const router = express.Router();
 
 // THIS IS TO CHEck that email was delievered ro uni email then why user said he is alumni
 router.post('/email-events',async (req, res) => {
@@ -50,4 +52,4 @@ console.log('Received email event:', req.body);
   res.sendStatus(200);
 });
 
-module.exports = router;
+export default router;

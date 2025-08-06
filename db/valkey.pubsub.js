@@ -1,4 +1,4 @@
-const Redis = require("ioredis");
+import Redis from "ioredis";
 
 class Valkey {
     constructor(type) {
@@ -183,4 +183,4 @@ if (valkeyEnv) {
     }
 }
 
-module.exports = Valkey;
+export default Valkey;

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const Schema = mongoose.Schema;
 
@@ -88,4 +88,4 @@ const cafeItemRatingSchema = new Schema({
 
 const CafeItemRating = mongoose.model('CafeItemRating', cafeItemRatingSchema);
 
-module.exports = CafeItemRating;
+export default CafeItemRating;

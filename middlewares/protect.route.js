@@ -1,7 +1,6 @@
-// const jwt = require("jsonwebtoken");
-const User = require("../models/user/user.model.js");
-const authenticateToken = require("./jwt.protect.js");
-const authenticateSession = require("./session.protect.js");
+import User from "../models/user/user.model.js";
+import authenticateToken from "./jwt.protect.js";
+import authenticateSession from "./session.protect.js";
 // TODO need to change it to JWT + Session for mobile app
 
 const protectRoute = async (req, res, next) => {
@@ -30,8 +29,7 @@ const protectRoute = async (req, res, next) => {
   }
 };
 
-
-module.exports = protectRoute;
+export default protectRoute;
 
 // const bypassRoutes = ["/universities-grouped-campus"];
 //  // Skip authentication if the route is in the bypass list

@@ -1,5 +1,5 @@
 // models/ModUserCollection.js
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const modUserCollectionSchema = new mongoose.Schema({
   _id: {
@@ -22,4 +22,4 @@ const modUserCollectionSchema = new mongoose.Schema({
   ],
 });
 
-module.exports = mongoose.model("ModUserCollection", modUserCollectionSchema);
+export default mongoose.model("ModUserCollection", modUserCollectionSchema);

@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
-const Society = require("./society.model");
-const { Schema, model } = mongoose;
+import mongoose from "mongoose";
+import Society from "./society.model.js";
+const Schema = mongoose.Schema;
 
 /**
  *
@@ -146,7 +146,7 @@ subSocietySchema.pre('save', async function (next) {
 });
 
 const SubSociety = mongoose.model("SubSociety", subSocietySchema);
-module.exports = SubSociety;
+export default SubSociety;
 
 // validate: {
 //     validator: function (value) {

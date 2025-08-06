@@ -1,16 +1,16 @@
-const { default: mongoose } = require("mongoose");
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
-const friendSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // The friend user ID
+const friendRequestSchema = new Schema({
+    user: { type: Schema.Types.ObjectId, ref: "User" }, // The friend user ID
     status: { type: String, enum: ['requested', 'accepted'], default: 'requested' }, // Status of the request
-    requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // The user who initiated the request
+    requestedBy: { type: Schema.Types.ObjectId, ref: "User" }, // The user who initiated the request
     createdAt: { type: Date, default: Date.now }, // Timestamp for when the request was made
 });
 
 
-const FriendRequest = mongoose.model("FriendRequest", friendSchema);
-
-module.exports = FriendRequest;
+const FriendRequest = mongoose.model("FriendRequest", friendRequestSchema);
+export default FriendRequest;
 
 
 

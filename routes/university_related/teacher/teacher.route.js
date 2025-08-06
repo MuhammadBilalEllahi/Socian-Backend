@@ -1,20 +1,18 @@
-const express = require("express");
-const Subject = require("../../../models/university/department/subject/subject.department.model");
-const University = require("../../../models/university/university.register.model");
-const Campus = require("../../../models/university/campus.university.model");
-const Department = require("../../../models/university/department/department.university.model");
-const Teacher = require("../../../models/university/teacher/teacher.model");
+import express from "express";
+import Subject from "../../../models/university/department/subject/subject.department.model.js";
+import University from "../../../models/university/university.register.model.js";
+import Campus from "../../../models/university/campus.university.model.js";
+import Department from "../../../models/university/department/department.university.model.js";
+import Teacher from "../../../models/university/teacher/teacher.model.js";
+import TeacherRating from "../../../models/university/teacher/rating.teacher.model.js";
+import mongoose from "mongoose";
+import { getUserDetails } from "../../../utils/utils.js";
+import { UserRoles } from "../../../models/userRoles.js";
+import User from "../../../models/user/user.model.js";
+import { sessionSaveHandler } from "../../../utils/save.session.js";
+import FeedBackCommentTeacher from "../../../models/university/teacher/feedback.rating.teacher.model.js";
 const router = express.Router();
-const TeacherRating = require("../../../models/university/teacher/rating.teacher.model");
-const { default: mongoose } = require("mongoose");
-const { getUserDetails } = require("../../../utils/utils");
-const {UserRoles} = require("../../../models/userRoles");
-const User = require("../../../models/user/user.model");
-const { sessionSaveHandler } = require("../../../utils/save.session");
-// const redisClient = require('../../../db/reddis');
-const FeedBackCommentTeacher = require("../../../models/university/teacher/feedback.rating.teacher.model");
 
-const axios = require('axios');
 
 
 
@@ -1191,4 +1189,4 @@ const getTeacherReviews = async (req, res) => {
 
 
 
-module.exports = router;
+export default router;

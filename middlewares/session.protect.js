@@ -1,10 +1,9 @@
-const User = require("../models/user/user.model");
+import User from "../models/user/user.model.js";
 
 async function authenticateSession(req, res, next) {
   if (req.session.user) {
     const _id = req.session.user._id;
     const user = await User.findOne({ _id }).select("-password");
-    // console.log("USER ", user, _id)
     if (!user)
       return res.status(502).json({ error: "User has no privilidges" });
     next();
@@ -13,4 +12,4 @@ async function authenticateSession(req, res, next) {
   }
 }
 
-module.exports = authenticateSession;
+export default authenticateSession;

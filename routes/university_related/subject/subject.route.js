@@ -1,13 +1,11 @@
-const express = require("express");
-const Subject = require("../../../models/university/department/subject/subject.department.model");
-const University = require("../../../models/university/university.register.model");
-const Campus = require("../../../models/university/campus.university.model");
-const Department = require("../../../models/university/department/department.university.model");
-const {
-  PastPaper,
-  PastpapersCollectionByYear,
-} = require("../../../models/university/papers/pastpaper.model");
-const { getUserDetails } = require("../../../utils/utils");
+import express from "express";
+import Subject from "../../../models/university/department/subject/subject.department.model.js";
+import University from "../../../models/university/university.register.model.js";
+import Campus from "../../../models/university/campus.university.model.js";
+import Department from "../../../models/university/department/department.university.model.js";
+import PastPaper from "../../../models/university/papers/pastpaper.model.js";
+import { PastpapersCollectionByYear } from "../../../models/university/papers/paper.collection.model.js";
+import { getUserDetails } from "../../../utils/utils.js";
 const router = express.Router();
 
 // TODO - create subject as single entity, ref with campus, so that user could attach them to department later
@@ -52,4 +50,4 @@ router.get('/other/department/subjects/all', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,5 +1,5 @@
-const { default: mongoose } = require("mongoose");
-
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
 
 const discussionCommentVoteSchema = new mongoose.Schema({
@@ -21,4 +21,4 @@ const discussionCommentVoteSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const DiscussionCommentVote = mongoose.model('DiscussionCommentVote', discussionCommentVoteSchema);
-module.exports = DiscussionCommentVote;
+export default DiscussionCommentVote;

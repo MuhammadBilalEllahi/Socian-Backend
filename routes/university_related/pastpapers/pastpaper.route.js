@@ -1,17 +1,17 @@
-const express = require('express');
-const Subject = require('../../../models/university/department/subject/subject.department.model');
-const { PastPaper } = require('../../../models/university/papers/pastpaper.model.js');
-const { PastPaperItem } = require('../../../models/university/papers/pastpaper.item.model');
-const { getUserDetails } = require('../../../utils/utils');
+import express from 'express';
+import Subject from '../../../models/university/department/subject/subject.department.model.js';
+import PastPaper from '../../../models/university/papers/pastpaper.model.js';
+import {PastPaperItem} from '../../../models/university/papers/pastpaper.item.model.js';
+import { getUserDetails } from '../../../utils/utils.js';
 const router = express.Router();
-const redisClient = require("../../../db/reddis.js");
-const mongoose = require('mongoose');
-const { DiscussionComment, PastPaperQuestion } = require('../../../models/university/papers/discussion/discussion.comment');
-const s3Service = require('../../../utils/aws/aws.js');
-const { upload } = require('../../../utils/multer.utils.js');
-const { PastpapersCollectionByYear } = require('../../../models/university/papers/paper.collection.model.js');
-const fs = require('fs');
-const User = require('../../../models/user/user.model.js');
+import redisClient from "../../../db/reddis.js";
+import mongoose from 'mongoose';
+import DiscussionComment from '../../../models/university/papers/discussion/discussion.comment.js';
+import s3Service from '../../../utils/aws/aws.js';
+import { upload } from '../../../utils/multer.utils.js';
+import { PastpapersCollectionByYear } from '../../../models/university/papers/paper.collection.model.js';
+import fs from 'fs';
+import User from '../../../models/user/user.model.js';
 // Cache configuration
 const CACHE_TTL = 3600; // 1 hour in seconds
 const CACHE_KEYS = {
@@ -798,4 +798,4 @@ router.post('/download/:paperId', asyncHandler(async (req, res) => {
   res.json({ message: "Download counted successfully" });
 }));
 
-module.exports = router;
+export default router;

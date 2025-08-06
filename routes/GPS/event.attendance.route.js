@@ -1,13 +1,13 @@
-const express = require("express");
-const geolib = require("geolib");
+import express from "express";
+import geolib from "geolib";
 
-const Event = require("../../models/gps/event.model"); 
-const EventAttendance = require("../../models/gps/event.attendance.model");
-const UserLocation = require("../../models/gps/user.location.model");
+import Event from "../../models/gps/event.model.js"; 
+import EventAttendance from "../../models/gps/event.attendance.model.js";
+import UserLocation from "../../models/gps/user.location.model.js";
 
 const router = express.Router(); // Ensure you use express.Router()
 
-module.exports = (io) => {
+export default (io) => {
   // Create an event
   router.post("/create-event", async (req, res) => {
     const { societyId, area, startTime, endTime } = req.body;

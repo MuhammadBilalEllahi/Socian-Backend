@@ -1,5 +1,5 @@
-const express = require('express');
-const SocietyType = require('../../../models/society/society.type.model');
+import express from 'express';
+import SocietyType from '../../../models/society/society.type.model.js';
 
 const router = express.Router();
 
@@ -37,4 +37,4 @@ router.post('/create-community-types', async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

@@ -2,6 +2,9 @@
 // const os = require('os');
 
 
+import dotenv from "dotenv/config";
+// dotenv.config({path: "./.env"});
+
 console.log('\n\x1b[1m💡 \x1b[33mAlways remember to pnpm install\x1b[0m\n');
 
 
@@ -11,45 +14,61 @@ console.log('\x1b[36m╔══════════════════�
 
 
 
-const express = require("express");
-const app = express();
-const PORT = process.env.PORT || 8080;
+import express from "express";
+import bodyParser from "body-parser";
+import cors from "cors";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
+import mongoDB from "./db/connect.mongodb.js";
+import session from "express-session";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import csrfProtection from "@fastify/csrf-protection";
+import compression from "compression";
+import http from "http";
+import attachSocketToApp  from "./socket/socket.js";
+import MongoStore from "connect-mongo";
+import path from "path";
+import logModActivity from "./models/mod/modActivityLogs.js";
+import redisClient from "./db/reddis.js";
+import cronjob from "./cronjob/cronjob.js";
+import authRouter from "./routes/auth/auth.route.js";
+import oAuthRouter from "./routes/auth/oAuth/oAuth.route.js";
+import protectRoute from "./middlewares/protect.route.js";
+import superProtect from "./middlewares/super.protect.js";
+import adminProtect from "./middlewares/admin.protect.js";
+import modProtect from "./middlewares/mod.protect.js";
+import superRouter from "./routes/super/super.route.js";
+import adminRouter from "./routes/admin/admin.route.js";
+import modRouter from "./routes/mod/mod.route.js";
+import universityRouter from "./routes/super/university.route.js";
+import departmentRouter from "./routes/university_related/department/department.route.js";
+import subjectRouter from "./routes/university_related/subject/subject.route.js";
+import teacherRouter from "./routes/university_related/teacher/teacher.route.js";
+import pastpaperRouter from "./routes/university_related/pastpapers/pastpaper.route.js";
+import academicRouter from "./routes/university_related/pastpapers/academic.format.route.js";
+import discussionRouter from "./routes/university_related/pastpapers/discussion.route.js";
+import uploadsRouter from './utils/aws/servePDF.js';
+import societyRouter from "./routes/university_related/society/society.route.js";
+import postsRouter from './routes/university_related/posts/post.route.js';
+import accessibleRoutes from './routes/accessibles/accessible.route.js';
+import userRouter from './routes/user/user.route.js';
+import cafeRouter from './routes/university_related/cafe/cafe.route.js';
+import reportRouter from './routes/university_related/report/report.route.js';
+import aiRouter from './routes/aiRoutes/ai.routes.js';
+import eventRouterFunc from './routes/GPS/event.attendance.route.js';
+import locationRouter from './routes/GPS/location.sharing.route.js';
+import gatheringRouter from './routes/GPS/gathering.route.js';
+import webhooks from './webhooks/webhooks.route.js';
+import messagesRouter from "./routes/1to1messages/messages.routes.js";
 
-
-const dotenv = require("dotenv");
-dotenv.config();
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const morgan = require("morgan");
-const cookieParser = require("cookie-parser");
-const mongoDB = require("./db/connect.mongodb.js");
-const session = require("express-session");
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const csrfProtection = require('@fastify/csrf-protection');
-const compression = require('compression');
-const http = require("http");
-const { attachSocketToApp } = require("./socket/socket.js");
 
 // const sanitizeHtml = require('sanitize-html');
 // const cleanHtml = sanitizeHtml(userInput, { allowedTags: [], allowedAttributes: {} });
 
-const MongoStore = require("connect-mongo");
-const path = require("path");
 
-const logModActivity = require("./models/mod/modActivityLogs.js");
-// const RedisStore = require('connect-redis').default;
-
-// const Redis = require('ioredis');
-
-
-
-const redisClient = require("./db/reddis.js");
-
-
-const cronjob = require("./cronjob/cronjob.js");
-
-
+const app = express();
+const PORT = process.env.PORT || 8080;
 
 
 // Will be using session for now
@@ -110,7 +129,7 @@ app.use(compression());
 
 
 const server = http.createServer(app)
-const io = attachSocketToApp(app, server);
+const io = attachSocketToApp.initSocketIO(app, server);
 
 app.use((req, res, next) => {
   const io = req.app.get('io');
@@ -125,58 +144,12 @@ app.use((req, res, next) => {
 // const crypto = require('crypto')
 // console.log(crypto.randomBytes(6).toString('hex'))
 
-const authRouter = require("./routes/auth/auth.route.js");
-const oAuthRouter = require('./routes/auth/oAuth/oAuth.route.js');
-// const requestRoute = require('./routes/request');
-// const emailRoute = require('./routes/email.route.js');
 
-// const mobAuthRouter = require("./routes/auth/mob.auth.route.js"); // will not use maybe
-
-const protectRoute = require("./middlewares/protect.route.js");
-const superProtect = require("./middlewares/super.protect.js");
-const adminProtect = require("./middlewares/admin.protect.js");
-const modProtect = require("./middlewares/mod.protect.js");
-
-const superRouter = require("./routes/super/super.route.js");
-const adminRouter = require("./routes/admin/admin.route.js");
-const modRouter = require("./routes/mod/mod.route.js");
-
-const universityRouter = require("./routes/super/university.route.js");
-// const campusRouter = require("./routes/university_related/campus.route.js");
-
-const departmentRouter = require("./routes/university_related/department/department.route.js");
-const subjectRouter = require("./routes/university_related/subject/subject.route.js");
-const teacherRouter = require("./routes/university_related/teacher/teacher.route.js");
-
-const pastpaperRouter = require("./routes/university_related/pastpapers/pastpaper.route.js");
-const academicRouter = require("./routes/university_related/pastpapers/academic.format.route.js");
-const discussionRouter = require("./routes/university_related/pastpapers/discussion.route.js");
-
-const uploadsRouter = require('./utils/aws/servePDF.js');
+const eventRouter = eventRouterFunc(io);
 
 
-
-const societyRouter = require("./routes/university_related/society/society.route.js");
-// const subSocietyRouter = require("./routes/university_related/subsociety/sub.society.route.js")
-const postsRouter = require('./routes/university_related/posts/post.route.js');
-
-const accessibleRoutes = require('./routes/accessibles/accessible.route.js');
-
-const userRouter = require('./routes/user/user.route.js');
-const cafeRouter = require('./routes/university_related/cafe/cafe.route.js');
-const reportRouter = require('./routes/university_related/report/report.route.js');
-
-const aiRouter = require('./routes/aiRoutes/ai.routes.js');
-
-const eventRouter = require('./routes/GPS/event.attendance.route.js')(io);
-
-const locationRouter= require('./routes/GPS/location.sharing.route.js')
-const gatheringRouter= require('./routes/GPS/gathering.route.js')
-
-const webhooks = require('./webhooks/webhooks.route.js');
-
-// Parse raw body for signature verification
-const messagesRouter = require("./routes/1to1messages/messages.routes.js");
+// const User = require("./models/user/user.model.js");
+// const Campus = require("./models/university/campus.university.model.js");
 
 
 
@@ -221,12 +194,6 @@ app.use("/api/event", protectRoute, eventRouter);
 // cafe role doesnot exist
 
 app.use('/api/accessible', accessibleRoutes)
-
-
-// const User = require("./models/user/user.model.js");
-// const Campus = require("./models/university/campus.university.model.js");
-
-
 app.use("/api/user", protectRoute, userRouter);
 
 
@@ -287,6 +254,17 @@ app.all('*', (req, res) => {
 
 
 
+// app._router.stack
+//   .filter(r => r.route && r.route.path)
+//   .forEach(r => {
+//     console.log(`🔗 [${Object.keys(r.route.methods).join(',').toUpperCase()}] ${r.route.path}`);
+//   });
+
+  import expressListEndpoints from 'express-list-endpoints';
+
+  const endpoints = expressListEndpoints(app);
+  console.log("📍 Registered Endpoints:");
+  console.log(endpoints);
 
 // Start Server
 const startServer = () => {

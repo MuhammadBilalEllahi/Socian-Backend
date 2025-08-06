@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 const allUniversitySchema = new Schema({
@@ -31,5 +31,4 @@ const allUniversitySchema = new Schema({
 });
 
 const AllUniversity = mongoose.model("AllUniversity", allUniversitySchema);
-
-module.exports = AllUniversity;
+export default AllUniversity;

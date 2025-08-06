@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const Schema = mongoose.Schema;
 
@@ -65,4 +65,4 @@ const cafeVoteSchema = new Schema({
 
 const CafeVote = mongoose.model('CafeVote', cafeVoteSchema);
 
-module.exports = CafeVote;
+export default CafeVote;

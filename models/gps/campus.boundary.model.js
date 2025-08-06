@@ -1,8 +1,8 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const campusBoundarySchema = new mongoose.Schema({
     name: { type: String, required: true },
     coordinates: { type: [[Number]], required: true }, // Array of [latitude, longitude]
 });
 
-module.exports = mongoose.model("CampusBoundary", campusBoundarySchema);
+export default mongoose.model("CampusBoundary", campusBoundarySchema);

@@ -1,6 +1,6 @@
 // models/ModUser.js
-const mongoose = require("mongoose");
-const ModActions = require("./modActions");
+import mongoose from "mongoose";
+import ModActions from "./modActions.js";
 
 const modUserSchema = new mongoose.Schema({
   _id: {
@@ -55,4 +55,4 @@ const modUserSchema = new mongoose.Schema({
 
 
 
-module.exports = mongoose.model("ModUser", modUserSchema);
+export default mongoose.model("ModUser", modUserSchema);

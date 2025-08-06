@@ -1,14 +1,14 @@
 // StructuredVote
 
 
-const { default: mongoose } = require("mongoose");
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
 
+const structuredQuestionVoteSchema = new Schema({
 
-const structuredQuestionVoteSchema = new mongoose.Schema({
-
-    answerId: { type: mongoose.Schema.Types.ObjectId, ref: "StructuredAnswer" }, // Use this if voting on an answer
-    commentId: { type: mongoose.Schema.Types.ObjectId, ref: "StructuredComment" }, // Use this if voting on a comment
+    answerId: { type: Schema.Types.ObjectId, ref: "StructuredAnswer" }, // Use this if voting on an answer
+    commentId: { type: Schema.Types.ObjectId, ref: "StructuredComment" }, // Use this if voting on a comment
 
     upVotesCount: { type: Number, default: 0 },
     downVotesCount: { type: Number, default: 0 },
@@ -25,4 +25,4 @@ const structuredQuestionVoteSchema = new mongoose.Schema({
 }, { timestamps: true, });
 
 const StructuredVote = mongoose.model('StructuredVote', structuredQuestionVoteSchema);
-module.exports = StructuredVote;
+export default StructuredVote;

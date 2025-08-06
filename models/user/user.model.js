@@ -1,7 +1,8 @@
-const mongoose = require("mongoose");
-const {UserRoles} = require("../userRoles");
-const Teacher = require("../university/teacher/teacher.model");
-const moment = require('moment-timezone');
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
+import {UserRoles} from "../userRoles.js";
+import Teacher from "../university/teacher/teacher.model.js";
+import moment from 'moment-timezone';
 
 
 // Remmeber: Apply logic in prioirity on frontend then backend and then model.
@@ -624,5 +625,4 @@ userSchema.pre("save", async function (next) {
 
 
 const User = mongoose.model("User", userSchema);
-
-module.exports = User;
+export default User;

@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const modActivitySchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -20,4 +20,4 @@ const modActivitySchema = new mongoose.Schema({
   undoAttempts: { type: Number, default: 0 },
 });
 
-module.exports = mongoose.model("ModActionLog", modActivitySchema);
+export default mongoose.model("ModActionLog", modActivitySchema);

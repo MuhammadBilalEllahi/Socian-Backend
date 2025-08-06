@@ -14,4 +14,4 @@ const ModActions = Object.freeze({
     DELETE_POST_COMMENT_REPLY: "delete_post_comment_reply",
   });
 
-module.exports = ModActions;
+export default ModActions;

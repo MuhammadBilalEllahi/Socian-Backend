@@ -1,25 +1,26 @@
-const express = require('express');
-const User = require('../../models/user/user.model');
-const router = express.Router();
-const moment = require('moment');
-const { getUserDetails, sendOtp, handlePlatformResponse } = require('../../utils/utils');
-const { default: mongoose } = require('mongoose');
-const Society = require('../../models/society/society.model');
-const FriendRequest = require('../../models/user/friend.request.model');
-const Teacher = require('../../models/university/teacher/teacher.model');
-const {UserRoles} = require('../../models/userRoles');
-const { upload, uploadImage } = require('../../utils/multer.utils');
-const { uploadPictureMedia } = require('../../utils/aws.bucket.utils');
-const { OTP } = require('../../models/otp/otp');
-const { resendEmailConfirmation } = require('../../utils/email.util');
-const bcryptjs = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const Department = require('../../models/university/department/department.university.model');
-const ModRequest = require('../../models/mod/mod.request.model');
-const ModModel = require('../../models/mod/mod.model');
-const ModUserCollection = require('../../models/mod/mod.collection.model');
+import express from 'express';
+import User from '../../models/user/user.model.js';
 
-exports.getUserProfile = async (req, res) => {
+const router = express.Router();
+import moment from 'moment';
+import { getUserDetails, sendOtp, handlePlatformResponse } from '../../utils/utils.js';
+import mongoose from 'mongoose';
+import Society from '../../models/society/society.model.js';
+import FriendRequest from '../../models/user/friend.request.model.js';
+import Teacher from '../../models/university/teacher/teacher.model.js';
+import { UserRoles } from '../../models/userRoles.js';
+import { upload, uploadImage } from '../../utils/multer.utils.js';
+import { uploadPictureMedia } from '../../utils/aws.bucket.utils.js';
+import { OTP } from '../../models/otp/otp.js';
+import { resendEmailConfirmation } from '../../utils/email.util.js';
+import bcryptjs from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import Department from '../../models/university/department/department.university.model.js';
+import ModRequest from '../../models/mod/mod.request.model.js';
+import ModModel from '../../models/mod/mod.model.js';
+import ModUserCollection from '../../models/mod/mod.collection.model.js';
+
+const getUserProfile = async (req, res) => {
     try {
         const userId = req.query.id;
         const user = await User.findById(userId)
@@ -34,6 +35,8 @@ exports.getUserProfile = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 };
+
+// router.get('/profile', getUserProfile);
 
 router.get('/profile', async (req, res) => {
     try {
@@ -1480,4 +1483,4 @@ router.post("/mod/request", async (req, res) => {
 
 
 
-module.exports = router;
+export default router;

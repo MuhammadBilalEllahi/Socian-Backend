@@ -1,11 +1,12 @@
-const Society = require('../../models/society/society.model');
+import Society from '../../models/society/society.model.js';
 
-const router = require('express').Router();
-const mongoose= require('mongoose');
+import express from 'express';
+const router = express.Router();
+import mongoose from 'mongoose';
 
-const Members = require('../../models/society/members.collec.model');
-const SocietyType = require('../../models/society/society.type.model');
-const VerificationRequest = require('../../models/verification/verfication.model');
+import Members from '../../models/society/members.collec.model.js';
+import SocietyType from '../../models/society/society.type.model.js';
+import VerificationRequest from '../../models/verification/verfication.model.js';
 
 router.get('/', async (req,res)=>{
     try{
@@ -684,4 +685,4 @@ router.delete('/verification-requests/:id', async (req, res) => {
 });
 
 
-module.exports = router;
+export default router;

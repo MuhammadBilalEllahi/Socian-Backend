@@ -1,12 +1,14 @@
-const express = require('express');
+import express from 'express';
+import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import stream from 'stream';
+import multer from 'multer';
+import { Transform } from 'stream';
+import { getUserDetails } from '../utils.js';
+import superProtect from '../../middlewares/super.protect.js';
+import { upload } from '../multer.utils.js';
+
 const router = express.Router();
-const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
-const stream = require('stream');
-const multer = require('multer');
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-const { getUserDetails } = require('../utils');
-const superProtect = require('../../middlewares/super.protect');
+
 
 const s3Client = new S3Client({
     region: process.env.AWS_REGION,
@@ -172,4 +174,4 @@ router.post('/upload/pastpaper/aws', superProtect, upload.single('file'), async 
 
 
 
-module.exports = router;
+export default router;

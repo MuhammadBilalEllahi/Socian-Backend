@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_KEY);
 const model = genAI.getGenerativeModel({
@@ -7,12 +7,8 @@ const model = genAI.getGenerativeModel({
     `
     You are a reviewer of feedbacks given by students to a teacher 
     and will generate a response summarizing what the students have said about the teacher and will make it concise and professional
-
     `
-
 });
-
-
 
 async function generateContent(prompt) {
   console.log("inside gemini generate function")
@@ -20,4 +16,4 @@ async function generateContent(prompt) {
   return result.response.text();
 }
 
-module.exports = generateContent;
+export default generateContent;

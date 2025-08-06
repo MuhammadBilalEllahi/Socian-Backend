@@ -1,12 +1,13 @@
-const ModUserCollection = require('../../models/mod/mod.collection.model');
-const ModUser = require('../../models/mod/mod.model');
-const ModRequest = require('../../models/mod/mod.request.model');
+import ModUserCollection from '../../models/mod/mod.collection.model.js';
+import ModUser from '../../models/mod/mod.model.js';
+import ModRequest from '../../models/mod/mod.request.model.js';
 
-const User = require('../../models/user/user.model');
-const {UserRoles} = require('../../models/userRoles');
-const { getUserDetails } = require('../../utils/utils');
+import User from '../../models/user/user.model.js';
+import {UserRoles} from '../../models/userRoles.js';
+import { getUserDetails } from '../../utils/utils.js';
 
-const router = require('express').Router();
+import express from 'express';
+const router = express.Router();
 
 // router.put('/user/ban', async (req, res) => {
 //     try {
@@ -314,4 +315,4 @@ console.log("REQUESTID",requestId, action, rejectionReason, timePlan, req.body)
 
 
 
-module.exports = router;
+export default router;

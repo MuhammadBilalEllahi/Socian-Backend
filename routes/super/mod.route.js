@@ -1,13 +1,14 @@
-const router = require("express").Router();
-const ModActivity = require("../../models/mod/modActivity.model");
-const { getUserDetails } = require("../../utils/utils");
+import express from "express";
+const router = express.Router();
+import ModActivity from "../../models/mod/modActivity.model.js";
+import { getUserDetails } from "../../utils/utils.js";
 
 // Import models that might need to be updated during undo
-const TeacherRating = require("../../models/university/teacher/rating.teacher.model");
-const Teacher = require("../../models/university/teacher/teacher.model");
-const FeedBackCommentTeacher = require("../../models/university/teacher/feedback.rating.teacher.model");
-const Society = require("../../models/society/society.model");
-const mongoose = require("mongoose");
+import TeacherRating from "../../models/university/teacher/rating.teacher.model.js";
+import Teacher from "../../models/university/teacher/teacher.model.js";
+import FeedBackCommentTeacher from "../../models/university/teacher/feedback.rating.teacher.model.js";
+import Society from "../../models/society/society.model.js";
+import mongoose from "mongoose";
 
 // Get all mod activities
 router.get("/get-all-mod-activity", async (req, res) => {
@@ -385,4 +386,4 @@ async function performUndoAction(activity, session) {
     }
 }
 
-module.exports = router;
+export default router;

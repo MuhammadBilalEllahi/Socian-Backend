@@ -1,23 +1,24 @@
 // StructuredComment
 
-const mongoose = require("mongoose");
-const StructuredVote = require("./vote.answers.model");
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
+import StructuredVote from "./vote.answers.model.js";
 
-const structuredCommenSchema = new mongoose.Schema({
+const structuredCommenSchema = new Schema({
     content: { type: String, required: true },
     upvotes: { type: Number, default: 0 },
     downvotes: { type: Number, default: 0 },
     voteId: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: "StructuredVote",
     },
     isDeleted: { type: Boolean, default: false },
     isEdited: { type: Boolean, default: false },
     isReported: { type: Boolean, default: false },
-    replies: [{ type: mongoose.Schema.Types.ObjectId, ref: 'StructuredComment' }],
-    mentions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], 
-    replyToUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // User being replied to
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    replies: [{ type: Schema.Types.ObjectId, ref: 'StructuredComment' }],
+    mentions: [{ type: Schema.Types.ObjectId, ref: 'User' }], 
+    replyToUser: { type: Schema.Types.ObjectId, ref: 'User' }, // User being replied to
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
 
 }, { timestamps: true });
 
@@ -38,4 +39,4 @@ structuredCommenSchema.pre('save', async function (next) {
 });
 
 const StructuredComment = mongoose.model('StructuredComment', structuredCommenSchema);
-module.exports = { StructuredComment };
+export { StructuredComment };

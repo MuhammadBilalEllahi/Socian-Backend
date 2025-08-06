@@ -1,4 +1,5 @@
-const { default: mongoose } = require("mongoose");
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
 const discussionSchema = new mongoose.Schema({
     _id: { type: mongoose.Schema.Types.ObjectId, ref: 'PastPaperItem' },
@@ -7,4 +8,4 @@ const discussionSchema = new mongoose.Schema({
 }, { timestamps: true , _id: false});
 
 const Discussion = mongoose.model('Discussion', discussionSchema);
-module.exports = Discussion;
+export default Discussion;

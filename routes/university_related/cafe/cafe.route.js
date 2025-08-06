@@ -1,18 +1,18 @@
-const express = require('express');
+import express  from 'express';
 const router = express.Router();
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { body, validationResult } = require('express-validator');
-const mongoose = require('mongoose');
-const CafeUser = require('../../../models/cafes_campus/cafe.user.model');
-const Cafe = require('../../../models/cafes_campus/cafe.model');
-const cafeProtectedRoutes = require('./protected/cafe.protected.routes');
-const cafeProtect = require('../../../middlewares/cafe.protect');
-const { getUserDetails } = require('../../../utils/utils');
-const FoodItem = require('../../../models/cafes_campus/food.item.model');
-const CafeVote = require('../../../models/cafes_campus/ratings/vote/vote.cafe.model');
-const CafeItemRating = require('../../../models/cafes_campus/ratings/rating.cafe.item.model');
-const protectRoute = require("../../../middlewares/protect.route")
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { body, validationResult } from 'express-validator';
+import mongoose from 'mongoose';
+import CafeUser from '../../../models/cafes_campus/cafe.user.model.js';
+import Cafe from '../../../models/cafes_campus/cafe.model.js';
+import cafeProtectedRoutes from './protected/cafe.protected.routes.js';
+import cafeProtect from '../../../middlewares/cafe.protect.js';
+import { getUserDetails } from '../../../utils/utils.js';
+import FoodItem from '../../../models/cafes_campus/food.item.model.js';
+import CafeVote from '../../../models/cafes_campus/ratings/vote/vote.cafe.model.js';
+import CafeItemRating from '../../../models/cafes_campus/ratings/rating.cafe.item.model.js';
+import protectRoute from "../../../middlewares/protect.route.js";
 router.use('/user', cafeProtect, cafeProtectedRoutes);
 
 // Login route
@@ -653,4 +653,4 @@ console.log("RATING DOC", ratingDoc);
 //     }
 // })
 
-module.exports = router;
+export default router;

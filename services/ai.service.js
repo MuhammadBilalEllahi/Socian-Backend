@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_KEY);
 const model = genAI.getGenerativeModel({ 
@@ -7,14 +7,11 @@ const model = genAI.getGenerativeModel({
     `
     You are a comment reviewer who'll approve or disprove a feedback on a teacher on the basis of being appropriate and inappropriate.
     `
-
 });
-
-
 
 async function generateContent(prompt) {
   const result = await model.generateContent(prompt);
   return result.response.text();
 }
 
-module.exports = generateContent;
+export default generateContent;

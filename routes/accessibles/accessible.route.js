@@ -1,10 +1,10 @@
-const express = require('express');
-const University = require('../../models/university/university.register.model');
+import express from 'express';
+import University from '../../models/university/university.register.model.js';
 const router = express.Router()
 
-const NodeCache = require("node-cache");
-const User = require('../../models/user/user.model');
-const redisClient = require('../../db/reddis')
+import NodeCache from "node-cache";
+import User from '../../models/user/user.model.js';
+import redisClient from '../../db/reddis.js';
 
 /**
  * In sign up page this route gets the universities with campus as 6757657-87687687 uni-campus
@@ -132,4 +132,4 @@ router.get('/usernames', async (req, res) => {
 
 
 
-module.exports = router
+export default router;

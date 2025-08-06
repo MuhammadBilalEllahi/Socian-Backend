@@ -1,15 +1,15 @@
-const express = require('express');
-const User = require('../../models/user/user.model');
-const { getUserDetails } = require('../../utils/utils');
+import express from 'express';
+import User from '../../models/user/user.model.js';
+import { getUserDetails } from '../../utils/utils.js';
 const router = express.Router();
-const modCafeRouter = require('./cafe/cafe.mod.route');
-const Teacher = require('../../models/university/teacher/teacher.model');
-const TeacherRating = require('../../models/university/teacher/rating.teacher.model');
-const mongoose = require('mongoose');
-const FeedBackCommentTeacher = require('../../models/university/teacher/feedback.rating.teacher.model');
-const Society = require('../../models/society/society.model');
-const ModActivity = require('../../models/mod/modActivity.model');
-const Post = require('../../models/society/post/post.model');
+import modCafeRouter from './cafe/cafe.mod.route.js';
+import Teacher from '../../models/university/teacher/teacher.model.js';
+import TeacherRating from '../../models/university/teacher/rating.teacher.model.js';
+import mongoose from 'mongoose';
+import FeedBackCommentTeacher from '../../models/university/teacher/feedback.rating.teacher.model.js';
+import Society from '../../models/society/society.model.js';
+import ModActivity from '../../models/mod/modActivity.model.js';
+import Post from '../../models/society/post/post.model.js';
 
 // Get moderator's own activities
 router.get('/my-activities', async (req, res) => {
@@ -516,4 +516,4 @@ router.put("/posts/un-hide", async (req, res) => {
 
 
 
-module.exports = router;
+export default router;

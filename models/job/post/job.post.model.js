@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema, model } = mongoose;
 
 
@@ -44,8 +44,6 @@ const jobApplicationSchema = new Schema({
 
 const JobApplication = model("JobApplication", jobApplicationSchema, "jobApplications");
 
-module.exports = JobApplication;
-
 
 const jobReviewsSchema = new Schema({
     _id: {
@@ -72,8 +70,6 @@ const jobReviewsSchema = new Schema({
 });
 
 const JobReviews = model("JobReviews", jobReviewsSchema, "jobReviews");
-
-module.exports = JobReviews;
 
 
 
@@ -112,8 +108,6 @@ const jobMessageCollectionSchema = new Schema({
 });
 
 const JobMessageCollection = model("JobMessageCollection", jobMessageCollectionSchema, "jobmessagecollections");
-
-module.exports = JobMessageCollection;
 
 
 const jobPostSchema = new Schema(
@@ -209,4 +203,4 @@ const jobPostSchema = new Schema(
 
 const JobPost = model("JobPost", jobPostSchema, "jobposts");
 
-module.exports = JobPost;
+export { JobApplication, JobReviews, JobMessageCollection, JobPost };

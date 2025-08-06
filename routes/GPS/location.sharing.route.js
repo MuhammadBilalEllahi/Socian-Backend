@@ -1,8 +1,8 @@
-const express = require("express");
-const geolib = require("geolib");
-const UserLocation = require("../../models/gps/user.location.model");
-const CampusBoundary = require("../../models/gps/campus.boundary.model");
-const User = require("../../models/user/user.model"); // Assuming you have a User model for name lookup
+import express from "express";
+import geolib from "geolib";
+import UserLocation from "../../models/gps/user.location.model.js";
+import CampusBoundary from "../../models/gps/campus.boundary.model.js";
+import User from "../../models/user/user.model.js"; // Assuming you have a User model for name lookup
 
 const router = express.Router();
 
@@ -102,4 +102,4 @@ router.get("/users-in-radius", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

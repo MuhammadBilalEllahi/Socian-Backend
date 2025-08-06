@@ -1,37 +1,37 @@
-const express = require("express");
-const User = require("../../models/user/user.model");
-const Campus = require("../../models/university/campus.university.model");
-const University = require("../../models/university/university.register.model");
-const Society = require("../../models/society/society.model");
-const Subject = require("../../models/university/department/subject/subject.department.model");
-const { PastPaper } = require("../../models/university/papers/pastpaper.model");
+import express from "express";
+import User from "../../models/user/user.model.js";
+import Campus from "../../models/university/campus.university.model.js";
+import University from "../../models/university/university.register.model.js";
+import Society from "../../models/society/society.model.js";
+import Subject from "../../models/university/department/subject/subject.department.model.js";
+import PastPaper  from "../../models/university/papers/pastpaper.model.js";
 // PastpapersCollectionByYear
 
-const { PastPaperItem } = require("../../models/university/papers/pastpaper.item.model");
+import { PastPaperItem } from "../../models/university/papers/pastpaper.item.model.js";
 const router = express.Router();
-const redisClient = require("../../db/reddis");
-const { getUserDetails } = require("../../utils/utils");
-const mongoose = require("mongoose");
-const { PastpapersCollectionByYear } = require("../../models/university/papers/paper.collection.model");
-const fs = require('fs');
-const path = require('path');
+import redisClient from "../../db/reddis.js";
+import { getUserDetails } from "../../utils/utils.js";
+import mongoose from "mongoose";
+import { PastpapersCollectionByYear } from "../../models/university/papers/paper.collection.model.js";
+import fs from 'fs';
+import path from 'path';
 
-const campusRouter = require('./campus.route');
-const univeristyRouter = require('./university.route');
-const societyRouter = require('./societies.route');
-const usersRouter = require('./users.route');
-const teachersRouter = require('./teachers.route');
-const reportRouter = require("./report.route");
-const modRouter = require("./mod.route");
-const Department = require("../../models/university/department/department.university.model");
-const Teacher = require("../../models/university/teacher/teacher.model");
-const FeedBackCommentTeacher = require("../../models/university/teacher/feedback.rating.teacher.model");
-const TeacherRating = require("../../models/university/teacher/rating.teacher.model");
-const { uploadAdminPostMedia } = require("../../utils/aws.bucket.utils");
-const SocietyPostAndCommentVote = require("../../models/society/post/vote/vote.post.community.model");
-const PostCommentCollection = require("../../models/society/post/comment/post.comment.collect.model");
-const Post = require("../../models/society/post/post.model");
-const { adminPostUpload} = require("../../utils/multer.utils");
+import campusRouter from './campus.route.js';
+import univeristyRouter from './university.route.js';
+import societyRouter from './societies.route.js';
+import usersRouter from './users.route.js';
+import teachersRouter from './teachers.route.js';
+import reportRouter from "./report.route.js";
+import modRouter from "./mod.route.js";
+import Department from "../../models/university/department/department.university.model.js";
+import Teacher from "../../models/university/teacher/teacher.model.js";
+import FeedBackCommentTeacher from "../../models/university/teacher/feedback.rating.teacher.model.js";
+import TeacherRating from "../../models/university/teacher/rating.teacher.model.js";
+import { uploadAdminPostMedia } from "../../utils/aws.bucket.utils.js";
+import SocietyPostAndCommentVote from "../../models/society/post/vote/vote.post.community.model.js";
+import PostCommentCollection from "../../models/society/post/comment/post.comment.collect.model.js";
+import Post from "../../models/society/post/post.model.js";
+import { adminPostUpload } from "../../utils/multer.utils.js";
 
 
 router.use('/campus', campusRouter);
@@ -1120,4 +1120,4 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 const Schema = mongoose.Schema;
 
 const teacherRatingSchema = new Schema({
@@ -65,7 +65,7 @@ teacherRatingSchema.index({ _id: 1, teacherId: 1, userId: 1 }, { unique: true })
 
 const TeacherRating = mongoose.model('TeacherRating', teacherRatingSchema);
 
-module.exports = TeacherRating;
+export default TeacherRating;
 
 
 

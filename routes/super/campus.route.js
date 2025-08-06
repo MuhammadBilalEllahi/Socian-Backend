@@ -1,10 +1,10 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
 
-const University = require("../../models/university/university.register.model");
-const Campus = require("../../models/university/campus.university.model");
-const redisClient = require("../../db/reddis");
-const mongoose = require('mongoose')
+import University from "../../models/university/university.register.model.js";
+import Campus from "../../models/university/campus.university.model.js";
+import redisClient from "../../db/reddis.js";
+import mongoose from 'mongoose';
 //  Routes
 router.post("/register", async (req, res) => {
   const session = await mongoose.startSession();
@@ -298,4 +298,4 @@ router.get('/:campusId', async (req, res) => {
 
 
 
-module.exports = router;
+export default router;

@@ -1,5 +1,5 @@
 // models/ModRequest.js
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const modRequestSchema = new mongoose.Schema({
   userId: {
@@ -42,4 +42,4 @@ const modRequestSchema = new mongoose.Schema({
 //   ]
 });
 
-module.exports = mongoose.model("ModRequest", modRequestSchema);
+export default mongoose.model("ModRequest", modRequestSchema);

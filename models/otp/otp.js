@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
+import moment from "moment";
 const { Schema } = mongoose;
-const moment = require("moment");
 const otpSchema = new Schema({
   purpose: {
     type: String,
@@ -77,4 +77,4 @@ otpSchema.pre("validate", function (next) {
 
 const OTP = mongoose.model("OTP", otpSchema);
 
-module.exports = { OTP };
+export { OTP };

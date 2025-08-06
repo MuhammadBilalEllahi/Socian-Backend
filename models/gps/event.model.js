@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const eventSchema = new mongoose.Schema({
     societyId: { type: mongoose.Schema.Types.ObjectId, ref: "Society", required: true },
@@ -7,4 +7,4 @@ const eventSchema = new mongoose.Schema({
     endTime: { type: Date, required: true },
 });
 
-module.exports = mongoose.model("Event", eventSchema);
+export default mongoose.model("Event", eventSchema);

@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema, model } = mongoose;
 
 const peronalPostsCollectionSchema = new Schema(
@@ -43,4 +43,4 @@ const peronalPostsCollectionSchema = new Schema(
 );
 
 const PersonalPostsCollection = model("PersonalPostsCollection", peronalPostsCollectionSchema);
-module.exports = PersonalPostsCollection;
+export default PersonalPostsCollection;

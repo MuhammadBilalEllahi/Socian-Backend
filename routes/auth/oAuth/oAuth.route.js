@@ -1,11 +1,11 @@
-const express = require('express');
-const { OAuth2Client } = require('google-auth-library');
-const User = require('../../../models/user/user.model');
-const { platformSessionOrJwt_CALL_on_glogin_only, platformJwt_CALL_on_glogin_only } = require('../../../utils/platform/jwt.session.platform');
-const Campus = require('../../../models/university/campus.university.model');
-const {UserRoles} = require('../../../models/userRoles');
-const { json } = require('body-parser');
-const NonUniversityEmail = require('../../../models/non_uni/NonUni.model');
+import express from 'express';
+import { OAuth2Client } from 'google-auth-library';
+import User from '../../../models/user/user.model.js';
+import { platformSessionOrJwt_CALL_on_glogin_only, platformJwt_CALL_on_glogin_only } from '../../../utils/platform/jwt.session.platform.js';
+import Campus from '../../../models/university/campus.university.model.js';
+import {UserRoles} from '../../../models/userRoles.js';
+import json  from 'body-parser';
+import NonUniversityEmail from '../../../models/non_uni/NonUni.model.js';
 const router = express.Router();
 
 
@@ -342,7 +342,6 @@ router.post("/google/mobile", async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;
 
 
-module.exports = router;

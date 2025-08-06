@@ -1,14 +1,17 @@
-const router = require("express").Router();
-const { ReportType, Report } = require("../../models/report/report.model");
-const Post = require("../../models/society/post/post.model");
-const PostComment = require("../../models/society/post/comment/post.comment.model");
-const User = require("../../models/user/user.model");
-const Society = require("../../models/society/society.model");
-const FeedBackCommentTeacher = require("../../models/university/teacher/feedback.rating.teacher.model");
-const TeacherRating = require("../../models/university/teacher/rating.teacher.model");
-const { PastPaperItem, File } = require("../../models/university/papers/pastpaper.item.model");
-const { DiscussionComment } = require("../../models/university/papers/discussion/discussion.comment");
-const Discussion = require("../../models/university/papers/discussion/discussion");
+import express from "express";
+const router = express.Router();
+import {ReportType} from "../../models/report/report.model.js";
+import {Report} from "../../models/report/report.model.js";
+import Post from "../../models/society/post/post.model.js";
+import PostComment from "../../models/society/post/comment/post.comment.model.js";
+import User from "../../models/user/user.model.js";
+import Society from "../../models/society/society.model.js";
+import FeedBackCommentTeacher from "../../models/university/teacher/feedback.rating.teacher.model.js";
+import TeacherRating from "../../models/university/teacher/rating.teacher.model.js";
+import {PastPaperItem} from "../../models/university/papers/pastpaper.item.model.js";
+import { File } from "../../models/university/papers/pastpaper.item.model.js";
+import DiscussionComment from "../../models/university/papers/discussion/discussion.comment.js";
+import Discussion from "../../models/university/papers/discussion/discussion.js";
 
 // Create report type
 router.post("/type/create", async (req, res) => {
@@ -460,4 +463,4 @@ router.delete("/type/:id", async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

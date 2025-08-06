@@ -1,8 +1,7 @@
-const mongoose = require('mongoose');
-
+import mongoose from 'mongoose';
+import slugify from 'slugify';
+import FoodCategory from './category.food.item.model.js';
 const Schema = mongoose.Schema;
-const slugify = require('slugify');
-const FoodCategory = require('./category.food.item.model');
 
 const LastChangesSchema = new Schema({
     whatUpdated: {
@@ -226,4 +225,4 @@ foodItemsSchema.pre('save', async function (next) {
 
 const FoodItem = mongoose.model('FoodItem', foodItemsSchema);
 
-module.exports = FoodItem;
+export default FoodItem;

@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const { Schema, model } = mongoose;
+import mongoose from "mongoose";
+const Schema = mongoose.Schema;
 
 /**
  * Enhanced Verification Request Schema
@@ -170,5 +170,5 @@ verificationRequestSchema.index({ alumni: 1 });
 verificationRequestSchema.index({ requestedBy: 1 });
 verificationRequestSchema.index({ assignedCampusModerator: 1 });
 
-const VerificationRequest = model("VerificationRequest", verificationRequestSchema);
-module.exports = VerificationRequest;
+const VerificationRequest = mongoose.model("VerificationRequest", verificationRequestSchema);
+export default VerificationRequest;

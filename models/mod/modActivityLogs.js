@@ -1,8 +1,8 @@
 // middlewares/logModActivity.middleware.js
-const fs = require("fs");
-const path = require("path");
-const ModActivity = require("./modActivity.model");
-const { getUserDetails } = require("../../utils/utils");
+import fs from "fs";
+import path from "path";
+import ModActivity from "./modActivity.model.js";
+import { getUserDetails } from "../../utils/utils.js";
 
 const logModActivity = async (req, res, next) => {
   try {
@@ -34,4 +34,4 @@ const logModActivity = async (req, res, next) => {
   next(); // continue to the actual route
 };
 
-module.exports = logModActivity;
+export default logModActivity;

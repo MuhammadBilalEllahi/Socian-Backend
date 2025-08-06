@@ -1,13 +1,13 @@
-const cron = require('node-cron');
-const Teacher = require('../models/university/teacher/teacher.model');
-const aiFeedback = require("../services/aifeedback.service");
-const {default: PQueue} = require('p-queue'); // Queue to rate limit AI API calls
-const ModUserCollection = require('../models/mod/mod.collection.model');
-const User = require('../models/user/user.model');
-const mongoose = require("mongoose")
-const ModUser = require("../models/mod/mod.model");
+import cron from 'node-cron';
+import Teacher from '../models/university/teacher/teacher.model.js';
+import aiFeedback from "../services/aifeedback.service.js";
+import PQueue from 'p-queue'; // Queue to rate limit AI API calls
+import ModUserCollection from '../models/mod/mod.collection.model.js';
+import User from '../models/user/user.model.js';
+import mongoose from "mongoose";
+import ModUser from "../models/mod/mod.model.js";
 // Initialize the queue with a concurrency limit (e.g., 5 simultaneous API calls)
-const queue = new PQueue({ concurrency: 5 });
+// const queue = new PQueue({ concurrency: 5 });
 
 ////////////////////////////Teacher feedback updates////////////////////////////////////
 async function updateTeacherFeedbackSummary(teacher) {
@@ -51,7 +51,7 @@ async function updateTeacherFeedbackSummary(teacher) {
     }
 }
 // */5 * * * * 
-cron.schedule("35 7 * * *", async () => {
+const cron1 =cron.schedule("35 7 * * *", async () => {
     console.log("Running cron job to update teacher feedback summary... 35 7 * * *");
 
     try {
@@ -82,7 +82,7 @@ cron.schedule("35 7 * * *", async () => {
 // then remove him from the mod collection nowmodusers and put him to prevmodusers
 
 
-cron.schedule("0 * * * *", async () => {
+const cron2 =cron.schedule("0 * * * *", async () => {
   console.log("⏱️1 hr time 0 **** Running cron job to update moderator updates...");
 
   const session = await mongoose.startSession();
@@ -179,6 +179,8 @@ cron.schedule("0 * * * *", async () => {
     console.log("🛑 Mongo session ended.\n");
   }
 });
+
+export default {cron1, cron2};
 
 // cron.schedule("* * * * *", async () => {
 //   console.log("Running cron job to update moderator updates... * * * * *");
